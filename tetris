@@ -1,0 +1,331 @@
+#!/bin/sh
+
+set -u # non initialized variable is an error
+
+# 2 signals are used: SIGUSR1 to decrease delay after level up and SIGUSR2 to quit
+# they are sent to all instances of this script
+# because of that we should process them in each instance
+# in this instance we are ignoring both signals
+# in shell enviroment, should Drop the SIG prefix, just input the signal name.
+trap '' USR1 USR2
+
+# Those are commands sent to controller by key press processing code
+# In controller they are used as index to retrieve actual function from array
+QUIT=0
+RIGHT=1
+LEFT=2
+ROTATE=3
+DOWN=4
+DROP=5
+
+
+DELAY=1 # initial delay between piece movements
+
+
+# color codes
+RED=1
+GREEN=2
+YELLOW=3
+BLUE=4
+MAGENTA=5
+CYAN=6
+WHITE=7
+ORANGE=208
+
+# Those are Tetrimino type
+O_TETORIMINO=0
+I_TETORIMINO=1
+T_TETORIMINO=2
+L_TETORIMINO=3
+J_TETORIMINO=4
+S_TETORIMINO=5
+Z_TETORIMINO=6
+
+# Those are the facing
+NORTH=0
+EAST=1
+SOUTH=2
+WEST=3
+
+# Location and size of playfield, color and border
+PLAYFIELD_W=10
+PLAYFIELD_H=20
+PLAYFIELD_X=30
+PLAYFIELD_Y=2
+BORDER_COLOR=$WHITE
+
+no_color=false    # do we use color or not
+showtime=true    # controller runs while this flag is true
+empty_cell=" ."  # how we draw empty cell
+filled_cell="[]" # how we draw filled cell
+
+score=0 # score variable initialization
+level=1 # level variable initialization
+
+# screen_buffer is variable, that accumulates all screen changes
+# this variable is printed in controller once per game cycle
+puts() {
+  screen_buffer="$screen_buffer""${1}"
+}
+
+# move cursor to (x,y) and print string
+# (1,1) is upper left corner of the screen
+xyprint() {
+  puts "\033[${2};${1}H${3}"
+}
+
+show_cursor() {
+  printf "\033[?25h"
+}
+
+hide_cursor() {
+  printf "\033[?25l"
+}
+
+# foreground color
+set_fg() {
+  $no_color && return
+  # puts "\033[3${1}m"
+  puts "\033[38;5;${1}m"
+}
+
+# background color
+set_bg() {
+  $no_color && return
+  # puts "\033[4${1}m"
+  puts "\033[48;5;${1}m"
+}
+
+reset_colors() {
+  puts "\033[0m"
+}
+
+set_bold() {
+  puts "\033[1m"
+}
+
+
+# this array holds all possible pieces that can be used in the game
+# each piece consists of 4 cells
+# each string is sequence of relative xy coordinates for different orientations
+# depending on piece symmetry there can be 1, 2, or 4 orientations
+# <COLOR><NORTH><EAST><SOURTH><WEST>
+
+# O-Tetrimino
+piece_0_color="$YELLOW"
+piece_0_minos_0="1 0 2 0 1 1 2 1"
+piece_0_minos_1="1 0 2 0 1 1 2 1"
+piece_0_minos_2="1 0 2 0 1 1 2 1"
+piece_0_minos_3="1 0 2 0 1 1 2 1"
+
+# I-Tetorimino
+piece_1_color="$CYAN" 
+piece_1_minos_0="0 1 1 1 2 1 3 1"
+piece_1_minos_1="2 0 2 1 2 2 2 3"
+piece_1_minos_2="0 2 1 2 2 2 3 2"
+piece_1_minos_3="1 0 1 1 1 2 1 3"
+
+# T-Tetorimino
+piece_2_color="$MAGENTA"
+piece_2_minos_0="1 0 0 1 1 1 2 1"
+piece_2_minos_1="1 0 1 1 2 1 1 2"
+piece_2_minos_2="0 1 1 1 2 1 1 2"
+piece_2_minos_3="1 0 0 1 1 1 1 2"
+
+# L-Tetorimino
+piece_3_color="$ORANGE"
+piece_3_minos_0="2 0 0 1 1 1 2 1"
+piece_3_minos_1="1 0 1 1 1 2 2 2"
+piece_3_minos_2="0 1 1 1 2 1 0 2"
+piece_3_minos_3="0 0 1 0 1 1 1 2"
+
+# J-Tetorimino
+piece_4_color="$BLUE"
+piece_4_minos_0="0 0 0 1 1 1 2 1"
+piece_4_minos_1="1 0 2 0 1 1 1 2"
+piece_4_minos_2="0 1 1 1 2 1 2 2"
+piece_4_minos_3="1 0 1 1 0 2 1 2"
+
+# S-Tetorimino
+piece_5_color="$GREEN"
+piece_5_minos_0="1 0 2 0 0 1 1 1"
+piece_5_minos_1="1 0 1 1 2 1 2 2"
+piece_5_minos_2="1 1 2 1 0 2 1 2"
+piece_5_minos_3="0 0 0 1 1 1 1 2"
+
+# Z-Tetorimino
+piece_6_color="$RED"
+piece_6_minos_0="0 0 1 0 1 1 2 1"
+piece_6_minos_1="2 0 1 1 2 1 1 2"
+piece_6_minos_2="0 1 1 1 1 2 2 2"
+piece_6_minos_3="1 0 0 1 1 1 0 2"
+
+put_piece() {
+  # Arguments:
+  #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content
+  
+  # at first, we should save arguments.
+  posx=${1}; posy=${2}; type=${3}; rotation=${4};content=${5}
+  shift $#
+
+  # set minos coordinates.
+  set `eval echo \\"\\$piece_"$type"_minos_"$rotation"\\"`
+
+  # loop through tetorimino minos: 4 minos, each has 2 coordinates
+  while [ $# -gt 0 ]; do
+    # relative coordinates are retrieved bassed on orientation and added to absolute coordinates
+    x=`expr "$posx" + "$1" \* 2` # the width of cell is 2 characters thick
+    y=`expr "$posy" + "$2"`
+    xyprint $x $y "$content"
+    shift 2
+  done
+}
+
+new_piece_location_ok() {
+  # Arguments: 1 - new x coordinate of the piece, 2 - new y coordinate of the piece
+  # test if piece can be moved to new location
+
+  newx=${1}; newy=${2}
+  
+  (
+    i=1; j=0
+  )
+  
+  return 0 # true
+}
+
+draw_border() {
+  set_bold
+  set_fg $BORDER_COLOR
+  x1=`expr "$PLAYFIELD_X" - 1`                   # 1 here is because border is 1 characters thick
+  x2=`expr "$PLAYFIELD_X" + "$PLAYFIELD_W" \* 2` # 2 here is because each cell on play field is 2 characters wide
+  y1=`expr "$PLAYFIELD_Y" - 1`
+  y2=`expr "$PLAYFIELD_Y" + "$PLAYFIELD_H"`
+
+  i=0
+  while [ "$i" -lt "$PLAYFIELD_H" ]; do
+    y=`expr "$i" + "$PLAYFIELD_Y"`
+    xyprint $x1 $y "┃"
+    xyprint $x2 $y "┃"
+    i=`expr "$i" + 1`
+  done
+  
+  i=0
+  while [ "$i" -lt "$PLAYFIELD_W" ]; do
+    x=`expr "$i" \* 2 + "$PLAYFIELD_X"` # 2 here is because each cell on play field is 2 characters width
+    xyprint $x $y1 '━━'
+    xyprint $x $y2 '━━'
+    i=`expr "$i" + 1`
+  done
+
+  xyprint $x1 $y1 "┏"; xyprint $x2 $y1 "┓" # draw the corners
+  xyprint $x1 $y2 "┗"; xyprint $x2 $y2 "┛"
+
+  reset_colors
+}
+
+init() {
+  # playfield is initialized with -1s (empty cells)
+  i=0
+  while [ "$i" -lt `expr "$PLAYFIELD_H" \* "$PLAYFIELD_W"` ]
+  do
+    eval play_field_$i=-1
+    i=`expr "$i" + 1`
+  done
+
+
+  screen_buffer=""
+  clear
+  hide_cursor
+}
+
+# this function runs in separate process
+# it sends DOWN commands to controller with appropriate delay
+ticker() {
+  # on SIGUSR2 this process should exit
+  trap exit SIGUSR2
+
+  while true ; do printf $DOWN; sleep $DELAY; done
+}
+
+# this function processes keyboard input
+reader() {
+  trap exit USR2 # this process exits on SIGUSR2
+  trap '' USR1   # SIGUSR1 is ignored
+
+}
+
+# this function updated occupied cells in play_field array after piece is dropped
+flatten_playfield() {
+  :
+}
+
+# this function goes through play_field array and eliminates lines without empty cells
+process_complete_lines() {
+  :
+}
+
+move_piece() {
+  # arguments: 1 - new x coordinate, 2 - new y coordinate
+  # moves the piece to the new locatio if possible
+}
+
+cmd_right(){
+  :
+}
+
+cmd_left() {
+  :
+}
+
+cmd_rotate() {
+  :
+}
+
+cmd_down() {
+  :
+}
+
+cmd_drop() {
+  :
+}
+
+cmd_quit() {
+  :
+}
+
+controller() {
+  # SIGUSR1 and SIGUSR2 are ignored
+  trap '' USR1 USR2
+
+  init
+
+  set_fg $ORANGE
+  set_bg $ORANGE
+  put_piece 5 1 2 2 "$filled_cell"
+  reset_colors
+
+  draw_border
+  # echo "$screen_buffer"
+  printf "$screen_buffer"
+
+  return
+  while $showtime; do # run while showtime variable is true, it is changed to false in cmd_quit function
+    printf "$screen_buffer"
+    screen_buffer=""
+
+  done
+  
+}
+
+stty_g=`stty -g` # let's save terminal state
+
+controller
+
+sleep 5
+wait
+
+echo # add new line
+show_cursor
+stty "$stty_g" # let's restore terminal state
+
