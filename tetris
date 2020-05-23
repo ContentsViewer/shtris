@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# FreeBSD sh | o
+# BusyBox sh | o
+# Solaris sh | x
+
 set -u # non initialized variable is an error
 
 # 2 signals are used: SIGUSR1 to decrease delay after level up and SIGUSR2 to quit
@@ -105,6 +109,7 @@ set_bold() {
 }
 
 
+
 # this array holds all possible pieces that can be used in the game
 # each piece consists of 4 cells
 # each string is sequence of relative xy coordinates for different orientations
@@ -164,8 +169,10 @@ put_piece() {
   # Arguments:
   #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content
   
+  local posx posy type rotation content lx ly x y
+
   # at first, we should save arguments.
-  posx=${1}; posy=${2}; type=${3}; rotation=${4};content=${5}
+  posx=${1}; posy=${2}; type=${3}; rotation=${4}; content=${5}
   shift $#
 
   # set minos coordinates.
@@ -174,8 +181,9 @@ put_piece() {
   # loop through tetorimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     # relative coordinates are retrieved bassed on orientation and added to absolute coordinates
-    x=`expr "$posx" + "$1" \* 2` # the width of cell is 2 characters thick
-    y=`expr "$posy" + "$2"`
+    lx=$1; ly=$2
+    x=$((posx + lx * 2)) # the width of cell is 2 characters thick
+    y=$((posy + ly))
     xyprint $x $y "$content"
     shift 2
   done
@@ -185,54 +193,71 @@ new_piece_location_ok() {
   # Arguments: 1 - new x coordinate of the piece, 2 - new y coordinate of the piece
   # test if piece can be moved to new location
 
-  newx=${1}; newy=${2}
-  
-  (
-    i=1; j=0
-  )
-  
-  return 0 # true
+  local x_test y_test x y lx ly idx field_cell
+  x_test=${1}; y_test=${2}
+
+  # set minos coordinates in parameters
+  # $1 - x, $2 - y
+  set `eval echo \\"\\$piece_"$current_tetorimino"_minos_"$current_rotation"\\"`
+  lx=$1; ly=$2
+  x=$((lx + x_test)) # new x coordinate of piece cell
+  y=$((ly + y_test)) # new y coordinate of piece cell
+
+  [ "$y" -lt 0 ] || 
+  [ "$y" -ge "$PLAYFIELD_H" ] || 
+  [ "$x" -lt 0 ] || 
+  [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
+
+  idx=$((y * PLAYFIELD_W + x))
+  field_cell=`eval echo \\"\\$play_field_"$idx"\\"`
+  [ "$field_cell" != -1 ] && return 1 # false; check if location is already occupied
+
+  return 0
+
 }
 
 draw_border() {
+  local x1 x2 y1 y2 i x y
+
   set_bold
   set_fg $BORDER_COLOR
-  x1=`expr "$PLAYFIELD_X" - 1`                   # 1 here is because border is 1 characters thick
-  x2=`expr "$PLAYFIELD_X" + "$PLAYFIELD_W" \* 2` # 2 here is because each cell on play field is 2 characters wide
-  y1=`expr "$PLAYFIELD_Y" - 1`
-  y2=`expr "$PLAYFIELD_Y" + "$PLAYFIELD_H"`
+  x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
+  x2=$((PLAYFIELD_X + PLAYFIELD_W * 2)) # 2 here is because each cell on play field is 2 characters wide
+  y1=$((PLAYFIELD_Y - 1))
+  y2=$((PLAYFIELD_Y + PLAYFIELD_H))
 
   i=0
   while [ "$i" -lt "$PLAYFIELD_H" ]; do
-    y=`expr "$i" + "$PLAYFIELD_Y"`
-    xyprint $x1 $y "┃"
-    xyprint $x2 $y "┃"
-    i=`expr "$i" + 1`
+    y=$((i + PLAYFIELD_Y))
+    xyprint $x1 $y "│"
+    xyprint $x2 $y "│"
+    i=$((i + 1))
   done
   
   i=0
   while [ "$i" -lt "$PLAYFIELD_W" ]; do
-    x=`expr "$i" \* 2 + "$PLAYFIELD_X"` # 2 here is because each cell on play field is 2 characters width
-    xyprint $x $y1 '━━'
-    xyprint $x $y2 '━━'
-    i=`expr "$i" + 1`
+    x=$((i * 2 + PLAYFIELD_X)) # 2 here is because each cell on play field is 2 characters width
+    xyprint $x $y1 '──'
+    xyprint $x $y2 '──'
+    i=$((i + 1))
   done
-
-  xyprint $x1 $y1 "┏"; xyprint $x2 $y1 "┓" # draw the corners
-  xyprint $x1 $y2 "┗"; xyprint $x2 $y2 "┛"
+  
+  xyprint $x1 $y1 "┌"; xyprint $x2 $y1 "┐" # draw the corners
+  xyprint $x1 $y2 "└"; xyprint $x2 $y2 "┘"
 
   reset_colors
 }
 
 init() {
+  local i
+  
   # playfield is initialized with -1s (empty cells)
   i=0
-  while [ "$i" -lt `expr "$PLAYFIELD_H" \* "$PLAYFIELD_W"` ]
+  while [ "$i" -lt $((PLAYFIELD_H * PLAYFIELD_W)) ]
   do
     eval play_field_$i=-1
-    i=`expr "$i" + 1`
+    i=$((i + 1))
   done
-
 
   screen_buffer=""
   clear
@@ -243,7 +268,7 @@ init() {
 # it sends DOWN commands to controller with appropriate delay
 ticker() {
   # on SIGUSR2 this process should exit
-  trap exit SIGUSR2
+  trap exit USR2
 
   while true ; do printf $DOWN; sleep $DELAY; done
 }
@@ -268,6 +293,7 @@ process_complete_lines() {
 move_piece() {
   # arguments: 1 - new x coordinate, 2 - new y coordinate
   # moves the piece to the new locatio if possible
+  :
 }
 
 cmd_right(){
@@ -319,11 +345,14 @@ controller() {
 }
 
 stty_g=`stty -g` # let's save terminal state
+(
+  ticker
+)|(
+  controller
+)
 
-controller
-
-sleep 5
-wait
+sleep 50
+# wait
 
 echo # add new line
 show_cursor
