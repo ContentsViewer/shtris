@@ -1,5 +1,13 @@
 #!/bin/sh
 
+# Tetris game written in pure sh
+# 
+# I tried to follow the Tetris Guideline(2009). 
+# URL: [Tetris Guideline. Tetris Wiki. accessed at 2020-05-23](https://tetris.fandom.com/wiki/Tetris_Guideline)
+#
+# This script is based on bash-tetris (Author: Kirill Timofeev <kt97679@gmail.com>)
+# Thank you!
+#
 # FreeBSD sh | o
 # BusyBox sh | o
 # Solaris sh | x
@@ -21,10 +29,26 @@ LEFT=2
 ROTATE=3
 DOWN=4
 DROP=5
+HOLD=6
 
-
-DELAY=1 # initial delay between piece movements
-
+# The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line. 
+# The current level of the game determines the normal Fall Speed using the following equation:
+# (0.8 - ((level - 1) * 0.007))^(level-1)
+FALL_SPEED_LEVEL_1=1
+FALL_SPEED_LEVEL_2=0.793
+FALL_SPEED_LEVEL_3=0.618
+FALL_SPEED_LEVEL_4=0.473
+FALL_SPEED_LEVEL_5=0.355
+FALL_SPEED_LEVEL_6=0.262
+FALL_SPEED_LEVEL_7=0.190
+FALL_SPEED_LEVEL_8=0.135
+FALL_SPEED_LEVEL_9=0.094
+FALL_SPEED_LEVEL_10=0.064
+FALL_SPEED_LEVEL_11=0.043
+FALL_SPEED_LEVEL_12=0.028
+FALL_SPEED_LEVEL_13=0.018
+FALL_SPEED_LEVEL_14=0.011
+FALL_SPEED_LEVEL_15=0.007
 
 # color codes
 RED=1
@@ -46,6 +70,7 @@ S_TETORIMINO=5
 Z_TETORIMINO=6
 
 # Those are the facing
+# Tetorimino has four facings
 NORTH=0
 EAST=1
 SOUTH=2
@@ -58,10 +83,19 @@ PLAYFIELD_X=30
 PLAYFIELD_Y=2
 BORDER_COLOR=$WHITE
 
-no_color=false    # do we use color or not
+no_color=false   # do we use color or not
 showtime=true    # controller runs while this flag is true
 empty_cell=" ."  # how we draw empty cell
 filled_cell="[]" # how we draw filled cell
+
+# the queue of the next tetoriminos to be placed.
+# the reference says the next six tetrimonos should be shown.
+next_queue=''
+
+# the hold queue allows the player to hold a falling tetorimino for as long as they wish.
+hold_queue=''
+
+bag=''
 
 score=0 # score variable initialization
 level=1 # level variable initialization
@@ -108,7 +142,32 @@ set_bold() {
   puts "\033[1m"
 }
 
+# playfield is 2-dimensional array, data is stored as follows:
+# a_{y,x} (y=0,...,PLAYFIELD_H-1, x=0,...,PLAYFIELD_W-1)
+# each array element contains cell color value or -1 if cell is empty
+redraw_playfield() {
+  local x y xp yp field_cell
 
+  x=0; y=0
+  xp=PLAYFIELD_X
+  while [ "$y" -lt "$PLAYFIELD_H" ]; do
+    yp=$((y + PLAYFIELD_Y))
+    xyprint $xp $yp ""
+    while [ "$x" -lt "$PLAYFIELD_W" ]; do
+      field_cell=`eval echo \\"\\$play_field_$y$x\\"`
+      if [ "$field_cell" == -1 ]; then
+        puts "$empty_cell"
+      else
+        set_fg "$field_cell"
+        set_bg "$field_cell"
+        puts "$filled_cell"
+        reset_colors
+      fi
+      x=$((x + 1))
+    done
+    y=$((y + 1))
+  done
+}
 
 # this array holds all possible pieces that can be used in the game
 # each piece consists of 4 cells
@@ -118,13 +177,15 @@ set_bold() {
 
 # O-Tetrimino
 piece_0_color="$YELLOW"
+piece_0_start_x=3; piece_0_start_y=-2
 piece_0_minos_0="1 0 2 0 1 1 2 1"
 piece_0_minos_1="1 0 2 0 1 1 2 1"
 piece_0_minos_2="1 0 2 0 1 1 2 1"
 piece_0_minos_3="1 0 2 0 1 1 2 1"
 
 # I-Tetorimino
-piece_1_color="$CYAN" 
+piece_1_color="$CYAN"
+piece_1_start_x=3; piece_1_start_y=-2
 piece_1_minos_0="0 1 1 1 2 1 3 1"
 piece_1_minos_1="2 0 2 1 2 2 2 3"
 piece_1_minos_2="0 2 1 2 2 2 3 2"
@@ -132,6 +193,7 @@ piece_1_minos_3="1 0 1 1 1 2 1 3"
 
 # T-Tetorimino
 piece_2_color="$MAGENTA"
+piece_2_start_x=3; piece_2_start_y=-2
 piece_2_minos_0="1 0 0 1 1 1 2 1"
 piece_2_minos_1="1 0 1 1 2 1 1 2"
 piece_2_minos_2="0 1 1 1 2 1 1 2"
@@ -139,6 +201,7 @@ piece_2_minos_3="1 0 0 1 1 1 1 2"
 
 # L-Tetorimino
 piece_3_color="$ORANGE"
+piece_3_start_x=3; piece_3_start_y=-2
 piece_3_minos_0="2 0 0 1 1 1 2 1"
 piece_3_minos_1="1 0 1 1 1 2 2 2"
 piece_3_minos_2="0 1 1 1 2 1 0 2"
@@ -146,6 +209,7 @@ piece_3_minos_3="0 0 1 0 1 1 1 2"
 
 # J-Tetorimino
 piece_4_color="$BLUE"
+piece_4_start_x=3; piece_4_start_y=-2
 piece_4_minos_0="0 0 0 1 1 1 2 1"
 piece_4_minos_1="1 0 2 0 1 1 1 2"
 piece_4_minos_2="0 1 1 1 2 1 2 2"
@@ -153,6 +217,7 @@ piece_4_minos_3="1 0 1 1 0 2 1 2"
 
 # S-Tetorimino
 piece_5_color="$GREEN"
+piece_5_start_x=3; piece_5_start_y=-2
 piece_5_minos_0="1 0 2 0 0 1 1 1"
 piece_5_minos_1="1 0 1 1 2 1 2 2"
 piece_5_minos_2="1 1 2 1 0 2 1 2"
@@ -160,6 +225,7 @@ piece_5_minos_3="0 0 0 1 1 1 1 2"
 
 # Z-Tetorimino
 piece_6_color="$RED"
+piece_6_start_x=3; piece_6_start_y=-2
 piece_6_minos_0="0 0 1 0 1 1 2 1"
 piece_6_minos_1="2 0 1 1 2 1 1 2"
 piece_6_minos_2="0 1 1 1 1 2 2 2"
@@ -189,11 +255,27 @@ put_piece() {
   done
 }
 
+fill_bag() {
+  :
+}
+
+feed_next_queue() {
+  :
+}
+
+hold_tetorimino() {
+  :
+}
+
+get_next() {
+  :
+}
+
 new_piece_location_ok() {
   # Arguments: 1 - new x coordinate of the piece, 2 - new y coordinate of the piece
   # test if piece can be moved to new location
 
-  local x_test y_test x y lx ly idx field_cell
+  local x_test y_test x y lx ly field_cell
   x_test=${1}; y_test=${2}
 
   # set minos coordinates in parameters
@@ -203,13 +285,12 @@ new_piece_location_ok() {
   x=$((lx + x_test)) # new x coordinate of piece cell
   y=$((ly + y_test)) # new y coordinate of piece cell
 
-  [ "$y" -lt 0 ] || 
+  [ "$y" -lt 0 ]              || 
   [ "$y" -ge "$PLAYFIELD_H" ] || 
-  [ "$x" -lt 0 ] || 
+  [ "$x" -lt 0 ]              || 
   [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
 
-  idx=$((y * PLAYFIELD_W + x))
-  field_cell=`eval echo \\"\\$play_field_"$idx"\\"`
+  field_cell=`eval echo \\"\\$play_field_$y$x\\"`
   [ "$field_cell" != -1 ] && return 1 # false; check if location is already occupied
 
   return 0
@@ -249,14 +330,16 @@ draw_border() {
 }
 
 init() {
-  local i
-  
+  local x y
+
   # playfield is initialized with -1s (empty cells)
-  i=0
-  while [ "$i" -lt $((PLAYFIELD_H * PLAYFIELD_W)) ]
-  do
-    eval play_field_$i=-1
-    i=$((i + 1))
+  x=0; y=0
+  while [ "$y" -lt "$PLAYFIELD_H" ]; do
+    while [ "$x" -lt "$PLAYFIELD_W" ]; do
+      eval play_field_$y$x=-1
+      x=$((x + 1))
+    done
+    y=$((y + 1))
   done
 
   screen_buffer=""
@@ -290,6 +373,10 @@ process_complete_lines() {
   :
 }
 
+process_fallen_piece() {
+  :
+}
+
 move_piece() {
   # arguments: 1 - new x coordinate, 2 - new y coordinate
   # moves the piece to the new locatio if possible
@@ -316,6 +403,10 @@ cmd_drop() {
   :
 }
 
+cmd_hold() {
+  :
+}
+
 cmd_quit() {
   :
 }
@@ -323,16 +414,16 @@ cmd_quit() {
 controller() {
   # SIGUSR1 and SIGUSR2 are ignored
   trap '' USR1 USR2
-
+  
   init
 
   set_fg $ORANGE
   set_bg $ORANGE
   put_piece 5 1 2 2 "$filled_cell"
   reset_colors
-
+  
   draw_border
-  # echo "$screen_buffer"
+  # redraw_playfield
   printf "$screen_buffer"
 
   return
@@ -345,16 +436,18 @@ controller() {
 }
 
 stty_g=`stty -g` # let's save terminal state
+
+# output of ticker and reader is joined and piped into controller
 (
-  ticker
+  ticker & # ticker runs as separate process
+  reader
 )|(
   controller
 )
 
 sleep 50
-# wait
+wait
 
 echo # add new line
 show_cursor
 stty "$stty_g" # let's restore terminal state
-
