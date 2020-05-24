@@ -85,6 +85,11 @@ PLAYFIELD_X=30
 PLAYFIELD_Y=2
 BORDER_COLOR=$WHITE
 
+# Location and color of score information
+SCORE_X=1
+SCORE_Y=10
+SCORE_COLOR=$GREEN
+
 no_color=false   # do we use color or not
 showtime=true    # controller runs while this flag is true
 empty_cell=" ."  # how we draw empty cell
@@ -169,6 +174,10 @@ redraw_playfield() {
     done
     y=$((y + 1))
   done
+}
+
+update_score() {
+  :
 }
 
 # this array holds all possible pieces that can be used in the game
@@ -359,22 +368,59 @@ init() {
 ticker() {
   # on SIGUSR2 this process should exit
   trap exit USR2
+  # on SIGUSR1 fall speed should be increased, this happens during level ups
+  trap 'level=$((level + 1))' USR1
 
-  while true ; do printf $DOWN; sleep $DELAY; done
+  # the game level, which SIGUSR1 counts up.
+  level=1
+
+  while true ; do 
+    printf $DOWN
+    eval sleep \"\$FALL_SPEED_LEVEL_$level\"
+  done
 }
 
 # this function processes keyboard input
 reader() {
   trap exit USR2 # this process exits on SIGUSR2
   trap '' USR1   # SIGUSR1 is ignored
-  local key a='' b='' cmd
+  local key a='' b='' cmd esc_ch='1b'
 
-  while : ;do
-    key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null)
-    
-    echo $key
+  stty -echo # disable terminal local echo (echoback)
+  while true ;do
+    # read one key, and convert to hex value
+    key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null | od -An -tx1)
+    cmd=''
+    # echo "$a$b$key" # For debugging to check the input sequence.
+    case "$a$b$key" in
+      *"$esc_ch $esc_ch") # 2 escapes
+        cmd=$QUIT
+        ;;
+      *"$esc_ch 5b 41")   # 'up-cursor'
+        cmd=$ROTATE
+        ;;
+      *"$esc_ch 5b 42")   # 'down-cursor'
+        cmd=$DOWN
+        ;;
+      *"$esc_ch 5b 43")   # 'right-cursor'
+        cmd=$RIGHT
+        ;;
+      *"$esc_ch 5b 44")   # 'left-cursor'
+        cmd=$LEFT
+        ;;
+      *'20')              # ' '
+        cmd=$DROP
+        ;;
+      *'43')              # 'c'
+        cmd=$HOLD
+        ;;
+      *'71')              # 'q'
+        cmd=$QUIT
+        ;;
+    esac
     a=$b   # preserve previous keys
     b=$key
+    [ -n "$cmd" ] && echo "$cmd" # if not empty string
   done
 }
 
@@ -454,8 +500,8 @@ stty_g=`stty -g` # let's save terminal state
 
 # output of ticker and reader is joined and piped into controller
 (
-  ticker & # ticker runs as separate process
   reader
+  ticker & # ticker runs as separate process
 )|(
   controller
 )
