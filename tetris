@@ -155,14 +155,16 @@ set_bold() {
 redraw_playfield() {
   local x y xp yp field_cell
 
-  x=0; y=0
-  xp=PLAYFIELD_X
+  y=0
+  xp=$PLAYFIELD_X # don't need to set xp every cell, need on front of the line.
   while [ "$y" -lt "$PLAYFIELD_H" ]; do
     yp=$((y + PLAYFIELD_Y))
-    xyprint $xp $yp ""
+    xyprint $xp $yp '' # put the cursor on the front of line
+    x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      field_cell=`eval echo \\"\\$play_field_$y$x\\"`
-      if [ "$field_cell" == -1 ]; then
+      field_cell=$(eval echo \"\$play_field_$y$x\")
+      
+      if [ "$field_cell" -eq -1 ]; then
         puts "$empty_cell"
       else
         set_fg "$field_cell"
@@ -187,60 +189,60 @@ update_score() {
 # <COLOR><NORTH><EAST><SOURTH><WEST>
 
 # O-Tetrimino
-piece_0_color="$YELLOW"
-piece_0_start_x=3; piece_0_start_y=-2
-piece_0_minos_0="1 0 2 0 1 1 2 1"
-piece_0_minos_1="1 0 2 0 1 1 2 1"
-piece_0_minos_2="1 0 2 0 1 1 2 1"
-piece_0_minos_3="1 0 2 0 1 1 2 1"
+eval piece_"$O_TETORIMINO"_color=\"$YELLOW\"
+eval piece_"$O_TETORIMINO"_start=\'3 -2\'
+eval piece_"$O_TETORIMINO"_minos_"$NORTH"=\'1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETORIMINO"_minos_"$EAST"=\'1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETORIMINO"_minos_"$SOUTH"=\'1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETORIMINO"_minos_"$WEST"=\'1 0 2 0 1 1 2 1\'
 
 # I-Tetorimino
-piece_1_color="$CYAN"
-piece_1_start_x=3; piece_1_start_y=-2
-piece_1_minos_0="0 1 1 1 2 1 3 1"
-piece_1_minos_1="2 0 2 1 2 2 2 3"
-piece_1_minos_2="0 2 1 2 2 2 3 2"
-piece_1_minos_3="1 0 1 1 1 2 1 3"
+eval piece_"$I_TETORIMINO"_color=\"$CYAN\"
+eval piece_"$I_TETORIMINO"_start=\'3 -1\'
+eval piece_"$I_TETORIMINO"_minos_"$NORTH"=\'0 1 1 1 2 1 3 1\'
+eval piece_"$I_TETORIMINO"_minos_"$EAST"=\'2 0 2 1 2 2 2 3\'
+eval piece_"$I_TETORIMINO"_minos_"$SOUTH"=\'0 2 1 2 2 2 3 2\'
+eval piece_"$I_TETORIMINO"_minos_"$WEST"=\'1 0 1 1 1 2 1 3\'
 
 # T-Tetorimino
-piece_2_color="$MAGENTA"
-piece_2_start_x=3; piece_2_start_y=-2
-piece_2_minos_0="1 0 0 1 1 1 2 1"
-piece_2_minos_1="1 0 1 1 2 1 1 2"
-piece_2_minos_2="0 1 1 1 2 1 1 2"
-piece_2_minos_3="1 0 0 1 1 1 1 2"
+eval piece_"$T_TETORIMINO"_color=\"$MAGENTA\"
+eval piece_"$T_TETORIMINO"_start=\'3 -2\'
+eval piece_"$T_TETORIMINO"_minos_"$NORTH"=\'1 0 0 1 1 1 2 1\'
+eval piece_"$T_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 1 2\'
+eval piece_"$T_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 1 2\'
+eval piece_"$T_TETORIMINO"_minos_"$WEST"=\'1 0 0 1 1 1 1 2\'
 
 # L-Tetorimino
-piece_3_color="$ORANGE"
-piece_3_start_x=3; piece_3_start_y=-2
-piece_3_minos_0="2 0 0 1 1 1 2 1"
-piece_3_minos_1="1 0 1 1 1 2 2 2"
-piece_3_minos_2="0 1 1 1 2 1 0 2"
-piece_3_minos_3="0 0 1 0 1 1 1 2"
+eval piece_"$L_TETORIMINO"_color=\"$ORANGE\"
+eval piece_"$L_TETORIMINO"_start=\'3 -2\'
+eval piece_"$L_TETORIMINO"_minos_"$NORTH"=\'2 0 0 1 1 1 2 1\'
+eval piece_"$L_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 1 2 2 2\'
+eval piece_"$L_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 0 2\'
+eval piece_"$L_TETORIMINO"_minos_"$WEST"=\'0 0 1 0 1 1 1 2\'
 
 # J-Tetorimino
-piece_4_color="$BLUE"
-piece_4_start_x=3; piece_4_start_y=-2
-piece_4_minos_0="0 0 0 1 1 1 2 1"
-piece_4_minos_1="1 0 2 0 1 1 1 2"
-piece_4_minos_2="0 1 1 1 2 1 2 2"
-piece_4_minos_3="1 0 1 1 0 2 1 2"
+eval piece_"$J_TETORIMINO"_color=\"$BLUE\"
+eval piece_"$J_TETORIMINO"_start=\'3 -2\'
+eval piece_"$J_TETORIMINO"_minos_"$NORTH"=\'0 0 0 1 1 1 2 1\'
+eval piece_"$J_TETORIMINO"_minos_"$EAST"=\'1 0 2 0 1 1 1 2\'
+eval piece_"$J_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 2 2\'
+eval piece_"$J_TETORIMINO"_minos_"$WEST"=\'1 0 1 1 0 2 1 2\'
 
 # S-Tetorimino
-piece_5_color="$GREEN"
-piece_5_start_x=3; piece_5_start_y=-2
-piece_5_minos_0="1 0 2 0 0 1 1 1"
-piece_5_minos_1="1 0 1 1 2 1 2 2"
-piece_5_minos_2="1 1 2 1 0 2 1 2"
-piece_5_minos_3="0 0 0 1 1 1 1 2"
+eval piece_"$S_TETORIMINO"_color=\"$GREEN\"
+eval piece_"$S_TETORIMINO"_start_x=\'3 -2\'
+eval piece_"$S_TETORIMINO"_minos_"$NORTH"=\'1 0 2 0 0 1 1 1\'
+eval piece_"$S_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 2 2\'
+eval piece_"$S_TETORIMINO"_minos_"$SOUTH"=\'1 1 2 1 0 2 1 2\'
+eval piece_"$S_TETORIMINO"_minos_"$WEST"=\'0 0 0 1 1 1 1 2\'
 
 # Z-Tetorimino
-piece_6_color="$RED"
-piece_6_start_x=3; piece_6_start_y=-2
-piece_6_minos_0="0 0 1 0 1 1 2 1"
-piece_6_minos_1="2 0 1 1 2 1 1 2"
-piece_6_minos_2="0 1 1 1 1 2 2 2"
-piece_6_minos_3="1 0 0 1 1 1 0 2"
+eval piece_"$Z_TETORIMINO"_color=\"$RED\"
+eval piece_"$Z_TETORIMINO"_start_x=\'3 -2\'
+eval piece_"$Z_TETORIMINO"_minos_"$NORTH"=\"0 0 1 0 1 1 2 1\"
+eval piece_"$Z_TETORIMINO"_minos_"$EAST"=\"2 0 1 1 2 1 1 2\"
+eval piece_"$Z_TETORIMINO"_minos_"$SOUTH"=\"0 1 1 1 1 2 2 2\"
+eval piece_"$Z_TETORIMINO"_minos_"$WEST"=\"1 0 0 1 1 1 0 2\"
 
 put_piece() {
   # Arguments:
@@ -349,8 +351,9 @@ init() {
   local x y
 
   # playfield is initialized with -1s (empty cells)
-  x=0; y=0
+  y=0
   while [ "$y" -lt "$PLAYFIELD_H" ]; do
+    x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
       eval play_field_$y$x=-1
       x=$((x + 1))
@@ -475,18 +478,22 @@ cmd_quit() {
 controller() {
   # SIGUSR1 and SIGUSR2 are ignored
   trap '' USR1 USR2
+  local cmd commands
+
+  # initialization of commands array with appropriate functions
+
   
   init
-  # set_fg $ORANGE
-  # set_bg $ORANGE
-  # put_piece 5 1 2 2 "$filled_cell"
-  # reset_colors
+  set_fg $ORANGE
+  set_bg $ORANGE
+  put_piece 5 1 2 2 "$filled_cell"
+  reset_colors
   
-  # draw_border
-  # redraw_playfield
-  # printf "$screen_buffer"
+  draw_border
+  redraw_playfield
+  printf "$screen_buffer"
 
-  # return
+  return
   while $showtime; do # run while showtime variable is true, it is changed to false in cmd_quit function
     echo "$screen_buffer"
     screen_buffer=""
