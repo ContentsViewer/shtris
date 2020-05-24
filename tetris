@@ -90,7 +90,15 @@ SCORE_X=1
 SCORE_Y=10
 SCORE_COLOR=$GREEN
 
-no_color=false   # do we use color or not
+# Next piece location
+NEXT_X=14
+NEXT_Y=11
+
+# Location of 'game over' in the end of the game
+GAMEOVER_X=$((PLAYFIELD_X + PLAYFIELD_W / 2))
+GAMEOVER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
+
+no_color=true    # do we use color or not
 showtime=true    # controller runs while this flag is true
 empty_cell=" ."  # how we draw empty cell
 filled_cell="[]" # how we draw filled cell
@@ -106,6 +114,13 @@ bag=''
 
 score=0 # score variable initialization
 level=1 # level variable initialization
+
+current_tty=$(
+  ps -p $$ | tail -n 1 | (
+    set $(cat)
+    printf "$2"
+  )
+)
 
 # screen_buffer is variable, that accumulates all screen changes
 # this variable is printed in controller once per game cycle
@@ -244,7 +259,7 @@ eval piece_"$Z_TETORIMINO"_minos_"$EAST"=\"2 0 1 1 2 1 1 2\"
 eval piece_"$Z_TETORIMINO"_minos_"$SOUTH"=\"0 1 1 1 1 2 2 2\"
 eval piece_"$Z_TETORIMINO"_minos_"$WEST"=\"1 0 0 1 1 1 0 2\"
 
-put_piece() {
+draw_piece() {
   # Arguments:
   #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content
   
@@ -286,6 +301,18 @@ hold_tetorimino() {
 }
 
 get_next() {
+  :
+}
+
+draw_current() {
+  :
+}
+
+show_current() {
+  :
+}
+
+clear_current() {
   :
 }
 
@@ -347,6 +374,12 @@ draw_border() {
   reset_colors
 }
 
+toggle_color() {
+  $no_color && no_color=false || no_color=true
+  draw_border
+  redraw_playfield
+}
+
 init() {
   local x y
 
@@ -364,6 +397,7 @@ init() {
   screen_buffer=""
   clear
   hide_cursor
+  toggle_color
 }
 
 # this function runs in separate process
@@ -378,7 +412,7 @@ ticker() {
   level=1
 
   while true ; do 
-    printf $DOWN
+    echo $DOWN
     eval sleep \"\$FALL_SPEED_LEVEL_$level\"
   done
 }
@@ -414,7 +448,7 @@ reader() {
       *'20')              # ' '
         cmd=$DROP
         ;;
-      *'43')              # 'c'
+      *'63')              # 'c'
         cmd=$HOLD
         ;;
       *'71')              # 'q'
@@ -444,7 +478,8 @@ process_fallen_piece() {
 move_piece() {
   # arguments: 1 - new x coordinate, 2 - new y coordinate
   # moves the piece to the new locatio if possible
-  :
+  
+  return 1
 }
 
 cmd_right(){
@@ -472,7 +507,10 @@ cmd_hold() {
 }
 
 cmd_quit() {
-  :
+  showtime=false                               # let's stop controller ...
+  pkill -USR2 -t "$current_tty" ${0##*/}       # ... send SIGUSR2 to all script instances to stop forked process ...
+  xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
+  echo "$screen_buffer"                        # ... and print final message
 }
 
 controller() {
@@ -481,26 +519,31 @@ controller() {
   local cmd commands
 
   # initialization of commands array with appropriate functions
-
+  eval commands_$QUIT=cmd_quit
+  eval commands_$RIGHT=cmd_right
+  eval commands_$LEFT=cmd_left
+  eval commands_$ROTATE=cmd_rotate
+  eval commands_$DOWN=cmd_down
+  eval commands_$DROP=cmd_drop
+  eval commands_$HOLD=cmd_hold
   
   init
-  set_fg $ORANGE
-  set_bg $ORANGE
-  put_piece 5 1 2 2 "$filled_cell"
-  reset_colors
+  # set_fg $ORANGE
+  # set_bg $ORANGE
+  # put_piece 5 1 2 2 "$filled_cell"
+  # reset_colors
   
-  draw_border
-  redraw_playfield
-  printf "$screen_buffer"
+  # draw_border
+  # redraw_playfield
+  # printf "$screen_buffer"
+  # return
 
-  return
-  while $showtime; do # run while showtime variable is true, it is changed to false in cmd_quit function
-    echo "$screen_buffer"
-    screen_buffer=""
-    read cmd
-    echo "$cmd"
+  while $showtime; do               # run while showtime variable is true, it is changed to false in cmd_quit function
+    echo "$screen_buffer"           # output screen buffer ...
+    screen_buffer=""                # ... and reset it 
+    read cmd                        # read next command from stdout
+    eval eval \"\$commands_"$cmd"\" # run command
   done
-  
 }
 
 stty_g=`stty -g` # let's save terminal state
@@ -513,7 +556,7 @@ stty_g=`stty -g` # let's save terminal state
   controller
 )
 
-sleep 50
+sleep 1
 wait
 
 show_cursor
