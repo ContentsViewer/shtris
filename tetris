@@ -11,6 +11,8 @@
 # FreeBSD sh | o
 # BusyBox sh | o
 # Solaris sh | x
+# 
+# Author: IOE <fivetwothreesix@gmail.com>
 
 set -u # non initialized variable is an error
 
@@ -256,7 +258,12 @@ put_piece() {
 }
 
 fill_bag() {
-  :
+  bag=$(shuf -e $O_TETORIMINO $I_TETORIMINO $T_TETORIMINO $L_TETORIMINO $J_TETORIMINO $S_TETORIMINO $Z_TETORIMINO |
+  (
+    while read piece; do
+      printf "$piece"' '
+    done
+  ))
 }
 
 feed_next_queue() {
@@ -360,7 +367,15 @@ ticker() {
 reader() {
   trap exit USR2 # this process exits on SIGUSR2
   trap '' USR1   # SIGUSR1 is ignored
+  local key a='' b='' cmd
 
+  while : ;do
+    key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null)
+    
+    echo $key
+    a=$b   # preserve previous keys
+    b=$key
+  done
 }
 
 # this function updated occupied cells in play_field array after piece is dropped
@@ -416,21 +431,21 @@ controller() {
   trap '' USR1 USR2
   
   init
-
-  set_fg $ORANGE
-  set_bg $ORANGE
-  put_piece 5 1 2 2 "$filled_cell"
-  reset_colors
+  # set_fg $ORANGE
+  # set_bg $ORANGE
+  # put_piece 5 1 2 2 "$filled_cell"
+  # reset_colors
   
-  draw_border
+  # draw_border
   # redraw_playfield
-  printf "$screen_buffer"
+  # printf "$screen_buffer"
 
-  return
+  # return
   while $showtime; do # run while showtime variable is true, it is changed to false in cmd_quit function
-    printf "$screen_buffer"
+    echo "$screen_buffer"
     screen_buffer=""
-
+    read cmd
+    echo "$cmd"
   done
   
 }
@@ -448,6 +463,5 @@ stty_g=`stty -g` # let's save terminal state
 sleep 50
 wait
 
-echo # add new line
 show_cursor
 stty "$stty_g" # let's restore terminal state
