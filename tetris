@@ -125,7 +125,7 @@ current_tty=$(
 # screen_buffer is variable, that accumulates all screen changes
 # this variable is printed in controller once per game cycle
 puts() {
-  screen_buffer="$screen_buffer""${1}"
+  screen_buffer="$screen_buffer""$1"
 }
 
 # move cursor to (x,y) and print string
@@ -145,15 +145,15 @@ hide_cursor() {
 # foreground color
 set_fg() {
   $no_color && return
-  # puts "\033[3${1}m"
   puts "\033[38;5;${1}m"
+  # puts "\033[3${1}m"
 }
 
 # background color
 set_bg() {
   $no_color && return
-  # puts "\033[4${1}m"
   puts "\033[48;5;${1}m"
+  # puts "\033[4${1}m"
 }
 
 reset_colors() {
@@ -270,7 +270,7 @@ draw_piece() {
   shift $#
 
   # set minos coordinates.
-  set `eval echo \\"\\$piece_"$type"_minos_"$rotation"\\"`
+  set $(eval echo \"\$piece_"$type"_minos_"$rotation"\")
 
   # loop through tetorimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
@@ -305,15 +305,22 @@ get_next() {
 }
 
 draw_current() {
-  :
+  # Arguments: 1 - string to draw single cell
+  # factor 2 for x because each cell is 2 characters wide
+  draw_piece $((current_piece_x * 2 + PLAYFIELD_X)) $((current_piece_y + PLAYFIELD_Y)) $current_piece $current_piece_rotation "$1"
 }
 
 show_current() {
-  :
+  local color
+  eval color=\"\$piece_"$current_piece"_color\"
+  set_fg "$color"
+  set_bg "$color"
+  draw_current "$filled_cell"
+  reset_colors
 }
 
 clear_current() {
-  :
+  draw_current "$empty_cell"
 }
 
 new_piece_location_ok() {
@@ -325,7 +332,7 @@ new_piece_location_ok() {
 
   # set minos coordinates in parameters
   # $1 - x, $2 - y
-  set `eval echo \\"\\$piece_"$current_tetorimino"_minos_"$current_rotation"\\"`
+  set $(eval echo \"\$piece_"$current_piece"_minos_"$current_piece_rotation"\")
   lx=$1; ly=$2
   x=$((lx + x_test)) # new x coordinate of piece cell
   y=$((ly + y_test)) # new y coordinate of piece cell
@@ -530,6 +537,11 @@ controller() {
   init
   # set_fg $ORANGE
   # set_bg $ORANGE
+  current_piece="$O_TETORIMINO"
+  current_piece_rotation="$NORTH"
+  current_piece_x=0
+  current_piece_y=0
+  show_current
   # put_piece 5 1 2 2 "$filled_cell"
   # reset_colors
   
