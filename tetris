@@ -93,6 +93,7 @@ SCORE_COLOR=$GREEN
 # Next piece location
 NEXT_X=14
 NEXT_Y=11
+NEXT_MAX=7
 
 # Location of 'game over' in the end of the game
 GAMEOVER_X=$((PLAYFIELD_X + PLAYFIELD_W / 2))
@@ -297,13 +298,15 @@ feed_next_queue() {
   local poped
 
   [ -z "$bag" ] && fill_bag       # if bag is empty, then fill the bag.
-  set $(eval echo "$bag")
+  set $(echo "$bag")
   poped="$1"; shift; bag="$*"     # pop the tetorimino
   next_queue="$next_queue $poped" # place tetorimino at the end of the Next Queue
 }
 
 get_next() {
+  local poped
   set "$next_queue"
+
   current_piece_rotation="$NORTH"
 }
 
@@ -402,7 +405,7 @@ toggle_color() {
 }
 
 init() {
-  local x y
+  local x y i
 
   # playfield is initialized with -1s (empty cells)
   y=0
@@ -415,7 +418,14 @@ init() {
     y=$((y + 1))
   done
 
-  screen_buffer=""
+  # prepare next queue filled with NEXT_MAX tetorimino 
+  i=0
+  while [ "$i" -lt "$NEXT_MAX" ]; do
+    feed_next_queue
+    i=$((i + 1))
+  done
+
+  screen_buffer=''
   clear
   hide_cursor
   toggle_color
@@ -562,19 +572,6 @@ controller() {
   eval commands_$HOLD=cmd_hold
   
   init
-
-  feed_next_queue
-  feed_next_queue
-  feed_next_queue
-  feed_next_queue
-  feed_next_queue
-  feed_next_queue
-  feed_next_queue
-  feed_next_queue
-
-  echo 'OK'
-  echo "$bag"
-  echo "$next_queue"
   exit
   # set_fg $ORANGE
   # set_bg $ORANGE
