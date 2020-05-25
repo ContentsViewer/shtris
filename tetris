@@ -100,8 +100,8 @@ GAMEOVER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
 
 no_color=true    # do we use color or not
 showtime=true    # controller runs while this flag is true
-empty_cell=" ."  # how we draw empty cell
-filled_cell="[]" # how we draw filled cell
+empty_cell=' .'  # how we draw empty cell
+filled_cell='[]' # how we draw filled cell
 
 # the queue of the next tetoriminos to be placed.
 # the reference says the next six tetrimonos should be shown.
@@ -292,15 +292,22 @@ fill_bag() {
   ))
 }
 
+#  the Tetrimino at the front of the line in the bag is placed at the end of the Next Queue
 feed_next_queue() {
-  :
-}
+  local poped
 
-hold_tetorimino() {
-  :
+  [ -z "$bag" ] && fill_bag       # if bag is empty, then fill the bag.
+  set $(eval echo "$bag")
+  poped="$1"; shift; bag="$*"     # pop the tetorimino
+  next_queue="$next_queue $poped" # place tetorimino at the end of the Next Queue
 }
 
 get_next() {
+  set "$next_queue"
+  current_piece_rotation="$NORTH"
+}
+
+hold_tetorimino() {
   :
 }
 
@@ -328,23 +335,30 @@ new_piece_location_ok() {
   # test if piece can be moved to new location
 
   local x_test y_test x y lx ly field_cell
-  x_test=${1}; y_test=${2}
+
+  x_test="$1"; y_test="$2" # at first, we should preserve the parameters ...
+  shift $#                 # .. and we shift all.
 
   # set minos coordinates in parameters
   # $1 - x, $2 - y
   set $(eval echo \"\$piece_"$current_piece"_minos_"$current_piece_rotation"\")
-  lx=$1; ly=$2
-  x=$((lx + x_test)) # new x coordinate of piece cell
-  y=$((ly + y_test)) # new y coordinate of piece cell
+  
+  # loop through tetorimino minos: 4 minos, each has 2 coordinates
+  while [ $# -gt 0 ]; do
+    lx="$1"; ly="$2"
+    x=$((lx + x_test)) # new x coordinate of piece cell
+    y=$((ly + y_test)) # new y coordinate of piece cell
 
-  [ "$y" -lt 0 ]              || 
-  [ "$y" -ge "$PLAYFIELD_H" ] || 
-  [ "$x" -lt 0 ]              || 
-  [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
+    [ "$y" -lt 0 ]              || 
+    [ "$y" -ge "$PLAYFIELD_H" ] || 
+    [ "$x" -lt 0 ]              || 
+    [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
 
-  field_cell=`eval echo \\"\\$play_field_$y$x\\"`
-  [ "$field_cell" != -1 ] && return 1 # false; check if location is already occupied
-
+    field_cell=$(eval echo \"\$play_field_$y$x\")
+    [ "$field_cell" != -1 ] && return 1     # false; check if location is already occupied
+    
+    shift 2 # shift to next minos coordinates
+  done
   return 0
 
 }
@@ -479,22 +493,35 @@ process_complete_lines() {
 }
 
 process_fallen_piece() {
-  :
+  flatten_playfield
+  process_complete_lines && return
+  update_score $?
+  redraw_playfield
 }
 
 move_piece() {
   # arguments: 1 - new x coordinate, 2 - new y coordinate
   # moves the piece to the new locatio if possible
-  
+
+  if new_piece_location_ok "$1" "$2"; then    # if new location is ok
+    clear_current                             # let's wipe out piece current location
+    current_piece_x="$1"                      # update x ...
+    current_piece_y="$2"                      # ... and y of new location
+    show_current                              # and draw piece in new location
+    return 0                                  # nothing more to do here
+  fi                                          # if we could not move piece to new location
+  [ "$2" -eq "$current_piece_y" ] && return 0 # and this was not horizontal move
+  process_fallen_piece                        # let's finalize this piece
+  get_next                                    # and start the new one
   return 1
 }
 
 cmd_right(){
-  :
+  move_piece $((current_piece_x + 1)) "$current_piece_y"
 }
 
 cmd_left() {
-  :
+  move_piece $((current_piece_x - 1)) "$current_piece_y"
 }
 
 cmd_rotate() {
@@ -502,7 +529,7 @@ cmd_rotate() {
 }
 
 cmd_down() {
-  :
+  move_piece "$current_piece_x" $((current_piece_y + 1))
 }
 
 cmd_drop() {
@@ -535,6 +562,20 @@ controller() {
   eval commands_$HOLD=cmd_hold
   
   init
+
+  feed_next_queue
+  feed_next_queue
+  feed_next_queue
+  feed_next_queue
+  feed_next_queue
+  feed_next_queue
+  feed_next_queue
+  feed_next_queue
+
+  echo 'OK'
+  echo "$bag"
+  echo "$next_queue"
+  exit
   # set_fg $ORANGE
   # set_bg $ORANGE
   current_piece="$O_TETORIMINO"
@@ -562,8 +603,8 @@ stty_g=`stty -g` # let's save terminal state
 
 # output of ticker and reader is joined and piped into controller
 (
-  reader
   ticker & # ticker runs as separate process
+  reader
 )|(
   controller
 )
