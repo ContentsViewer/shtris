@@ -32,6 +32,7 @@ ROTATE=3
 DOWN=4
 DROP=5
 HOLD=6
+TOGGLE_COLOR=7
 
 # The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line. 
 # The current level of the game determines the normal Fall Speed using the following equation:
@@ -246,7 +247,7 @@ eval piece_"$J_TETORIMINO"_minos_"$WEST"=\'1 0 1 1 0 2 1 2\'
 
 # S-Tetorimino
 eval piece_"$S_TETORIMINO"_color=\"$GREEN\"
-eval piece_"$S_TETORIMINO"_start_x=\'3 -2\'
+eval piece_"$S_TETORIMINO"_start=\'3 -2\'
 eval piece_"$S_TETORIMINO"_minos_"$NORTH"=\'1 0 2 0 0 1 1 1\'
 eval piece_"$S_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 2 2\'
 eval piece_"$S_TETORIMINO"_minos_"$SOUTH"=\'1 1 2 1 0 2 1 2\'
@@ -254,7 +255,7 @@ eval piece_"$S_TETORIMINO"_minos_"$WEST"=\'0 0 0 1 1 1 1 2\'
 
 # Z-Tetorimino
 eval piece_"$Z_TETORIMINO"_color=\"$RED\"
-eval piece_"$Z_TETORIMINO"_start_x=\'3 -2\'
+eval piece_"$Z_TETORIMINO"_start=\'3 -2\'
 eval piece_"$Z_TETORIMINO"_minos_"$NORTH"=\"0 0 1 0 1 1 2 1\"
 eval piece_"$Z_TETORIMINO"_minos_"$EAST"=\"2 0 1 1 2 1 1 2\"
 eval piece_"$Z_TETORIMINO"_minos_"$SOUTH"=\"0 1 1 1 1 2 2 2\"
@@ -304,10 +305,27 @@ feed_next_queue() {
 }
 
 get_next() {
-  local poped
-  set "$next_queue"
+  local next_piece
 
+  set $(echo "$next_queue")
+  next_piece="$1"; shift; next_queue="$*" # pop the next piece from the front of queue
+  feed_next_queue                         # push tetorimino into queue; keep queue size
+
+  #next piece becomes current
+  current_piece="$next_piece"
   current_piece_rotation="$NORTH"
+
+  # place current according to $piece_type_start
+  shift "$#"
+  set $(eval echo \"\$piece_"$current_piece"_start\")
+  current_piece_x="$1"
+  current_piece_y="$2"
+
+  # check if piece can be placed at this location, if not - game over
+  new_piece_location_ok $current_piece_x $current_piece_y || cmd_quit
+  show_current
+
+
 }
 
 hold_tetorimino() {
@@ -352,13 +370,14 @@ new_piece_location_ok() {
     x=$((lx + x_test)) # new x coordinate of piece cell
     y=$((ly + y_test)) # new y coordinate of piece cell
 
-    [ "$y" -lt 0 ]              || 
     [ "$y" -ge "$PLAYFIELD_H" ] || 
     [ "$x" -lt 0 ]              || 
     [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
 
-    field_cell=$(eval echo \"\$play_field_$y$x\")
-    [ "$field_cell" != -1 ] && return 1     # false; check if location is already occupied
+    [ "$y" -lt 0 ] || {
+      field_cell=$(eval echo \"\$play_field_$y$x\")
+      [ "$field_cell" != -1 ] && return 1   # false; check if location is already occupied
+    }
     
     shift 2 # shift to next minos coordinates
   done
@@ -402,6 +421,9 @@ toggle_color() {
   $no_color && no_color=false || no_color=true
   draw_border
   redraw_playfield
+  draw_border
+  redraw_playfield
+  show_current
 }
 
 init() {
@@ -428,6 +450,7 @@ init() {
   screen_buffer=''
   clear
   hide_cursor
+  get_next
   toggle_color
 }
 
@@ -482,7 +505,10 @@ reader() {
       *'63')              # 'c'
         cmd=$HOLD
         ;;
-      *'71')              # 'q'
+      *'43')              # 'C'
+        cmd=$TOGGLE_COLOR
+        ;;
+      *'51')              # 'Q'
         cmd=$QUIT
         ;;
     esac
@@ -563,23 +589,23 @@ controller() {
   local cmd commands
 
   # initialization of commands array with appropriate functions
-  eval commands_$QUIT=cmd_quit
-  eval commands_$RIGHT=cmd_right
-  eval commands_$LEFT=cmd_left
-  eval commands_$ROTATE=cmd_rotate
-  eval commands_$DOWN=cmd_down
-  eval commands_$DROP=cmd_drop
-  eval commands_$HOLD=cmd_hold
+  eval commands_"$QUIT"=cmd_quit
+  eval commands_"$RIGHT"=cmd_right
+  eval commands_"$LEFT"=cmd_left
+  eval commands_"$ROTATE"=cmd_rotate
+  eval commands_"$DOWN"=cmd_down
+  eval commands_"$DROP"=cmd_drop
+  eval commands_"$HOLD"=cmd_hold
+  eval commands_"$TOGGLE_COLOR"=toggle_color
   
   init
-  exit
   # set_fg $ORANGE
   # set_bg $ORANGE
-  current_piece="$O_TETORIMINO"
-  current_piece_rotation="$NORTH"
-  current_piece_x=0
-  current_piece_y=0
-  show_current
+  # current_piece="$O_TETORIMINO"
+  # current_piece_rotation="$NORTH"
+  # current_piece_x=0
+  # current_piece_y=0
+  # show_current
   # put_piece 5 1 2 2 "$filled_cell"
   # reset_colors
   
