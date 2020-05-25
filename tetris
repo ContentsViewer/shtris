@@ -8,11 +8,12 @@
 # This script is based on bash-tetris (Author: Kirill Timofeev <kt97679@gmail.com>)
 # Thank you!
 #
+# Linux   sh | o
 # FreeBSD sh | o
 # BusyBox sh | o
 # Solaris sh | x
 # 
-# Author: IOE <fivetwothreesix@gmail.com>
+# Author: IOE <Github: ContentsViewer>
 
 set -u # non initialized variable is an error
 
