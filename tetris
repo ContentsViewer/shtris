@@ -37,6 +37,7 @@ ROTATE_CCW=7
 HOLD=8
 TOGGLE_COLOR=9
 TOGGLE_HELP=10
+RELOAD_SCREEN=11
 
 # The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line. 
 # The current level of the game determines the normal Fall Speed using the following equation:
@@ -103,8 +104,8 @@ SCORE_FACTOR_SOFTDROP=1
 SCORE_FACTOR_HARDDROP=2
 
 # Location and color of help information
-HELP_X=58
-HELP_Y=11
+HELP_X=57
+HELP_Y=10
 HELP_COLOR=$YELLOW
 
 # Next piece location
@@ -181,9 +182,10 @@ z         Rotate Counter-Clockwise
 c         Hold
 ↓         Soft Drop
 Space     Hard Drop
-Q, ESCx2  Quit
+R         Reload Screen
 C         Toggle Color
 H         Toggle Help
+Q, ESCx2  Quit
 '
 help_on=1 # if this flag is 1 help is shown, if -1, hide
 
@@ -200,6 +202,8 @@ next_queue=''
 hold_queue=''
 
 bag=''
+
+already_hold=false
 
 score=0 # score variable initialization
 level=1 # level variable initialization
@@ -310,11 +314,8 @@ feed_next_queue() {
 get_next() {
   local next_piece
 
-  clear_next
-
   set $(echo "$next_queue")
-  next_piece="$1"; shift; next_queue="$*" # pop the next piece from the front of queue
-  feed_next_queue                         # push tetorimino into queue; keep queue size
+  next_piece="$1"; # peek the next piece
 
   #next piece becomes current
   current_piece="$next_piece"
@@ -326,13 +327,17 @@ get_next() {
 
   # check if piece can be placed at this location, if not - game over
   new_piece_location_ok $current_piece_x $current_piece_y || cmd_quit
-  show_current
 
+  show_current
+  clear_next
+  shift; next_queue="$*" # pop the next piece from the front of queue
+  feed_next_queue        # push tetorimino into queue; keep queue size
   show_next
 }
 
 hold_tetorimino() {
-  :
+  "$already_hold" && return
+
 }
 
 draw_piece() {
@@ -501,7 +506,7 @@ flatten_playfield() {
 
 # this function goes through playfield array and eliminates lines without empty cells
 process_complete_lines() {
-  local x y complete_lines=0 xi yi field_cell yi1
+  local x y complete_lines=0 yi field_cell yi1
 
   y=$(($PLAYFIELD_H - 1))
   while [ "$y" -ge 0 ]; do
@@ -518,11 +523,11 @@ process_complete_lines() {
     yi=$((y + 1))
     while [ "$yi" -le "$START_Y" ]; do
       yi1=$((yi - 1))
-      xi=$((PLAYFIELD_W - 1))
-      while [ "$xi" -ge 0 ]; do
-        field_cell=$(eval echo \"\$playfield_"$yi"_"$xi"\")
-        eval playfield_"$yi1"_"$xi"=\"$field_cell\"
-        xi=$((xi - 1))
+      x=$((PLAYFIELD_W - 1))
+      while [ "$x" -ge 0 ]; do
+        field_cell=$(eval echo \"\$playfield_"$yi"_"$x"\")
+        eval playfield_"$yi1"_"$x"=\"$field_cell\"
+        x=$((x - 1))
       done
       yi=$((yi + 1))
     done
@@ -611,6 +616,12 @@ draw_help() {
   reset_colors
 }
 
+reload_screen() {
+  clear
+  toggle_color
+  toggle_color
+}
+
 toggle_help() {
   local show=false
   help_on=$((-help_on))
@@ -664,9 +675,10 @@ cmd_hold() {
 }
 
 cmd_quit() {
-  showtime=false                               # let's stop controller ...
-  pkill -USR2 -t "$current_tty" ${0##*/}       # ... send SIGUSR2 to all script instances to stop forked process ...
+  showtime=false                                      # let's stop controller ...
+  pkill -USR2 -t "$current_tty" ${0##*/}              # ... send SIGUSR2 to all script instances to stop forked process ...
   xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
+  xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H + 1)) '> Quit' # put message at bottom of playfield so that game screen will keep its shape. 
   echo "$screen_buffer"                        # ... and print final message
 }
 
@@ -760,6 +772,9 @@ reader() {
       *'43')              # 'C'
         cmd="$TOGGLE_COLOR"
         ;;
+      *'52')              # 'R'
+        cmd="$RELOAD_SCREEN"
+        ;;
       *'48')              # 'H'
         cmd="$TOGGLE_HELP"
         ;;
@@ -788,6 +803,7 @@ controller() {
   eval commands_"$SOFT_DROP"=cmd_soft_drop
   eval commands_"$HARD_DROP"=cmd_hard_drop
   eval commands_"$HOLD"=cmd_hold
+  eval commands_"$RELOAD_SCREEN"=reload_screen
   eval commands_"$TOGGLE_COLOR"=toggle_color
   eval commands_"$TOGGLE_HELP"=toggle_help
 
