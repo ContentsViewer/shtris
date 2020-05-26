@@ -85,7 +85,7 @@ WEST=3
 # Location and size of playfield, color and border
 PLAYFIELD_W=10
 PLAYFIELD_H=20
-PLAYFIELD_X=30
+PLAYFIELD_X=20
 PLAYFIELD_Y=2
 BORDER_COLOR=$WHITE
 
@@ -102,8 +102,8 @@ SCORE_FACTOR_SOFTDROP=1
 SCORE_FACTOR_HARDDROP=2
 
 # Next piece location
-NEXT_X=14
-NEXT_Y=11
+NEXT_X=43
+NEXT_Y=2
 NEXT_MAX=7
 
 # Location of 'game over' in the end of the game
@@ -112,7 +112,7 @@ GAMEOVER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
 
 # piece starting location
 START_X=3
-START_Y=22
+START_Y=21
 
 # this array holds all possible pieces that can be used in the game
 # each piece consists of 4 cells(minos)
@@ -290,6 +290,8 @@ feed_next_queue() {
 get_next() {
   local next_piece
 
+  clear_next
+
   set $(echo "$next_queue")
   next_piece="$1"; shift; next_queue="$*" # pop the next piece from the front of queue
   feed_next_queue                         # push tetorimino into queue; keep queue size
@@ -306,7 +308,7 @@ get_next() {
   new_piece_location_ok $current_piece_x $current_piece_y || cmd_quit
   show_current
 
-
+  show_next
 }
 
 hold_tetorimino() {
@@ -317,10 +319,10 @@ draw_piece() {
   # Arguments:
   #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content, 6 - mask with playfield
   
-  local posx posy type rotation content lx ly x y masked
+  local posx posy type rotation content lx ly x y mask
 
   # at first, we should save arguments.
-  posx="$1"; posy="$2"; type="$3"; rotation="$4"; content="$5"; masked="${6:-false}"
+  posx="$1"; posy="$2"; type="$3"; rotation="$4"; content="$5"; mask="${6:-false}"
   shift $#
 
   # set minos coordinates.
@@ -333,12 +335,13 @@ draw_piece() {
     x=$((posx + lx * 2)) # the width of cell is 2 characters thick
     y=$((posy + ly))
 
-    $masked                                     &&
-    [ "$y" -ge "$PLAYFIELD_Y" ]                 &&
-    [ "$y" -lt $((PLAYFIELD_Y + PLAYFIELD_H)) ] &&
-    [ "$x" -ge "$PLAYFIELD_X" ]                 &&
+    "$mask"                                         &&
+    [ "$y" -ge "$PLAYFIELD_Y" ]                     &&
+    [ "$y" -lt $((PLAYFIELD_Y + PLAYFIELD_H)) ]     &&
+    [ "$x" -ge "$PLAYFIELD_X" ]                     &&
     [ "$x" -lt $((PLAYFIELD_X + PLAYFIELD_W * 2)) ] && xyprint $x $y "$content" # draw mino within playfield
-    
+    "$mask"                                         || xyprint $x $y "$content"
+
     shift 2
   done
 }
@@ -360,6 +363,36 @@ show_current() {
 
 clear_current() {
   draw_current "$empty_cell"
+}
+
+draw_next() {
+  # Arguments: 1 - if show, set true.
+  local color show x y content
+
+  x="$NEXT_X"; y="$NEXT_Y"; show="$1"
+  shift $#
+  set $(echo "$next_queue")
+  while [ $# -gt 0 ]; do
+    content='  '
+    "$show" && {
+      eval color=\"\$piece_"$1"_color\"
+      set_fg "$color"
+      set_bg "$color"
+      content="$filled_cell"
+    }
+    draw_piece "$x" "$y" "$1" "$NORTH" "$content"
+    "$show" && reset_colors
+    shift
+    y=$((y + 3))
+  done
+}
+
+show_next() {
+  draw_next true
+}
+
+clear_next() {
+  draw_next false
 }
 
 new_piece_location_ok() {
@@ -425,14 +458,6 @@ draw_border() {
   reset_colors
 }
 
-toggle_color() {
-  $no_color && no_color=false || no_color=true
-  draw_border
-  redraw_playfield
-  draw_border
-  redraw_playfield
-  show_current
-}
 
 # this function updated occupied cells in playfield array after piece is dropped
 flatten_playfield() {
@@ -456,7 +481,43 @@ flatten_playfield() {
 
 # this function goes through playfield array and eliminates lines without empty cells
 process_complete_lines() {
-  :
+  local x y complete_lines=0 xi yi field_cell yi1
+
+  y=$(($PLAYFIELD_H - 1))
+  while [ "$y" -ge 0 ]; do
+    x=$((PLAYFIELD_W - 1))
+    while [ "$x" -ge 0 ]; do
+      field_cell=$(eval echo \"\$playfield_"$y"_"$x"\")
+      [ "$field_cell" -eq -1 ] && break # empty cell found
+      x=$((x - 1))
+    done
+    [ "$x" -ge 0 ] && { y=$((y - 1)); continue; } # previous loop was interrupted because empty cell was found
+    complete_lines=$((complete_lines + 1))
+
+    # move lines down
+    yi=$((y + 1))
+    while [ "$yi" -le "$START_Y" ]; do
+      yi1=$((yi - 1))
+      xi=$((PLAYFIELD_W - 1))
+      while [ "$xi" -ge 0 ]; do
+        field_cell=$(eval echo \"\$playfield_"$yi"_"$xi"\")
+        eval playfield_"$yi1"_"$xi"=\"$field_cell\"
+        xi=$((xi - 1))
+      done
+      yi=$((yi + 1))
+    done
+
+    # mark cells at top of the playfield as free
+    x=$((PLAYFIELD_W - 1))
+    while [ "$x" -ge 0 ]; do
+      eval playfield_"$START_Y"_"$x"=-1
+      x=$((x - 1))
+    done
+
+    y=$((y - 1))
+  done
+
+  return "$complete_lines"
 }
 
 process_fallen_piece() {
@@ -499,6 +560,16 @@ rotate_piece() {
   else                                                             # if new orientation is not ok
     current_piece_rotation=$old_rotation                           # restore old orientation
   fi
+}
+
+toggle_color() {
+  $no_color && no_color=false || no_color=true
+  show_next
+  draw_border
+  redraw_playfield
+  draw_border
+  redraw_playfield
+  show_current
 }
 
 cmd_right(){
