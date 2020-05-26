@@ -434,106 +434,6 @@ toggle_color() {
   show_current
 }
 
-init() {
-  local x y i
-
-  # playfield is initialized with -1s (empty cells)
-  # x of playfield - 0, ..., (PLAYFIELD_W-1)
-  # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y)
-  y=0
-  while [ "$y" -le "$START_Y" ]; do
-    x=0
-    while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      eval playfield_"$y"_"$x"=-1
-      x=$((x + 1))
-    done
-    y=$((y + 1))
-  done
-
-  # prepare next queue filled with NEXT_MAX tetorimino 
-  i=0
-  while [ "$i" -lt "$NEXT_MAX" ]; do
-    feed_next_queue
-    i=$((i + 1))
-  done
-
-  screen_buffer=''
-  clear
-  hide_cursor
-  get_next
-  toggle_color
-}
-
-# this function runs in separate process
-# it sends DOWN commands to controller with appropriate delay
-ticker() {
-  # on SIGUSR2 this process should exit
-  trap exit USR2
-  # on SIGUSR1 fall speed should be increased, this happens during level ups
-  trap 'level=$((level + 1))' USR1
-
-  # the game level, which SIGUSR1 counts up.
-  level=1
-
-  while true ; do 
-    echo $FALL
-    eval sleep \"\$FALL_SPEED_LEVEL_$level\"
-  done
-}
-
-# this function processes keyboard input
-reader() {
-  trap exit USR2 # this process exits on SIGUSR2
-  trap '' USR1   # SIGUSR1 is ignored
-  local key a='' b='' cmd esc_ch='1b'
-
-  stty -echo # disable terminal local echo (echoback)
-  while true ;do
-    # read one key, and convert to hex value
-    key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null | od -An -tx1)
-    cmd=''
-    # echo "$a$b$key" # For debugging to check the input sequence.
-    case "$a$b$key" in
-      *"$esc_ch $esc_ch") # 2 escapes
-        cmd=$QUIT
-        ;;
-      *"$esc_ch 5b 41")   # 'up-cursor'
-        cmd=$ROTATE_CW
-        ;;
-      *"$esc_ch 5b 42")   # 'down-cursor'
-        cmd=$SOFT_DROP
-        ;;
-      *"$esc_ch 5b 43")   # 'right-cursor'
-        cmd=$RIGHT
-        ;;
-      *"$esc_ch 5b 44")   # 'left-cursor'
-        cmd=$LEFT
-        ;;
-      *'20')              # ' '
-        cmd=$HARD_DROP
-        ;;
-      *'63')              # 'c'
-        cmd=$HOLD
-        ;;
-      *'78')              # 'x'
-        cmd=$ROTATE_CW
-        ;;
-      *'7a')              # 'z'
-        cmd=$ROTATE_CCW
-        ;;
-      *'43')              # 'C'
-        cmd=$TOGGLE_COLOR
-        ;;
-      *'51')              # 'Q'
-        cmd=$QUIT
-        ;;
-    esac
-    a=$b   # preserve previous keys
-    b=$key
-    [ -n "$cmd" ] && echo "$cmd" # if not empty string
-  done
-}
-
 # this function updated occupied cells in playfield array after piece is dropped
 flatten_playfield() {
   local color lx ly x y
@@ -641,6 +541,106 @@ cmd_quit() {
   pkill -USR2 -t "$current_tty" ${0##*/}       # ... send SIGUSR2 to all script instances to stop forked process ...
   xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
   echo "$screen_buffer"                        # ... and print final message
+}
+
+init() {
+  local x y i
+
+  # playfield is initialized with -1s (empty cells)
+  # x of playfield - 0, ..., (PLAYFIELD_W-1)
+  # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y)
+  y=0
+  while [ "$y" -le "$START_Y" ]; do
+    x=0
+    while [ "$x" -lt "$PLAYFIELD_W" ]; do
+      eval playfield_"$y"_"$x"=-1
+      x=$((x + 1))
+    done
+    y=$((y + 1))
+  done
+
+  # prepare next queue filled with NEXT_MAX tetorimino 
+  i=0
+  while [ "$i" -lt "$NEXT_MAX" ]; do
+    feed_next_queue
+    i=$((i + 1))
+  done
+
+  screen_buffer=''
+  clear
+  hide_cursor
+  get_next
+  toggle_color
+}
+
+# this function runs in separate process
+# it sends DOWN commands to controller with appropriate delay
+ticker() {
+  # on SIGUSR2 this process should exit
+  trap exit USR2
+  # on SIGUSR1 fall speed should be increased, this happens during level ups
+  trap 'level=$((level + 1))' USR1
+
+  # the game level, which SIGUSR1 counts up.
+  level=1
+
+  while true ; do 
+    echo $FALL
+    eval sleep \"\$FALL_SPEED_LEVEL_$level\"
+  done
+}
+
+# this function processes keyboard input
+reader() {
+  trap exit USR2 # this process exits on SIGUSR2
+  trap '' USR1   # SIGUSR1 is ignored
+  local key a='' b='' cmd esc_ch='1b'
+
+  stty -echo # disable terminal local echo (echoback)
+  while true ;do
+    # read one key, and convert to hex value
+    key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null | od -An -tx1)
+    cmd=''
+    # echo "$a$b$key" # For debugging to check the input sequence.
+    case "$a$b$key" in
+      *"$esc_ch $esc_ch") # 2 escapes
+        cmd=$QUIT
+        ;;
+      *"$esc_ch 5b 41")   # 'up-cursor'
+        cmd=$ROTATE_CW
+        ;;
+      *"$esc_ch 5b 42")   # 'down-cursor'
+        cmd=$SOFT_DROP
+        ;;
+      *"$esc_ch 5b 43")   # 'right-cursor'
+        cmd=$RIGHT
+        ;;
+      *"$esc_ch 5b 44")   # 'left-cursor'
+        cmd=$LEFT
+        ;;
+      *'20')              # ' '
+        cmd=$HARD_DROP
+        ;;
+      *'63')              # 'c'
+        cmd=$HOLD
+        ;;
+      *'78')              # 'x'
+        cmd=$ROTATE_CW
+        ;;
+      *'7a')              # 'z'
+        cmd=$ROTATE_CCW
+        ;;
+      *'43')              # 'C'
+        cmd=$TOGGLE_COLOR
+        ;;
+      *'51')              # 'Q'
+        cmd=$QUIT
+        ;;
+    esac
+    a=$b   # preserve previous keys
+    b=$key
+    [ -n "$cmd" ] && echo "$cmd" # if not empty string
+  done
 }
 
 controller() {
