@@ -29,11 +29,13 @@ trap '' USR1 USR2
 QUIT=0
 RIGHT=1
 LEFT=2
-ROTATE=3
-DOWN=4
-DROP=5
-HOLD=6
-TOGGLE_COLOR=7
+FALL=3
+SOFT_DROP=4
+HARD_DROP=5
+ROTATE_CW=6
+ROTATE_CCW=7
+HOLD=8
+TOGGLE_COLOR=9
 
 # The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line. 
 # The current level of the game determines the normal Fall Speed using the following equation:
@@ -91,6 +93,13 @@ BORDER_COLOR=$WHITE
 SCORE_X=1
 SCORE_Y=10
 SCORE_COLOR=$GREEN
+
+SCORE_FACTOR_SINGLE=100
+SCORE_FACTOR_DOUBLE=300
+SCORE_FACTOR_TRIPLE=500
+SCORE_FACTOR_TETRIS=800
+SCORE_FACTOR_SOFTDROP=1
+SCORE_FACTOR_HARDDROP=2
 
 # Next piece location
 NEXT_X=14
@@ -361,7 +370,7 @@ new_piece_location_ok() {
   x_test="$1"; y_test="$2" # at first, we should preserve the parameters ...
   shift $#                 # .. and we shift all.
 
-  # set minos coordinates in parameters
+  # set minos coordinates into parameters
   # $1 - x, $2 - y
   set $(eval echo \"\$piece_"$current_piece"_minos_"$current_piece_rotation"\")
   
@@ -440,7 +449,7 @@ init() {
     done
     y=$((y + 1))
   done
-
+exit
   # prepare next queue filled with NEXT_MAX tetorimino 
   i=0
   while [ "$i" -lt "$NEXT_MAX" ]; do
@@ -467,7 +476,7 @@ ticker() {
   level=1
 
   while true ; do 
-    echo $DOWN
+    echo $FALL
     eval sleep \"\$FALL_SPEED_LEVEL_$level\"
   done
 }
@@ -489,10 +498,10 @@ reader() {
         cmd=$QUIT
         ;;
       *"$esc_ch 5b 41")   # 'up-cursor'
-        cmd=$ROTATE
+        cmd=$ROTATE_CW
         ;;
       *"$esc_ch 5b 42")   # 'down-cursor'
-        cmd=$DOWN
+        cmd=$SOFT_DROP
         ;;
       *"$esc_ch 5b 43")   # 'right-cursor'
         cmd=$RIGHT
@@ -501,10 +510,16 @@ reader() {
         cmd=$LEFT
         ;;
       *'20')              # ' '
-        cmd=$DROP
+        cmd=$HARD_DROP
         ;;
       *'63')              # 'c'
         cmd=$HOLD
+        ;;
+      *'78')              # 'x'
+        cmd=$ROTATE_CW
+        ;;
+      *'7a')              # 'z'
+        cmd=$ROTATE_CCW
         ;;
       *'43')              # 'C'
         cmd=$TOGGLE_COLOR
@@ -521,7 +536,22 @@ reader() {
 
 # this function updated occupied cells in play_field array after piece is dropped
 flatten_playfield() {
-  :
+  local color lx ly x y
+
+  eval color=\"\$piece_"$current_piece"_color\"
+
+  # set minos coordinates into parameters
+  # $1 - x, $2 - y
+  set $(eval echo \"\$piece_"$current_piece"_minos_"$current_piece_rotation"\")
+  
+  # loop through tetorimino minos: 4 minos, each has 2 coordinates
+  while [ $# -gt 0 ]; do
+    lx="$1"; ly="$2"
+    x=$((lx + current_piece_x))
+    y=$((ly + current_piece_y))
+    eval play_field_"$y$x"="$color"
+    shift 2 # shift to next minos coordinates
+  done
 }
 
 # this function goes through play_field array and eliminates lines without empty cells
@@ -553,6 +583,24 @@ move_piece() {
   return 1
 }
 
+rotate_piece() {
+  # arguments: 1 - rotation direction; 1: clockwise; -1: counter-clockwise
+  local direction="$1" old_rotation new_rotation
+  
+  old_rotation=$current_piece_rotation                             # preserve current orientation
+  new_rotation=$((old_rotation + direction + 4))
+  new_rotation=$((new_rotation % 4))                               # calculate new orientation
+  current_piece_rotation=$new_rotation                             # set orientation to new
+  if new_piece_location_ok $current_piece_x $current_piece_y; then # check if new orientation is ok
+    current_piece_rotation=$old_rotation                           # if yes - restore old rotation ...
+    clear_current                                                  # ... clear piece image 
+    current_piece_rotation=$new_rotation                           # ... set new orientation
+    show_current                                                   # ... draw piece with new orientation
+  else                                                             # if new orientation is not ok
+    current_piece_rotation=$old_rotation                           # restore old orientation
+  fi
+}
+
 cmd_right(){
   move_piece $((current_piece_x + 1)) "$current_piece_y"
 }
@@ -561,16 +609,27 @@ cmd_left() {
   move_piece $((current_piece_x - 1)) "$current_piece_y"
 }
 
-cmd_rotate() {
-  :
-}
-
-cmd_down() {
+cmd_fall() {
   move_piece "$current_piece_x" $((current_piece_y + 1))
 }
 
-cmd_drop() {
-  :
+cmd_soft_drop() {
+  move_piece "$current_piece_x" $((current_piece_y + 1))
+}
+
+cmd_hard_drop() {
+  # move piece all way down
+  while move_piece $current_piece_x $((current_piece_y + 1)); do
+    :
+  done
+}
+
+cmd_rotate_cw() {
+  rotate_piece 1
+}
+
+cmd_rotate_ccw() {
+  rotate_piece -1
 }
 
 cmd_hold() {
@@ -593,9 +652,11 @@ controller() {
   eval commands_"$QUIT"=cmd_quit
   eval commands_"$RIGHT"=cmd_right
   eval commands_"$LEFT"=cmd_left
-  eval commands_"$ROTATE"=cmd_rotate
-  eval commands_"$DOWN"=cmd_down
-  eval commands_"$DROP"=cmd_drop
+  eval commands_"$ROTATE_CW"=cmd_rotate_cw
+  eval commands_"$ROTATE_CCW"=cmd_rotate_ccw
+  eval commands_"$FALL"=cmd_fall
+  eval commands_"$SOFT_DROP"=cmd_soft_drop
+  eval commands_"$HARD_DROP"=cmd_hard_drop
   eval commands_"$HOLD"=cmd_hold
   eval commands_"$TOGGLE_COLOR"=toggle_color
   
