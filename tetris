@@ -36,6 +36,7 @@ ROTATE_CW=6
 ROTATE_CCW=7
 HOLD=8
 TOGGLE_COLOR=9
+TOGGLE_HELP=10
 
 # The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line. 
 # The current level of the game determines the normal Fall Speed using the following equation:
@@ -100,6 +101,11 @@ SCORE_FACTOR_TRIPLE=500
 SCORE_FACTOR_TETRIS=800
 SCORE_FACTOR_SOFTDROP=1
 SCORE_FACTOR_HARDDROP=2
+
+# Location and color of help information
+HELP_X=58
+HELP_Y=11
+HELP_COLOR=$YELLOW
 
 # Next piece location
 NEXT_X=43
@@ -166,6 +172,20 @@ eval piece_"$Z_TETORIMINO"_minos_"$NORTH"=\"0 0 1 0 1 1 2 1\"
 eval piece_"$Z_TETORIMINO"_minos_"$EAST"=\"2 0 1 1 2 1 1 2\"
 eval piece_"$Z_TETORIMINO"_minos_"$SOUTH"=\"0 1 1 1 1 2 2 2\"
 eval piece_"$Z_TETORIMINO"_minos_"$WEST"=\"1 0 0 1 1 1 0 2\"
+
+help='
+←         Move Left or Right
+→         Move Right
+↑, x      Rotate Clockwise
+z         Rotate Counter-Clockwise
+c         Hold
+↓         Soft Drop
+Space     Hard Drop
+Q, ESCx2  Quit
+C         Toggle Color
+H         Toggle Help
+'
+help_on=1 # if this flag is 1 help is shown, if -1, hide
 
 no_color=true    # do we use color or not
 showtime=true    # controller runs while this flag is true
@@ -562,11 +582,47 @@ rotate_piece() {
   fi
 }
 
+draw_help() {
+  local show="$1" x y
+
+  x="$HELP_X"; y="$HELP_Y"
+
+  set_bold
+  set_fg "$HELP_COLOR"
+
+  additional_buffer=$(
+    echo "$help" | {
+      # in this process, the change of screen_buffer is ignored out of this process. 
+      # should return the buffer.
+      screen_buffer=''
+      while read line; do
+        "$show" || {
+          empty_line=''; i=0
+          while [ "$i" -lt ${#line} ]; do empty_line="$empty_line "; i=$((i + 1)); done
+          line="$empty_line"
+        }
+        eval xyprint \"$x\" \"$y\" \'"$line"\'
+        y=$((y + 1))
+      done
+      echo "$screen_buffer"
+    }
+  )
+  puts "$additional_buffer"
+  reset_colors
+}
+
+toggle_help() {
+  local show=false
+  help_on=$((-help_on))
+  [ "$help_on" -eq 1 ] && show=true
+  draw_help "$show"
+}
+
 toggle_color() {
   $no_color && no_color=false || no_color=true
   show_next
-  draw_border
-  redraw_playfield
+  toggle_help
+  toggle_help
   draw_border
   redraw_playfield
   show_current
@@ -675,37 +731,40 @@ reader() {
     # echo "$a$b$key" # For debugging to check the input sequence.
     case "$a$b$key" in
       *"$esc_ch $esc_ch") # 2 escapes
-        cmd=$QUIT
+        cmd="$QUIT"
         ;;
       *"$esc_ch 5b 41")   # 'up-cursor'
-        cmd=$ROTATE_CW
+        cmd="$ROTATE_CW"
         ;;
       *"$esc_ch 5b 42")   # 'down-cursor'
-        cmd=$SOFT_DROP
+        cmd="$SOFT_DROP"
         ;;
       *"$esc_ch 5b 43")   # 'right-cursor'
-        cmd=$RIGHT
+        cmd="$RIGHT"
         ;;
       *"$esc_ch 5b 44")   # 'left-cursor'
-        cmd=$LEFT
+        cmd="$LEFT"
         ;;
       *'20')              # ' '
-        cmd=$HARD_DROP
+        cmd="$HARD_DROP"
         ;;
       *'63')              # 'c'
-        cmd=$HOLD
+        cmd="$HOLD"
         ;;
       *'78')              # 'x'
-        cmd=$ROTATE_CW
+        cmd="$ROTATE_CW"
         ;;
       *'7a')              # 'z'
-        cmd=$ROTATE_CCW
+        cmd="$ROTATE_CCW"
         ;;
       *'43')              # 'C'
-        cmd=$TOGGLE_COLOR
+        cmd="$TOGGLE_COLOR"
+        ;;
+      *'48')              # 'H'
+        cmd="$TOGGLE_HELP"
         ;;
       *'51')              # 'Q'
-        cmd=$QUIT
+        cmd="$QUIT"
         ;;
     esac
     a=$b   # preserve previous keys
@@ -730,6 +789,7 @@ controller() {
   eval commands_"$HARD_DROP"=cmd_hard_drop
   eval commands_"$HOLD"=cmd_hold
   eval commands_"$TOGGLE_COLOR"=toggle_color
+  eval commands_"$TOGGLE_HELP"=toggle_help
 
   init
   # set_fg $ORANGE
