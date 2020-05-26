@@ -110,6 +110,63 @@ NEXT_MAX=7
 GAMEOVER_X=$((PLAYFIELD_X + PLAYFIELD_W / 2))
 GAMEOVER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
 
+# piece starting location
+START_X=3
+START_Y=22
+
+# this array holds all possible pieces that can be used in the game
+# each piece consists of 4 cells(minos)
+# each string is sequence of relative xy coordinates
+
+# O-Tetrimino
+eval piece_"$O_TETORIMINO"_color=\"$YELLOW\"
+eval piece_"$O_TETORIMINO"_minos_"$NORTH"=\'1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETORIMINO"_minos_"$EAST"=\'1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETORIMINO"_minos_"$SOUTH"=\'1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETORIMINO"_minos_"$WEST"=\'1 0 2 0 1 1 2 1\'
+
+# I-Tetorimino
+eval piece_"$I_TETORIMINO"_color=\"$CYAN\"
+eval piece_"$I_TETORIMINO"_minos_"$NORTH"=\'0 1 1 1 2 1 3 1\'
+eval piece_"$I_TETORIMINO"_minos_"$EAST"=\'2 0 2 1 2 2 2 3\'
+eval piece_"$I_TETORIMINO"_minos_"$SOUTH"=\'0 2 1 2 2 2 3 2\'
+eval piece_"$I_TETORIMINO"_minos_"$WEST"=\'1 0 1 1 1 2 1 3\'
+
+# T-Tetorimino
+eval piece_"$T_TETORIMINO"_color=\"$MAGENTA\"
+eval piece_"$T_TETORIMINO"_minos_"$NORTH"=\'1 0 0 1 1 1 2 1\'
+eval piece_"$T_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 1 2\'
+eval piece_"$T_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 1 2\'
+eval piece_"$T_TETORIMINO"_minos_"$WEST"=\'1 0 0 1 1 1 1 2\'
+
+# L-Tetorimino
+eval piece_"$L_TETORIMINO"_color=\"$ORANGE\"
+eval piece_"$L_TETORIMINO"_minos_"$NORTH"=\'2 0 0 1 1 1 2 1\'
+eval piece_"$L_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 1 2 2 2\'
+eval piece_"$L_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 0 2\'
+eval piece_"$L_TETORIMINO"_minos_"$WEST"=\'0 0 1 0 1 1 1 2\'
+
+# J-Tetorimino
+eval piece_"$J_TETORIMINO"_color=\"$BLUE\"
+eval piece_"$J_TETORIMINO"_minos_"$NORTH"=\'0 0 0 1 1 1 2 1\'
+eval piece_"$J_TETORIMINO"_minos_"$EAST"=\'1 0 2 0 1 1 1 2\'
+eval piece_"$J_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 2 2\'
+eval piece_"$J_TETORIMINO"_minos_"$WEST"=\'1 0 1 1 0 2 1 2\'
+
+# S-Tetorimino
+eval piece_"$S_TETORIMINO"_color=\"$GREEN\"
+eval piece_"$S_TETORIMINO"_minos_"$NORTH"=\'1 0 2 0 0 1 1 1\'
+eval piece_"$S_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 2 2\'
+eval piece_"$S_TETORIMINO"_minos_"$SOUTH"=\'1 1 2 1 0 2 1 2\'
+eval piece_"$S_TETORIMINO"_minos_"$WEST"=\'0 0 0 1 1 1 1 2\'
+
+# Z-Tetorimino
+eval piece_"$Z_TETORIMINO"_color=\"$RED\"
+eval piece_"$Z_TETORIMINO"_minos_"$NORTH"=\"0 0 1 0 1 1 2 1\"
+eval piece_"$Z_TETORIMINO"_minos_"$EAST"=\"2 0 1 1 2 1 1 2\"
+eval piece_"$Z_TETORIMINO"_minos_"$SOUTH"=\"0 1 1 1 1 2 2 2\"
+eval piece_"$Z_TETORIMINO"_minos_"$WEST"=\"1 0 0 1 1 1 0 2\"
+
 no_color=true    # do we use color or not
 showtime=true    # controller runs while this flag is true
 empty_cell=' .'  # how we draw empty cell
@@ -177,7 +234,9 @@ set_bold() {
 }
 
 # playfield is 2-dimensional array, data is stored as follows:
-# a_{y,x} (y=0,...,PLAYFIELD_H-1, x=0,...,PLAYFIELD_W-1)
+# a_{y,x}
+#   x - 0, ..., (PLAYFIELD_W-1)
+#   y - 0, ..., (PLAYFIELD_H-1), ..., (START_Y-1)
 # each array element contains cell color value or -1 if cell is empty
 redraw_playfield() {
   local x y xp yp field_cell
@@ -185,11 +244,11 @@ redraw_playfield() {
   y=0
   xp=$PLAYFIELD_X # don't need to set xp every cell, need on front of the line.
   while [ "$y" -lt "$PLAYFIELD_H" ]; do
-    yp=$((y + PLAYFIELD_Y))
+    yp=$((PLAYFIELD_Y + PLAYFIELD_H - y - 1))
     xyprint $xp $yp '' # put the cursor on the front of line
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      field_cell=$(eval echo \"\$play_field_$y$x\")
+      field_cell=$(eval echo \"\$playfield_"$y"_"$x"\")
       
       if [ "$field_cell" -eq -1 ]; then
         puts "$empty_cell"
@@ -207,92 +266,6 @@ redraw_playfield() {
 
 update_score() {
   :
-}
-
-# this array holds all possible pieces that can be used in the game
-# each piece consists of 4 cells
-# each string is sequence of relative xy coordinates for different orientations
-# depending on piece symmetry there can be 1, 2, or 4 orientations
-# <COLOR><NORTH><EAST><SOURTH><WEST>
-
-# O-Tetrimino
-eval piece_"$O_TETORIMINO"_color=\"$YELLOW\"
-eval piece_"$O_TETORIMINO"_start=\'3 -2\'
-eval piece_"$O_TETORIMINO"_minos_"$NORTH"=\'1 0 2 0 1 1 2 1\'
-eval piece_"$O_TETORIMINO"_minos_"$EAST"=\'1 0 2 0 1 1 2 1\'
-eval piece_"$O_TETORIMINO"_minos_"$SOUTH"=\'1 0 2 0 1 1 2 1\'
-eval piece_"$O_TETORIMINO"_minos_"$WEST"=\'1 0 2 0 1 1 2 1\'
-
-# I-Tetorimino
-eval piece_"$I_TETORIMINO"_color=\"$CYAN\"
-eval piece_"$I_TETORIMINO"_start=\'3 -1\'
-eval piece_"$I_TETORIMINO"_minos_"$NORTH"=\'0 1 1 1 2 1 3 1\'
-eval piece_"$I_TETORIMINO"_minos_"$EAST"=\'2 0 2 1 2 2 2 3\'
-eval piece_"$I_TETORIMINO"_minos_"$SOUTH"=\'0 2 1 2 2 2 3 2\'
-eval piece_"$I_TETORIMINO"_minos_"$WEST"=\'1 0 1 1 1 2 1 3\'
-
-# T-Tetorimino
-eval piece_"$T_TETORIMINO"_color=\"$MAGENTA\"
-eval piece_"$T_TETORIMINO"_start=\'3 -2\'
-eval piece_"$T_TETORIMINO"_minos_"$NORTH"=\'1 0 0 1 1 1 2 1\'
-eval piece_"$T_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 1 2\'
-eval piece_"$T_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 1 2\'
-eval piece_"$T_TETORIMINO"_minos_"$WEST"=\'1 0 0 1 1 1 1 2\'
-
-# L-Tetorimino
-eval piece_"$L_TETORIMINO"_color=\"$ORANGE\"
-eval piece_"$L_TETORIMINO"_start=\'3 -2\'
-eval piece_"$L_TETORIMINO"_minos_"$NORTH"=\'2 0 0 1 1 1 2 1\'
-eval piece_"$L_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 1 2 2 2\'
-eval piece_"$L_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 0 2\'
-eval piece_"$L_TETORIMINO"_minos_"$WEST"=\'0 0 1 0 1 1 1 2\'
-
-# J-Tetorimino
-eval piece_"$J_TETORIMINO"_color=\"$BLUE\"
-eval piece_"$J_TETORIMINO"_start=\'3 -2\'
-eval piece_"$J_TETORIMINO"_minos_"$NORTH"=\'0 0 0 1 1 1 2 1\'
-eval piece_"$J_TETORIMINO"_minos_"$EAST"=\'1 0 2 0 1 1 1 2\'
-eval piece_"$J_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 2 2\'
-eval piece_"$J_TETORIMINO"_minos_"$WEST"=\'1 0 1 1 0 2 1 2\'
-
-# S-Tetorimino
-eval piece_"$S_TETORIMINO"_color=\"$GREEN\"
-eval piece_"$S_TETORIMINO"_start=\'3 -2\'
-eval piece_"$S_TETORIMINO"_minos_"$NORTH"=\'1 0 2 0 0 1 1 1\'
-eval piece_"$S_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 2 2\'
-eval piece_"$S_TETORIMINO"_minos_"$SOUTH"=\'1 1 2 1 0 2 1 2\'
-eval piece_"$S_TETORIMINO"_minos_"$WEST"=\'0 0 0 1 1 1 1 2\'
-
-# Z-Tetorimino
-eval piece_"$Z_TETORIMINO"_color=\"$RED\"
-eval piece_"$Z_TETORIMINO"_start=\'3 -2\'
-eval piece_"$Z_TETORIMINO"_minos_"$NORTH"=\"0 0 1 0 1 1 2 1\"
-eval piece_"$Z_TETORIMINO"_minos_"$EAST"=\"2 0 1 1 2 1 1 2\"
-eval piece_"$Z_TETORIMINO"_minos_"$SOUTH"=\"0 1 1 1 1 2 2 2\"
-eval piece_"$Z_TETORIMINO"_minos_"$WEST"=\"1 0 0 1 1 1 0 2\"
-
-draw_piece() {
-  # Arguments:
-  #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content
-  
-  local posx posy type rotation content lx ly x y
-
-  # at first, we should save arguments.
-  posx=${1}; posy=${2}; type=${3}; rotation=${4}; content=${5}
-  shift $#
-
-  # set minos coordinates.
-  set $(eval echo \"\$piece_"$type"_minos_"$rotation"\")
-
-  # loop through tetorimino minos: 4 minos, each has 2 coordinates
-  while [ $# -gt 0 ]; do
-    # relative coordinates are retrieved bassed on orientation and added to absolute coordinates
-    lx=$1; ly=$2
-    x=$((posx + lx * 2)) # the width of cell is 2 characters thick
-    y=$((posy + ly))
-    xyprint $x $y "$content"
-    shift 2
-  done
 }
 
 fill_bag() {
@@ -325,11 +298,9 @@ get_next() {
   current_piece="$next_piece"
   current_piece_rotation="$NORTH"
 
-  # place current according to $piece_type_start
-  shift "$#"
-  set $(eval echo \"\$piece_"$current_piece"_start\")
-  current_piece_x="$1"
-  current_piece_y="$2"
+  # place current at the top of play field.
+  current_piece_x="$START_X"
+  current_piece_y="$START_Y"
 
   # check if piece can be placed at this location, if not - game over
   new_piece_location_ok $current_piece_x $current_piece_y || cmd_quit
@@ -342,10 +313,40 @@ hold_tetorimino() {
   :
 }
 
+draw_piece() {
+  # Arguments:
+  #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content, 6 - mask with playfield
+  
+  local posx posy type rotation content lx ly x y masked
+
+  # at first, we should save arguments.
+  posx="$1"; posy="$2"; type="$3"; rotation="$4"; content="$5"; masked="${6:-false}"
+  shift $#
+
+  # set minos coordinates.
+  set $(eval echo \"\$piece_"$type"_minos_"$rotation"\")
+
+  # loop through tetorimino minos: 4 minos, each has 2 coordinates
+  while [ $# -gt 0 ]; do
+    # relative coordinates are retrieved bassed on orientation and added to absolute coordinates
+    lx=$1; ly=$2
+    x=$((posx + lx * 2)) # the width of cell is 2 characters thick
+    y=$((posy + ly))
+
+    $masked                                     &&
+    [ "$y" -ge "$PLAYFIELD_Y" ]                 &&
+    [ "$y" -lt $((PLAYFIELD_Y + PLAYFIELD_H)) ] &&
+    [ "$x" -ge "$PLAYFIELD_X" ]                 &&
+    [ "$x" -lt $((PLAYFIELD_X + PLAYFIELD_W * 2)) ] && xyprint $x $y "$content" # draw mino within playfield
+    
+    shift 2
+  done
+}
+
 draw_current() {
   # Arguments: 1 - string to draw single cell
   # factor 2 for x because each cell is 2 characters wide
-  draw_piece $((current_piece_x * 2 + PLAYFIELD_X)) $((current_piece_y + PLAYFIELD_Y)) $current_piece $current_piece_rotation "$1"
+  draw_piece $((PLAYFIELD_X + current_piece_x * 2)) $((PLAYFIELD_Y + PLAYFIELD_H - 1 - current_piece_y)) $current_piece $current_piece_rotation "$1" true
 }
 
 show_current() {
@@ -377,22 +378,19 @@ new_piece_location_ok() {
   # loop through tetorimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     lx="$1"; ly="$2"
-    x=$((lx + x_test)) # new x coordinate of piece cell
-    y=$((ly + y_test)) # new y coordinate of piece cell
+    x=$((x_test + lx)) # new x coordinate of piece cell
+    y=$((y_test - ly)) # new y coordinate of piece cell
 
-    [ "$y" -ge "$PLAYFIELD_H" ] || 
+    [ "$y" -lt 0 ]              || 
     [ "$x" -lt 0 ]              || 
     [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
 
-    [ "$y" -lt 0 ] || {
-      field_cell=$(eval echo \"\$play_field_$y$x\")
-      [ "$field_cell" != -1 ] && return 1   # false; check if location is already occupied
-    }
-    
+    field_cell=$(eval echo \"\$playfield_"$y"_"$x"\")
+    [ "$field_cell" != -1 ] && return 1    # false; check if location is already occupied
+  
     shift 2 # shift to next minos coordinates
   done
   return 0
-
 }
 
 draw_border() {
@@ -440,16 +438,18 @@ init() {
   local x y i
 
   # playfield is initialized with -1s (empty cells)
+  # x of playfield - 0, ..., (PLAYFIELD_W-1)
+  # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y)
   y=0
-  while [ "$y" -lt "$PLAYFIELD_H" ]; do
+  while [ "$y" -le "$START_Y" ]; do
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      eval play_field_$y$x=-1
+      eval playfield_"$y"_"$x"=-1
       x=$((x + 1))
     done
     y=$((y + 1))
   done
-exit
+
   # prepare next queue filled with NEXT_MAX tetorimino 
   i=0
   while [ "$i" -lt "$NEXT_MAX" ]; do
@@ -534,7 +534,7 @@ reader() {
   done
 }
 
-# this function updated occupied cells in play_field array after piece is dropped
+# this function updated occupied cells in playfield array after piece is dropped
 flatten_playfield() {
   local color lx ly x y
 
@@ -547,14 +547,14 @@ flatten_playfield() {
   # loop through tetorimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     lx="$1"; ly="$2"
-    x=$((lx + current_piece_x))
-    y=$((ly + current_piece_y))
-    eval play_field_"$y$x"="$color"
+    x=$((current_piece_x + lx))
+    y=$((current_piece_y - ly))
+    eval playfield_"$y"_"$x"="$color"
     shift 2 # shift to next minos coordinates
   done
 }
 
-# this function goes through play_field array and eliminates lines without empty cells
+# this function goes through playfield array and eliminates lines without empty cells
 process_complete_lines() {
   :
 }
@@ -568,7 +568,7 @@ process_fallen_piece() {
 
 move_piece() {
   # arguments: 1 - new x coordinate, 2 - new y coordinate
-  # moves the piece to the new locatio if possible
+  # moves the piece to the new location if possible
 
   if new_piece_location_ok "$1" "$2"; then    # if new location is ok
     clear_current                             # let's wipe out piece current location
@@ -610,16 +610,16 @@ cmd_left() {
 }
 
 cmd_fall() {
-  move_piece "$current_piece_x" $((current_piece_y + 1))
+  move_piece "$current_piece_x" $((current_piece_y - 1))
 }
 
 cmd_soft_drop() {
-  move_piece "$current_piece_x" $((current_piece_y + 1))
+  move_piece "$current_piece_x" $((current_piece_y - 1))
 }
 
 cmd_hard_drop() {
   # move piece all way down
-  while move_piece $current_piece_x $((current_piece_y + 1)); do
+  while move_piece $current_piece_x $((current_piece_y - 1)); do
     :
   done
 }
@@ -647,7 +647,7 @@ controller() {
   # SIGUSR1 and SIGUSR2 are ignored
   trap '' USR1 USR2
   local cmd commands
-
+  
   # initialization of commands array with appropriate functions
   eval commands_"$QUIT"=cmd_quit
   eval commands_"$RIGHT"=cmd_right
@@ -659,7 +659,7 @@ controller() {
   eval commands_"$HARD_DROP"=cmd_hard_drop
   eval commands_"$HOLD"=cmd_hold
   eval commands_"$TOGGLE_COLOR"=toggle_color
-  
+
   init
   # set_fg $ORANGE
   # set_bg $ORANGE
