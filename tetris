@@ -236,10 +236,11 @@ bag=''
 # at level 1 / 100 = Total Line Clears
 goal=5
 
-already_hold=false #
-score=0            # score variable initialization
-level=1            # level variable initialization
-lines_completed=0  # completed lines counter initialization
+already_hold=false       #
+score=0                  # score variable initialization
+level=1                  # level variable initialization
+lines_completed=0        # completed lines counter initialization
+discard_cmds_timepoint=0 # cmds issued before this time is discarded
 
 current_tty=$(
   ps -p $$ | tail -n 1 | (
@@ -713,6 +714,7 @@ process_fallen_piece() {
   [ "$action" -eq "$ACTION_NONE" ] && return
   update_score "$action"
   redraw_playfield
+  discard_cmds
 }
 
 move_piece() {
@@ -778,6 +780,10 @@ draw_help() {
   )
   puts "$additional_buffer"
   reset_colors
+}
+
+discard_cmds() {
+  discard_cmds_timepoint=$(date +%s)
 }
 
 reload_screen() {
@@ -890,7 +896,7 @@ ticker() {
   level=1
 
   while true ; do 
-    echo $FALL
+    echo "$(date +%s) $FALL" # <timestamp> <cmd>
     eval sleep \"\$FALL_SPEED_LEVEL_$level\"
   done
 }
@@ -950,14 +956,14 @@ reader() {
     esac
     a=$b   # preserve previous keys
     b=$key
-    [ -n "$cmd" ] && echo "$cmd" # if not empty string
+    [ -n "$cmd" ] && echo "$(date +%s) $cmd" # if not empty string
   done
 }
 
 controller() {
   # SIGUSR1 and SIGUSR2 are ignored
   trap '' USR1 USR2
-  local cmd commands
+  local cmd commands statement issued_time
   
   # initialization of commands array with appropriate functions
   eval commands_"$QUIT"=cmd_quit
@@ -974,25 +980,19 @@ controller() {
   eval commands_"$TOGGLE_HELP"=toggle_help
 
   init
-  # set_fg $ORANGE
-  # set_bg $ORANGE
-  # current_piece="$O_TETORIMINO"
-  # current_piece_rotation="$NORTH"
-  # current_piece_x=0
-  # current_piece_y=0
-  # show_current
-  # put_piece 5 1 2 2 "$filled_cell"
-  # reset_colors
-  
-  # draw_border
-  # redraw_playfield
-  # printf "$screen_buffer"
-  # return
 
   while $showtime; do               # run while showtime variable is true, it is changed to false in cmd_quit function
     echo "$screen_buffer"           # output screen buffer ...
-    screen_buffer=""                # ... and reset it 
-    read cmd                        # read next command from stdout
+    screen_buffer=""                # ... and reset it
+    
+    # read next command from stdout
+    # skip cmds issued before discard_cmds_timepoint
+    while read statement; do
+      set $(echo "$statement")
+      issued_time="$1"; cmd="$2"
+      shift $#
+      [ "$issued_time" -gt "$discard_cmds_timepoint" ] && break
+    done
     eval eval \"\$commands_"$cmd"\" # run command
   done
 }
@@ -1006,6 +1006,9 @@ stty_g=`stty -g` # let's save terminal state
 ) 2> /dev/null | (
   controller
 ) 2> /dev/null
+
+sleep 1
+wait
 
 show_cursor
 stty "$stty_g" # let's restore terminal state
