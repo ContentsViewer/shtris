@@ -1003,12 +1003,9 @@ stty_g=`stty -g` # let's save terminal state
 (
   ticker & # ticker runs as separate process
   reader
-)|(
+) 2> /dev/null | (
   controller
 ) 2> /dev/null
-
-sleep 1
-wait
 
 show_cursor
 stty "$stty_g" # let's restore terminal state
