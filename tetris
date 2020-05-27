@@ -679,7 +679,6 @@ process_complete_lines() {
     y=$((y + 1))
   done
 
-  eval completed_lines=\'$(echo "$completed_lines")\'  # Strip whitespace  from the beginning and end of a string
   [ -z "$completed_lines" ] && return "$ACTION_NONE"
   set $(echo "$completed_lines")
   completed_lines_count=$#
@@ -930,22 +929,23 @@ reader() {
   while true ;do
     # read one key, and convert to hex value
     key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null | od -An -tx1)
+    key=$(echo $(echo "$key")) # Strip whitespace from the beginning and end of a string
     cmd=''
     # echo "$a$b$key" # For debugging to check the input sequence.
     case "$a$b$key" in
-      *"$esc_ch $esc_ch") # 2 escapes
+      *"$esc_ch""$esc_ch") # 2 escapes
         cmd="$QUIT"
         ;;
-      *"$esc_ch 5b 41")   # 'up-cursor'
+      *"$esc_ch"'5b41')   # 'up-cursor'
         cmd="$ROTATE_CW"
         ;;
-      *"$esc_ch 5b 42")   # 'down-cursor'
+      *"$esc_ch"'5b42')   # 'down-cursor'
         cmd="$SOFT_DROP"
         ;;
-      *"$esc_ch 5b 43")   # 'right-cursor'
+      *"$esc_ch"'5b43')   # 'right-cursor'
         cmd="$RIGHT"
         ;;
-      *"$esc_ch 5b 44")   # 'left-cursor'
+      *"$esc_ch"'5b44')   # 'left-cursor'
         cmd="$LEFT"
         ;;
       *'20')              # ' '
