@@ -1005,7 +1005,7 @@ stty_g=`stty -g` # let's save terminal state
   reader
 )|(
   controller
-)
+) 2> /dev/null
 
 sleep 1
 wait
