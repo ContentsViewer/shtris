@@ -870,7 +870,7 @@ cmd_quit() {
   pkill -USR2 -t "$current_tty" ${0##*/}              # ... send SIGUSR2 to all script instances to stop forked process ...
   xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
   xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H + 1)) '> Quit' # put message at bottom of playfield so that game screen will keep its shape. 
-  echo "$screen_buffer"                        # ... and print final message
+  printf "$screen_buffer"                        # ... and print final message
 }
 
 init() {
@@ -1001,7 +1001,7 @@ controller() {
   init
 
   while $showtime; do               # run while showtime variable is true, it is changed to false in cmd_quit function
-    echo "$screen_buffer"           # output screen buffer ...
+    printf "$screen_buffer"         # output screen buffer ...
     screen_buffer=""                # ... and reset it
     
     # read next command from stdout
@@ -1022,16 +1022,9 @@ stty_g=`stty -g` # let's save terminal state
 (
   ticker & # ticker runs as separate process
   reader
-) | (
+) 2> /dev/null | (
   controller
-)
-
-# (
-#   ticker & # ticker runs as separate process
-#   reader
-# ) 2> /dev/null | (
-#   controller
-# ) 2> /dev/null
+) 2> /dev/null
 
 sleep 1
 wait
