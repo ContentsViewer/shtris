@@ -57,6 +57,7 @@ FALL_SPEED_LEVEL_12=0.028
 FALL_SPEED_LEVEL_13=0.018
 FALL_SPEED_LEVEL_14=0.011
 FALL_SPEED_LEVEL_15=0.007
+LEVEL_MAX=15
 
 # color codes
 RED=1
@@ -87,29 +88,39 @@ WEST=3
 # Location and size of playfield, color and border
 PLAYFIELD_W=10
 PLAYFIELD_H=20
-PLAYFIELD_X=20
+PLAYFIELD_X=19
 PLAYFIELD_Y=2
 BORDER_COLOR=$WHITE
 
 # Location and color of score information
-SCORE_X=1
-SCORE_Y=10
+SCORE_X=5
+SCORE_Y=7
 SCORE_COLOR=$GREEN
 
-SCORE_FACTOR_SINGLE=100
-SCORE_FACTOR_DOUBLE=300
-SCORE_FACTOR_TRIPLE=500
-SCORE_FACTOR_TETRIS=800
-SCORE_FACTOR_SOFTDROP=1
-SCORE_FACTOR_HARDDROP=2
+ACTION_NONE=0
+ACTION_SINGLE=1
+ACTION_DOUBLE=2
+ACTION_TRIPLE=3
+ACTION_TETRIS=4
+ACTION_SOFT_DROP=5
+ACTION_HARD_DROP=6
+
+eval SCORE_FACTOR_"$ACTION_SINGLE"=100
+eval SCORE_FACTOR_"$ACTION_DOUBLE"=300
+eval SCORE_FACTOR_"$ACTION_TRIPLE"=500
+eval SCORE_FACTOR_"$ACTION_TETRIS"=800
+eval SCORE_FACTOR_"$ACTION_SOFT_DROP"=1
+eval SCORE_FACTOR_"$ACTION_HARD_DROP"=2
+
+
 
 # Location and color of help information
-HELP_X=57
+HELP_X=56
 HELP_Y=10
 HELP_COLOR=$YELLOW
 
 # Next piece location
-NEXT_X=43
+NEXT_X=42
 NEXT_Y=2
 NEXT_MAX=7
 
@@ -209,8 +220,9 @@ bag=''
 
 already_hold=false
 
-score=0 # score variable initialization
-level=1 # level variable initialization
+score=0           # score variable initialization
+level=1           # level variable initialization
+lines_completed=0 # completed lines counter initialization
 
 current_tty=$(
   ps -p $$ | tail -n 1 | (
@@ -293,17 +305,28 @@ redraw_playfield() {
 }
 
 update_score() {
+  # Arguments: 1 - ACTION name. ex. ACTION_SINGLE
+
   set_bold
   set_fg "$SCORE_COLOR"
+  xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE: "
+  xyprint "$SCORE_X" $((SCORE_Y + 1)) "│1234567890"
+  xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
+  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES   10"
+  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   10"
+  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    10"
+  reset_colors
 }
 
 fill_bag() {
-  bag=$(shuf -e $O_TETORIMINO $I_TETORIMINO $T_TETORIMINO $L_TETORIMINO $J_TETORIMINO $S_TETORIMINO $Z_TETORIMINO |
-  (
-    while read piece; do
-      printf "$piece"' '
-    done
-  ))
+  bag=$(
+    shuf -e $O_TETORIMINO $I_TETORIMINO $T_TETORIMINO $L_TETORIMINO $J_TETORIMINO $S_TETORIMINO $Z_TETORIMINO |
+    (
+      while read piece; do
+        printf "$piece"' '
+      done
+    )
+  )
 }
 
 #  the Tetrimino at the front of the line in the bag is placed at the end of the Next Queue
@@ -689,6 +712,7 @@ toggle_color() {
   $no_color && no_color=false || no_color=true
   show_next
   show_hold
+  update_score "$ACTION_NONE"
   toggle_help
   toggle_help
   draw_border
