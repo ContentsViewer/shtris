@@ -112,8 +112,6 @@ eval SCORE_FACTOR_"$ACTION_TETRIS"=800
 eval SCORE_FACTOR_"$ACTION_SOFT_DROP"=1
 eval SCORE_FACTOR_"$ACTION_HARD_DROP"=2
 
-
-
 # Location and color of help information
 HELP_X=56
 HELP_Y=10
@@ -305,7 +303,7 @@ redraw_playfield() {
 }
 
 update_score() {
-  # Arguments: 1 - ACTION name. ex. ACTION_SINGLE
+  # Arguments: 1 - ACTION name. ex: ACTION_SINGLE
 
   set_bold
   set_fg "$SCORE_COLOR"
@@ -561,7 +559,6 @@ draw_border() {
   reset_colors
 }
 
-
 # this function updated occupied cells in playfield array after piece is dropped
 flatten_playfield() {
   local color lx ly x y
@@ -582,51 +579,85 @@ flatten_playfield() {
   done
 }
 
+is_line_completed() {
+  # Arguments: 1 - line y of playfield you want to check
+  # check the line is completed
+  local x line_y="$1"
+
+  x=$((PLAYFIELD_W - 1))
+  while [ "$x" -ge 0 ]; do
+    field_cell=$(eval echo \"\$playfield_"$line_y"_"$x"\")
+    [ "$field_cell" -eq -1 ] && return 1 # false. empty cell found
+    x=$((x - 1))
+  done;
+
+  return 0 # true
+}
+
 # this function goes through playfield array and eliminates lines without empty cells
 process_complete_lines() {
-  local x y complete_lines=0 yi field_cell yi1
+  local x y yi completed_lines field_cell completed_lines_count action
 
-  y=$(($PLAYFIELD_H - 1))
-  while [ "$y" -ge 0 ]; do
+  completed_lines=''
+  y=0
+  while [ "$y" -lt "$PLAYFIELD_H" ]; do
+    is_line_completed "$y" && completed_lines="$completed_lines $y"
+    y=$((y + 1))
+  done
+
+  eval completed_lines=\'$(echo "$completed_lines")\'  # Strip whitespace  from the beginning and end of a string
+  [ -z "$completed_lines" ] && return "$ACTION_NONE"
+  set $(echo "$completed_lines")
+  completed_lines_count=$#
+
+  # move lines down. move cells from y to yi
+  y=-1; yi=0
+  while [ "$y" -lt "$START_Y" ]; do
+    y=$((y + 1))
+    [ $# -gt 0 ]      &&
+    [ "$1" -eq "$y" ] && {
+      shift
+      continue
+    }
+    [ "$y" -eq "$yi" ] && { # dont need to swap if y equals yi.
+      yi=$((yi + 1))
+      continue
+    }
+
     x=$((PLAYFIELD_W - 1))
     while [ "$x" -ge 0 ]; do
       field_cell=$(eval echo \"\$playfield_"$y"_"$x"\")
-      [ "$field_cell" -eq -1 ] && break # empty cell found
+      eval playfield_"$yi"_"$x"=\"$field_cell\"
       x=$((x - 1))
     done
-    [ "$x" -ge 0 ] && { y=$((y - 1)); continue; } # previous loop was interrupted because empty cell was found
-    complete_lines=$((complete_lines + 1))
-
-    # move lines down
-    yi=$((y + 1))
-    while [ "$yi" -le "$START_Y" ]; do
-      yi1=$((yi - 1))
-      x=$((PLAYFIELD_W - 1))
-      while [ "$x" -ge 0 ]; do
-        field_cell=$(eval echo \"\$playfield_"$yi"_"$x"\")
-        eval playfield_"$yi1"_"$x"=\"$field_cell\"
-        x=$((x - 1))
-      done
-      yi=$((yi + 1))
-    done
-
-    # mark cells at top of the playfield as free
-    x=$((PLAYFIELD_W - 1))
-    while [ "$x" -ge 0 ]; do
-      eval playfield_"$START_Y"_"$x"=-1
-      x=$((x - 1))
-    done
-
-    y=$((y - 1))
+    yi=$((yi + 1))
   done
 
-  return "$complete_lines"
+  # now let's mark lines from line yi to top line of the playfield as free.
+  while [ "$yi" -le "$START_Y" ]; do
+    x=$((PLAYFIELD_W - 1))
+    while [ "$x" -ge 0 ]; do
+      eval playfield_"$yi"_"$x"=-1
+      x=$((x - 1))
+    done
+    yi=$((yi + 1))
+  done
+
+  action="$ACTION_NONE"
+  case "$completed_lines_count" in
+    1) action="$ACTION_SINGLE" ;;
+    2) action="$ACTION_DOUBLE" ;;
+    3) action="$ACTION_TRIPLE" ;;
+    4) action="$ACTION_TETRIS" ;;
+  esac
+  return "$action"
 }
 
 process_fallen_piece() {
   flatten_playfield
-  process_complete_lines && return
-  update_score $?
+  process_complete_lines; action="$?"
+  [ "$action" -eq "$ACTION_NONE" ] && return
+  update_score "$action"
   redraw_playfield
 }
 
