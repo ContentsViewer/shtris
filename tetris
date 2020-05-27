@@ -105,6 +105,7 @@ ACTION_TETRIS=4
 ACTION_SOFT_DROP=5
 ACTION_HARD_DROP=6
 
+eval SCORE_FACTOR_"$ACTION_NONE"=0
 eval SCORE_FACTOR_"$ACTION_SINGLE"=100
 eval SCORE_FACTOR_"$ACTION_DOUBLE"=300
 eval SCORE_FACTOR_"$ACTION_TRIPLE"=500
@@ -214,13 +215,31 @@ next_queue=''
 # the hold queue allows the player to hold a falling tetorimino for as long as they wish.
 hold_queue=''
 
+# Tetris uses a “bag” system to determine the sequence of Tetriminos that appear during game
+# play. This system allows for equal distribution among the seven Tetriminos.
+# 
+# The seven different Tetriminos are placed into a virtual bag, then shuffled into a random order.
+# This order is the sequence that the bag “feeds” the Next Queue. Every time a new Tetrimino is
+# generated and starts its fall within the Matrix, the Tetrimino at the front of the line in the bag is
+# placed at the end of the Next Queue, pushing all Tetriminos in the Next Queue forward by one.
+# The bag is refilled and reshuffled once it is empty.
 bag=''
 
-already_hold=false
+# the Variable Goal System requires that the player clears 5 lines at level 1, 10 lines at
+# level 2, 15 at level 3 and so on, adding an additional five lines to the Goal each level through 15.
+# with the Variable Goal System of adding 5 lines per level, the player is required to clear 600 lines
+# by level 15. 
+# 
+# This system also includes line bonuses to help speed up the game.
+# To speed up the process of “clearing” 600 lines, in the Variable Goal System the number of Line
+# Clears awarded for any action is directly based off the score of the action performed (score
+# at level 1 / 100 = Total Line Clears
+goal=5
 
-score=0           # score variable initialization
-level=1           # level variable initialization
-lines_completed=0 # completed lines counter initialization
+already_hold=false #
+score=0            # score variable initialization
+level=1            # level variable initialization
+lines_completed=0  # completed lines counter initialization
 
 current_tty=$(
   ps -p $$ | tail -n 1 | (
@@ -304,15 +323,50 @@ redraw_playfield() {
 
 update_score() {
   # Arguments: 1 - ACTION name. ex: ACTION_SINGLE
+  local factor
+
+  eval factor=\"\$SCORE_FACTOR_"$1"\"
+
+  case "$1" in
+    "$ACTION_SINGLE")
+      lines_completed=$((lines_completed + factor / 100)) # with Awarded Line Clears
+      score=$((score + level * factor))
+      ;;
+    "$ACTION_DOUBLE")
+      lines_completed=$((lines_completed + factor / 100))
+      score=$((score + level * factor))
+      ;;
+    "$ACTION_TRIPLE")
+      lines_completed=$((lines_completed + factor / 100))
+      score=$((score + level * factor))
+      ;;
+    "$ACTION_TETRIS")
+      lines_completed=$((lines_completed + factor / 100))
+      score=$((score + level * factor))
+      ;;
+    "$ACTION_SOFT_DROP")
+      score=$((score + factor))
+      ;;
+    "$ACTION_HARD_DROP")
+      score=$((score + factor))
+      ;;
+  esac
+
+  [ "$level" -le "$LEVEL_MAX" ]      &&
+  [ "$lines_completed" -ge "$goal" ] && {
+    goal=$((goal + level * 5))             # adding an additional five lines to the Goal
+    level=$((level + 1))                   # increment level
+    pkill -USR1 -t "$current_tty" ${0##*/} # and send SIGUSR1 signal to all instances of this script (please see ticker for more details)
+  }
 
   set_bold
   set_fg "$SCORE_COLOR"
   xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE: "
-  xyprint "$SCORE_X" $((SCORE_Y + 1)) "│1234567890"
+  xyprint "$SCORE_X" $((SCORE_Y + 1)) "│$score"
   xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
-  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES   10"
-  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   10"
-  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    10"
+  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES   $lines_completed"
+  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   $level"
+  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    $goal"
   reset_colors
 }
 
@@ -764,13 +818,13 @@ cmd_fall() {
 }
 
 cmd_soft_drop() {
-  move_piece "$current_piece_x" $((current_piece_y - 1))
+  move_piece "$current_piece_x" $((current_piece_y - 1)) && update_score "$ACTION_SOFT_DROP"
 }
 
 cmd_hard_drop() {
   # move piece all way down
   while move_piece $current_piece_x $((current_piece_y - 1)); do
-    :
+    update_score "$ACTION_HARD_DROP"
   done
 }
 
