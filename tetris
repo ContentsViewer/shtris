@@ -113,6 +113,10 @@ NEXT_X=43
 NEXT_Y=2
 NEXT_MAX=7
 
+# Hold piece location
+HOLD_X=9
+HOLD_Y=2
+
 # Location of 'game over' in the end of the game
 GAMEOVER_X=$((PLAYFIELD_X + PLAYFIELD_W / 2))
 GAMEOVER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
@@ -327,8 +331,9 @@ get_next() {
 
   # check if piece can be placed at this location, if not - game over
   new_piece_location_ok $current_piece_x $current_piece_y || cmd_quit
-
   show_current
+
+  # now let's shift next queue
   clear_next
   shift; next_queue="$*" # pop the next piece from the front of queue
   feed_next_queue        # push tetorimino into queue; keep queue size
@@ -336,8 +341,32 @@ get_next() {
 }
 
 hold_tetorimino() {
+  #  Between Holds, A Lock Down must take place. reset this flag in move_piece().
   "$already_hold" && return
+  already_hold=true
 
+  # if hold queue is empty,
+  [ -z "$hold_queue" ] && {
+    hold_queue="$current_piece" # hold current tetorimino
+    clear_current
+    get_next                    # the Next Tetrimino is generated from the Next Queue and begins to fall
+    show_hold
+    return
+  }
+  clear_current
+  clear_hold
+
+  # swap piece
+  held_piece="$hold_queue"
+  hold_queue="$current_piece"
+  current_piece="$held_piece"
+  
+  # beginning from its generation position and North Facing orientation.
+  current_piece_x="$START_X"
+  current_piece_y="$START_Y"
+  current_piece_rotation="$NORTH"
+
+  show_hold
 }
 
 draw_piece() {
@@ -418,6 +447,31 @@ show_next() {
 
 clear_next() {
   draw_next false
+}
+
+draw_hold() {
+  # Arguments: 1 - if show hold, set true. if not, false.
+  local show="$1" color
+
+  [ -z "$hold_queue" ] && return
+
+  content='  '
+  "$show" && {
+    eval color=\"\$piece_"$hold_queue"_color\"
+    set_fg "$color"
+    set_bg "$color"
+    content="$filled_cell"
+  }
+  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$content"
+  "$show" && reset_colors
+}
+
+show_hold() {
+  draw_hold true
+}
+
+clear_hold() {
+  draw_hold false
 }
 
 new_piece_location_ok() {
@@ -566,6 +620,7 @@ move_piece() {
   [ "$2" -eq "$current_piece_y" ] && return 0 # and this was not horizontal move
   process_fallen_piece                        # let's finalize this piece
   get_next                                    # and start the new one
+  already_hold=false                          # player can hold the falling tetorimino.
   return 1
 }
 
@@ -632,6 +687,7 @@ toggle_help() {
 toggle_color() {
   $no_color && no_color=false || no_color=true
   show_next
+  show_hold
   toggle_help
   toggle_help
   draw_border
@@ -671,7 +727,7 @@ cmd_rotate_ccw() {
 }
 
 cmd_hold() {
-  :
+  hold_tetorimino
 }
 
 cmd_quit() {
