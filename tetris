@@ -373,13 +373,32 @@ update_score() {
 
 fill_bag() {
   bag=$(
-    shuf -e $O_TETORIMINO $I_TETORIMINO $T_TETORIMINO $L_TETORIMINO $J_TETORIMINO $S_TETORIMINO $Z_TETORIMINO |
+    echo \
+"$O_TETORIMINO
+$I_TETORIMINO
+$T_TETORIMINO
+$L_TETORIMINO
+$J_TETORIMINO
+$S_TETORIMINO
+$Z_TETORIMINO" |
+    awk '{print rand() " " $0}' | 
+    sort -k1 | 
+    cut -d' ' -f2 | 
     (
       while read piece; do
         printf "$piece"' '
       done
     )
   )
+
+  # bag=$(
+  #   shuf -e $O_TETORIMINO $I_TETORIMINO $T_TETORIMINO $L_TETORIMINO $J_TETORIMINO $S_TETORIMINO $Z_TETORIMINO |
+  #   (
+  #     while read piece; do
+  #       printf "$piece"' '
+  #     done
+  #   )
+  # )
 }
 
 #  the Tetrimino at the front of the line in the bag is placed at the end of the Next Queue
