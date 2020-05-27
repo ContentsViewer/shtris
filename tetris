@@ -293,7 +293,8 @@ redraw_playfield() {
 }
 
 update_score() {
-  :
+  set_bold
+  set_fg "$SCORE_COLOR"
 }
 
 fill_bag() {
