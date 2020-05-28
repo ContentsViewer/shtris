@@ -37,7 +37,7 @@ ROTATE_CCW=7
 HOLD=8
 TOGGLE_COLOR=9
 TOGGLE_HELP=10
-RELOAD_SCREEN=11
+REDRAW_SCREEN=11
 
 # The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line. 
 # The current level of the game determines the normal Fall Speed using the following equation:
@@ -196,14 +196,13 @@ z         Rotate Counter-Clockwise
 c         Hold
 ↓         Soft Drop
 Space     Hard Drop
-R         Reload Screen
+R         Redraw Screen
 C         Toggle Color
 H         Toggle Help
 Q, ESCx2  Quit
 '
-help_on=1 # if this flag is 1 help is shown, if -1, hide
-
-no_color=true    # do we use color or not
+help_on=true     # if this flag is true help is shown, if false, hide
+no_color=false   # do we use color or not
 showtime=true    # controller runs while this flag is true
 empty_cell=' .'  # how we draw empty cell
 filled_cell='[]' # how we draw filled cell
@@ -253,6 +252,11 @@ current_tty=$(
 # this variable is printed in controller once per game cycle
 puts() {
   screen_buffer="$screen_buffer""$1"
+}
+
+flush_screen() {
+  printf "$screen_buffer"
+  screen_buffer=''
 }
 
 # move cursor to (x,y) and print string
@@ -516,22 +520,22 @@ clear_current() {
 }
 
 draw_next() {
-  # Arguments: 1 - if show, set true.
-  local color show x y content
+  # Arguments: 1 - visibility ( false - no, true - yes)
+  local color visible x y content
 
-  x="$NEXT_X"; y="$NEXT_Y"; show="$1"
+  x="$NEXT_X"; y="$NEXT_Y"; visible="$1"
   shift $#
   set $(echo "$next_queue")
   while [ $# -gt 0 ]; do
     content='  '
-    "$show" && {
+    "$visible" && {
       eval color=\"\$piece_"$1"_color\"
       set_fg "$color"
       set_bg "$color"
       content="$filled_cell"
     }
     draw_piece "$x" "$y" "$1" "$NORTH" "$content"
-    "$show" && reset_colors
+    "$visible" && reset_colors
     shift
     y=$((y + 3))
   done
@@ -546,20 +550,20 @@ clear_next() {
 }
 
 draw_hold() {
-  # Arguments: 1 - if show hold, set true. if not, false.
-  local show="$1" color
+  # Arguments: 1 - visibility ( false - no, true - yes)
+  local visible="$1" color
 
   [ -z "$hold_queue" ] && return
 
   content='  '
-  "$show" && {
+  "$visible" && {
     eval color=\"\$piece_"$hold_queue"_color\"
     set_fg "$color"
     set_bg "$color"
     content="$filled_cell"
   }
   draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$content"
-  "$show" && reset_colors
+  "$visible" && reset_colors
 }
 
 show_hold() {
@@ -772,7 +776,8 @@ rotate_piece() {
 }
 
 draw_help() {
-  local show="$1" x y
+  # Arguments: 1 - visibility ( false - no, true - yes), if this argument is skipped $help_on is used
+  local visible=${1:-$help_on} x y line
 
   x="$HELP_X"; y="$HELP_Y"
 
@@ -785,7 +790,7 @@ draw_help() {
       # should return the buffer.
       screen_buffer=''
       while read line; do
-        "$show" || {
+        "$visible" || {
           empty_line=''; i=0
           while [ "$i" -lt ${#line} ]; do empty_line="$empty_line "; i=$((i + 1)); done
           line="$empty_line"
@@ -804,29 +809,25 @@ discard_cmds() {
   discard_cmds_timepoint=$(date +%s)
 }
 
-reload_screen() {
+redraw_screen() {
   clear
-  toggle_color
-  toggle_color
+  show_next
+  show_hold
+  update_score "$ACTION_NONE"
+  draw_help
+  draw_border
+  redraw_playfield
+  show_current
 }
 
 toggle_help() {
-  local show=false
-  help_on=$((-help_on))
-  [ "$help_on" -eq 1 ] && show=true
-  draw_help "$show"
+  "$help_on" && help_on=false || help_on=true
+  draw_help
 }
 
 toggle_color() {
   $no_color && no_color=false || no_color=true
-  show_next
-  show_hold
-  update_score "$ACTION_NONE"
-  toggle_help
-  toggle_help
-  draw_border
-  redraw_playfield
-  show_current
+  redraw_screen
 }
 
 cmd_right(){
@@ -899,7 +900,8 @@ init() {
   clear
   hide_cursor
   get_next
-  toggle_color
+  redraw_screen
+  flush_screen
 }
 
 # this function runs in separate process
@@ -964,7 +966,7 @@ reader() {
         cmd="$TOGGLE_COLOR"
         ;;
       *'52')              # 'R'
-        cmd="$RELOAD_SCREEN"
+        cmd="$REDRAW_SCREEN"
         ;;
       *'48')              # 'H'
         cmd="$TOGGLE_HELP"
@@ -994,7 +996,7 @@ controller() {
   eval commands_"$SOFT_DROP"=cmd_soft_drop
   eval commands_"$HARD_DROP"=cmd_hard_drop
   eval commands_"$HOLD"=cmd_hold
-  eval commands_"$RELOAD_SCREEN"=reload_screen
+  eval commands_"$REDRAW_SCREEN"=redraw_screen
   eval commands_"$TOGGLE_COLOR"=toggle_color
   eval commands_"$TOGGLE_HELP"=toggle_help
 
