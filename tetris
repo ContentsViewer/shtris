@@ -14,15 +14,27 @@
 # Solaris sh | x
 # 
 # Author: IOE <Github: ContentsViewer>
+# 
+# Scripting NOTE:
+#  * We cannot use `read -s -n 1`
+#  * Any process cannot send signals to control(main) process
+#    * stty issues error -> cannot read keyboard inputs
+#
 
 set -u # non initialized variable is an error
 
-# 2 signals are used: SIGUSR1 to decrease delay after level up and SIGTERM to quit
+# 3 signals are used: SIGUSR1 to decrease delay after level up and SIGTERM to quit
 # they are sent to all instances of this script
 # because of that we should process them in each instance
-# in this instance we are ignoring both signals
+#
+# in this instance we are ignoring these signals
+# 
 # in shell enviroment, should Drop the SIG prefix, just input the signal name.
-trap '' USR1 TERM
+SIGNAL_TERM=TERM
+SIGNAL_LEVEL_UP=USR1
+SIGNAL_RESET_LOCKDOWN_TIMER=USR2
+
+trap '' $SIGNAL_TERM $SIGNAL_LEVEL_UP $SIGNAL_RESET_LOCKDOWN_TIMER
 
 # Those are commands sent to controller by key press processing code
 # In controller they are used as index to retrieve actual function from array
@@ -38,6 +50,7 @@ HOLD=8
 TOGGLE_COLOR=9
 TOGGLE_HELP=10
 REFRESH_SCREEN=11
+LOCKDOWN=12
 
 # The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line. 
 # The current level of the game determines the normal Fall Speed using the following equation:
@@ -289,8 +302,16 @@ set_bold() {
   puts "\033[1m"
 }
 
+now() {
+  echo $(date +%s)
+}
+
+send_signal() {
+  pkill -"$1" -t "$current_tty" ${0##*/}
+}
+
 discard_cmds() {
-  discard_cmds_timepoint=$(date +%s)
+  discard_cmds_timepoint=$(now)
 }
 
 # playfield is 2-dimensional array, data is stored as follows:
@@ -359,7 +380,7 @@ update_score() {
   [ "$lines_completed" -ge "$goal" ] && {
     goal=$((goal + level * 5))             # adding an additional five lines to the Goal
     level=$((level + 1))                   # increment level
-    pkill -USR1 -t "$current_tty" ${0##*/} # and send SIGUSR1 signal to all instances of this script (please see ticker for more details)
+    pkill -$SIGNAL_LEVEL_UP -t "$current_tty" ${0##*/} # and send level-up signal to all instances of this script (please see ticker for more details)
   }
 
   set_bold
@@ -419,7 +440,7 @@ get_next() {
   current_piece_y="$START_Y"
 
   # check if piece can be placed at this location, if not - game over
-  new_piece_location_ok $current_piece_x $current_piece_y || cmd_quit
+  new_piece_location_ok $current_piece_x $current_piece_y || quit
   show_current
 
   # now let's shift next queue
@@ -731,6 +752,7 @@ process_fallen_piece() {
 move_piece() {
   # arguments: 1 - new x coordinate, 2 - new y coordinate
   # moves the piece to the new location if possible
+  immediately_lockdown=${3:-false}
 
   if new_piece_location_ok "$1" "$2"; then    # if new location is ok
     clear_current                             # let's wipe out piece current location
@@ -740,10 +762,21 @@ move_piece() {
     return 0                                  # nothing more to do here
   fi                                          # if we could not move piece to new location
   [ "$2" -eq "$current_piece_y" ] && return 0 # and this was not horizontal move
-  process_fallen_piece                        # let's finalize this piece
-  get_next                                    # and start the new one
-  already_hold=false                          # player can hold the falling tetorimino.
+  
+  "$immediately_lockdown" && 
+  lockdown || 
+  send_signal "$SIGNAL_RESET_LOCKDOWN_TIMER"
+
   return 1
+}
+
+lockdown() {
+  # if can fall, dont lock down
+  new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && return
+  
+  process_fallen_piece # let's finalize this piece
+  get_next             # and start the new one
+  already_hold=false   # player can hold the falling tetorimino.
 }
 
 rotate_piece() {
@@ -819,46 +852,48 @@ toggle_color() {
   redraw_screen 
 }
 
-cmd_right(){
+move_right(){
   move_piece $((current_piece_x + 1)) "$current_piece_y"
 }
 
-cmd_left() {
+move_left() {
   move_piece $((current_piece_x - 1)) "$current_piece_y"
 }
 
-cmd_fall() {
+fall() {
   move_piece "$current_piece_x" $((current_piece_y - 1))
 }
 
-cmd_soft_drop() {
+soft_drop() {
   move_piece "$current_piece_x" $((current_piece_y - 1)) && update_score "$ACTION_SOFT_DROP"
 }
 
-cmd_hard_drop() {
+hard_drop() {
   # move piece all way down
-  while move_piece $current_piece_x $((current_piece_y - 1)); do
+  while move_piece $current_piece_x $((current_piece_y - 1)) true; do
     update_score "$ACTION_HARD_DROP"
   done
 }
 
-cmd_rotate_cw() {
+rotate_cw() {
   rotate_piece 1
 }
 
-cmd_rotate_ccw() {
+rotate_ccw() {
   rotate_piece -1
 }
 
-cmd_hold() {
+hold() {
   hold_tetorimino
 }
 
-cmd_quit() {
+quit() {
   showtime=false                                        # let's stop controller ...
-  pkill -TERM -t "$current_tty" ${0##*/}                # let's kill ticker process ...
+  pkill -$SIGNAL_TERM -t "$current_tty" ${0##*/}        # let's kill ticker process ...
   xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
-  xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H + 1)) '> Quit' # put message at bottom of playfield so that game screen will keep its shape. 
+  xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H)) '
+> Quit
+> Press any key to continue ...'                      # put message at bottom of playfield so that game screen will keep its shape.
   flush_screen
 }
 
@@ -892,28 +927,50 @@ init() {
   flush_screen
 }
 
+lockdown_timer() {
+  # on SIGTERM this process should exit
+  trap exit $SIGNAL_TERM
+  # on this signal reset the timer
+  trap 'trigger_time=$(now)' $SIGNAL_RESET_LOCKDOWN_TIMER
+  # these signals are ignored
+  trap '' $SIGNAL_LEVEL_UP
+
+  trigger_time=-1
+  while true; do
+    [ "$trigger_time" -gt 0 ] &&
+    [ $(now) -gt "$trigger_time" ] &&{
+      trigger_time=-1
+      echo "$(now) $LOCKDOWN"
+    }
+  done
+}
 
 # this function runs in separate process
 # it sends DOWN commands to controller with appropriate delay
 ticker() {
   # on SIGTERM this process should exit
-  trap exit TERM
-  # on SIGUSR1 fall speed should be increased, this happens during level ups
-  trap 'level=$((level + 1))' USR1
+  trap exit $SIGNAL_TERM
+  # on this signal fall speed should be increased, this happens during level ups
+  trap 'level=$((level + 1))' $SIGNAL_LEVEL_UP
+  # these signals are ignored
+  trap '' $SIGNAL_RESET_LOCKDOWN_TIMER
 
-  # the game level, which SIGUSR1 counts up.
+  # the game level, which levelup-signal counts up.
   level=1
 
   while true ; do
     eval sleep \"\$FALL_SPEED_LEVEL_$level\"
-    echo "$(date +%s) $FALL" # <timestamp> <cmd>
+    echo "$(now) $FALL" # <timestamp> <cmd>
   done
 }
 
 # this function processes keyboard input
 reader() {
-  trap exit TERM # this process exits on SIGTERM
-  trap '' USR1   # SIGUSR1 is ignored
+  # this process exits on SIGTERM
+  trap exit $SIGNAL_TERM
+  # these signals are ignored
+  trap '' $SIGNAL_LEVEL_UP $SIGNAL_RESET_LOCKDOWN_TIMER
+
   local key a='' b='' esc_ch='1b' cmd
 
   stty -echo # disable terminal local echo (echoback)
@@ -966,32 +1023,33 @@ reader() {
     esac
     a=$b   # preserve previous keys
     b=$key
-    [ -n "$cmd" ] && echo "$(date +%s) $cmd" # if not empty string
+    [ -n "$cmd" ] && echo "$(now) $cmd" # if not empty string
   done
 }
 
 controller() {
-  # SIGUSR1 and SIGTERM are ignored
-  trap '' USR1 TERM
+  # These signals are ignored
+  trap '' $SIGNAL_TERM $SIGNAL_LEVEL_UP $SIGNAL_RESET_LOCKDOWN_TIMER
   local cmd statement issued_time
 
   # initialization of commands array with appropriate functions
-  eval commands_"$QUIT"=cmd_quit
-  eval commands_"$RIGHT"=cmd_right
-  eval commands_"$LEFT"=cmd_left
-  eval commands_"$ROTATE_CW"=cmd_rotate_cw
-  eval commands_"$ROTATE_CCW"=cmd_rotate_ccw
-  eval commands_"$FALL"=cmd_fall
-  eval commands_"$SOFT_DROP"=cmd_soft_drop
-  eval commands_"$HARD_DROP"=cmd_hard_drop
-  eval commands_"$HOLD"=cmd_hold
+  eval commands_"$QUIT"=quit
+  eval commands_"$RIGHT"=move_right
+  eval commands_"$LEFT"=move_left
+  eval commands_"$ROTATE_CW"=rotate_cw
+  eval commands_"$ROTATE_CCW"=rotate_ccw
+  eval commands_"$FALL"=fall
+  eval commands_"$SOFT_DROP"=soft_drop
+  eval commands_"$HARD_DROP"=hard_drop
+  eval commands_"$HOLD"=hold
   eval commands_"$REFRESH_SCREEN"=refresh_screen
   eval commands_"$TOGGLE_COLOR"=toggle_color
   eval commands_"$TOGGLE_HELP"=toggle_help
+  eval commands_"$LOCKDOWN"=lockdown
 
   init
 
-  while $showtime; do # run while showtime variable is true, it is changed to false in cmd_quit function
+  while $showtime; do # run while showtime variable is true, it is changed to false in quit function
     # read next command from stdout
     # skip cmds issued before discard_cmds_timepoint
     while read statement; do
@@ -1011,7 +1069,8 @@ main() {
 
   # output of ticker and reader is joined and piped into controller
   (
-    ticker & # ticker runs as separate process
+    ticker &     # ticker runs as separate process
+    lockdown_timer &
     reader
   ) | (
     controller
