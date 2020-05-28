@@ -431,7 +431,7 @@ feed_next_queue() {
   local poped
 
   [ -z "$bag" ] && fill_bag       # if bag is empty, then fill the bag.
-  set $(echo "$bag")
+  set $bag
   poped="$1"; shift; bag="$*"     # pop the tetorimino
   next_queue="$next_queue $poped" # place tetorimino at the end of the Next Queue
 }
@@ -439,7 +439,7 @@ feed_next_queue() {
 get_next() {
   local next_piece
 
-  set $(echo "$next_queue")
+  set $next_queue
   next_piece="$1"; # peek the next piece
 
   #next piece becomes current
@@ -545,7 +545,7 @@ draw_next() {
 
   x="$NEXT_X"; y="$NEXT_Y"; visible="$1"
   shift $#
-  set $(echo "$next_queue")
+  set $next_queue
   while [ $# -gt 0 ]; do
     content='  '
     "$visible" && {
@@ -704,7 +704,7 @@ process_complete_lines() {
   done
 
   [ -z "$completed_lines" ] && return "$ACTION_NONE"
-  set $(echo "$completed_lines")
+  set $completed_lines
   completed_lines_count=$#
 
   # move lines down. move cells from y to yi
@@ -1065,7 +1065,7 @@ controller() {
     # read next command from stdout
     # skip cmds issued before discard_cmds_timepoint
     while read statement; do
-      set $(echo "$statement")
+      set $statement
       issued_time="$1"; cmd="$2"
       shift $#
       [ "$issued_time" -gt "$discard_cmds_timepoint" ] && break
