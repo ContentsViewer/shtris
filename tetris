@@ -1064,8 +1064,8 @@ controller() {
 }
 
 main() {
-  stty_g=`stty -g`                                         # let's save terminal state
-  current_tty=$(ps -p $$ | tail -n 1 | awk '{ print $2 }')
+  stty_g=`stty -g`                        # let's save terminal state
+  current_tty=$(tty | sed -e "s:/dev/::") # get current tty. remove string '/dev/' of tty output
 
   # output of ticker and reader is joined and piped into controller
   (
