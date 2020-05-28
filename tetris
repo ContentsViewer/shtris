@@ -333,13 +333,12 @@ rand() {
 #   y - 0, ..., (PLAYFIELD_H-1), ..., (START_Y-1)
 # each array element contains cell color value or -1 if cell is empty
 redraw_playfield() {
-  local x y xp yp field_cell
+  local x y yp field_cell
 
   y=0
-  xp=$PLAYFIELD_X # don't need to set xp every cell, need on front of the line.
   while [ "$y" -lt "$PLAYFIELD_H" ]; do
     yp=$((PLAYFIELD_Y + PLAYFIELD_H - y - 1))
-    xyprint $xp $yp '' # put the cursor on the front of line
+    xyprint $PLAYFIELD_X $yp '' # put the cursor on the front of line
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
       field_cell=$(eval echo \"\$playfield_"$y"_"$x"\")
@@ -494,7 +493,6 @@ hold_tetorimino() {
 draw_piece() {
   # Arguments:
   #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content, 6 - mask with playfield
-  
   local posx posy type rotation content lx ly x y mask
 
   # at first, we should save arguments.
@@ -775,10 +773,12 @@ move_piece() {
   fi                                          # if we could not move piece to new location
   [ "$2" -eq "$current_piece_y" ] && return 0 # and this was not horizontal move
   
-  "$immediately_lockdown" && 
-  lockdown                || 
-  send_signal "$SIGNAL_RESET_LOCKDOWN_TIMER"
-
+  if "$immediately_lockdown"; then
+    lockdown
+  else
+    send_signal "$SIGNAL_RESET_LOCKDOWN_TIMER"
+  fi
+  
   return 1
 }
 
@@ -996,40 +996,40 @@ reader() {
       *"$esc_ch""$esc_ch") # 2 escapes
         cmd="$QUIT"
         ;;
-      *"$esc_ch"'5b41')   # 'up-cursor'
+      *"$esc_ch"'5b41')    # 'up-cursor'
         cmd="$ROTATE_CW"
         ;;
-      *"$esc_ch"'5b42')   # 'down-cursor'
+      *"$esc_ch"'5b42')    # 'down-cursor'
         cmd="$SOFT_DROP"
         ;;
-      *"$esc_ch"'5b43')   # 'right-cursor'
+      *"$esc_ch"'5b43')    # 'right-cursor'
         cmd="$RIGHT"
         ;;
-      *"$esc_ch"'5b44')   # 'left-cursor'
+      *"$esc_ch"'5b44')    # 'left-cursor'
         cmd="$LEFT"
         ;;
-      *'20')              # ' '
+      *'20')               # ' '
         cmd="$HARD_DROP"
         ;;
-      *'63')              # 'c'
+      *'63')               # 'c'
         cmd="$HOLD"
         ;;
-      *'78')              # 'x'
+      *'78')               # 'x'
         cmd="$ROTATE_CW"
         ;;
-      *'7a')              # 'z'
+      *'7a')               # 'z'
         cmd="$ROTATE_CCW"
         ;;
-      *'43')              # 'C'
+      *'43')               # 'C'
         cmd="$TOGGLE_COLOR"
         ;;
-      *'52')              # 'R'
+      *'52')               # 'R'
         cmd="$REFRESH_SCREEN"
         ;;
-      *'48')              # 'H'
+      *'48')               # 'H'
         cmd="$TOGGLE_HELP"
         ;;
-      *'51')              # 'Q'
+      *'51')               # 'Q'
         cmd="$QUIT"
         ;;
     esac
@@ -1081,7 +1081,7 @@ main() {
 
   # output of ticker and reader is joined and piped into controller
   (
-    ticker &     # ticker runs as separate process
+    ticker &         # ticker runs as separate process
     lockdown_timer &
     reader
   ) | (
