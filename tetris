@@ -284,14 +284,14 @@ hide_cursor() {
 set_fg() {
   $no_color && return
   puts "\033[38;5;${1}m"
-  # puts "\033[3${1}m"
+  # puts "\033[3${1}m" # for using 8/16 Colors
 }
 
 # background color
 set_bg() {
   $no_color && return
   puts "\033[48;5;${1}m"
-  # puts "\033[4${1}m"
+  # puts "\033[4${1}m" # for using 8/16 Colors
 }
 
 reset_colors() {
@@ -378,9 +378,9 @@ update_score() {
 
   [ "$level" -le "$LEVEL_MAX" ]      &&
   [ "$lines_completed" -ge "$goal" ] && {
-    goal=$((goal + level * 5))             # adding an additional five lines to the Goal
-    level=$((level + 1))                   # increment level
-    pkill -$SIGNAL_LEVEL_UP -t "$current_tty" ${0##*/} # and send level-up signal to all instances of this script (please see ticker for more details)
+    goal=$((goal + level * 5))   # adding an additional five lines to the Goal
+    level=$((level + 1))         # increment level
+    send_signal $SIGNAL_LEVEL_UP # and send level-up signal to all instances of this script (please see ticker for more details)
   }
 
   set_bold
@@ -764,7 +764,7 @@ move_piece() {
   [ "$2" -eq "$current_piece_y" ] && return 0 # and this was not horizontal move
   
   "$immediately_lockdown" && 
-  lockdown || 
+  lockdown                || 
   send_signal "$SIGNAL_RESET_LOCKDOWN_TIMER"
 
   return 1
@@ -888,12 +888,12 @@ hold() {
 }
 
 quit() {
-  showtime=false                                        # let's stop controller ...
-  pkill -$SIGNAL_TERM -t "$current_tty" ${0##*/}        # let's kill ticker process ...
+  showtime=false                               # let's stop controller ...
+  send_signal $SIGNAL_TERM                     # let's kill ticker process ...
   xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
   xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H)) '
 > Quit
-> Press any key to continue ...'                      # put message at bottom of playfield so that game screen will keep its shape.
+> Press any key to continue ...'               # put message at bottom of playfield so that game screen will keep its shape.
   flush_screen
 }
 
@@ -937,8 +937,8 @@ lockdown_timer() {
 
   trigger_time=-1
   while true; do
-    [ "$trigger_time" -gt 0 ] &&
-    [ $(now) -gt "$trigger_time" ] &&{
+    [ "$trigger_time" -gt 0 ]      &&
+    [ $(now) -gt "$trigger_time" ] && {
       trigger_time=-1
       echo "$(now) $LOCKDOWN"
     }
