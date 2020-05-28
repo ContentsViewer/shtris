@@ -13,4 +13,12 @@ Thank you!
     BusyBox sh | o
     Solaris sh | x
 
-Author: IOE <Github: ContentsViewer>
+## Usage
+```sh
+$ chmod 755 ./tetris
+$ ./tetris
+```
+Enjoy :-)
+
+## Author
+IOE <Github: ContentsViewer>

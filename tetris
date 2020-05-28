@@ -949,11 +949,13 @@ lockdown_timer() {
 
   trigger_time=-1
   while true; do
-    [ "$trigger_time" -gt 0 ]      &&
-    [ $(now) -gt "$trigger_time" ] && {
+    [ "$trigger_time" -gt 0 ]        &&
+    [ "$(now)" -gt "$trigger_time" ] && {
       trigger_time=-1
       echo "$(now) $LOCKDOWN"
     }
+    sleep 0.1 & # for reducing loop
+    wait
   done
 }
 
@@ -1065,9 +1067,9 @@ controller() {
     # read next command from stdout
     # skip cmds issued before discard_cmds_timepoint
     while read statement; do
-      set $statement
+      shift $#; set $statement
+      [ $# -ne 2 ] && continue   # in some case, param counts is unexpected(not 2). I dont know why :-)
       issued_time="$1"; cmd="$2"
-      shift $#
       [ "$issued_time" -gt "$discard_cmds_timepoint" ] && break
     done
     eval eval \"\$commands_"$cmd"\" # run command
@@ -1092,4 +1094,37 @@ main() {
   stty "$stty_g" # let's restore terminal state
 }
 
-main 2> /dev/null # discard stderr of kill command saying 'User defined signal ...'
+print_usage_and_exit () {
+  cat <<USAGE 1>&2
+
+Usage: ${0##*/} [options]
+
+Options:
+ -d, --debug  debug mode
+ -h, --help   display this help and exit
+
+Version:
+ 1.0
+
+USAGE
+  exit 1
+}
+
+case "${1:-}" in
+  --help|-h) print_usage_and_exit;;
+esac
+
+debug=false
+while [ $# -gt 0 ]; do
+  case $1 in
+    -d|--debug) debug=true; shift; continue;;
+    *)          print_usage_and_exit;;
+  esac
+done
+
+if $debug; then
+  main
+else
+  main 2> /dev/null # discard stderr of kill command saying 'User defined signal ...'
+fi
+
