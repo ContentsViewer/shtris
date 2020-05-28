@@ -314,6 +314,19 @@ discard_cmds() {
   discard_cmds_timepoint=$(now)
 }
 
+rand() {
+  LF=$(printf '\\\n_');LF=${LF%_}       # define LF for sed.
+  (ps -Ao pid,etime,pcpu,vsz; date)   | # the source of randamize(process info + date)
+  od -t d4 -A n -v                    | # Quantified(-A n: hide address on left side.; -v: disable Omission)
+  sed 's/[^0-9]\{1,\}/'"$LF"'/g'      | # replace strings starting with no number with LF.
+  grep '[0-9]'                        | # get only numbers
+  tail -n 42                          | # get tail 42 before eof
+  sed 's/.*\(.\{8\}\)$/\1/g'          | # the number less than 100000000(2^32)
+  awk 'BEGIN{a=-2147483648;}
+      {a+=$1;}
+      END{srand(a); print rand();}'
+}
+
 # playfield is 2-dimensional array, data is stored as follows:
 # a_{y,x}
 #   x - 0, ..., (PLAYFIELD_W-1)
@@ -397,14 +410,13 @@ update_score() {
 fill_bag() {
   bag=$(
     echo \
-"$O_TETORIMINO
-$I_TETORIMINO
-$T_TETORIMINO
-$L_TETORIMINO
-$J_TETORIMINO
-$S_TETORIMINO
-$Z_TETORIMINO" |
-    awk '{print rand() " " $0}' | 
+"$(rand) $O_TETORIMINO
+$(rand) $I_TETORIMINO
+$(rand) $T_TETORIMINO
+$(rand) $L_TETORIMINO
+$(rand) $J_TETORIMINO
+$(rand) $S_TETORIMINO
+$(rand) $Z_TETORIMINO" |
     sort -k1 | 
     cut -d' ' -f2 | 
     (
