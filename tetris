@@ -307,7 +307,7 @@ now() {
 }
 
 send_signal() {
-  pkill -"$1" -t "$current_tty" ${0##*/}
+  pkill -$1 -t $current_tty ${0##*/}
 }
 
 discard_cmds() {
