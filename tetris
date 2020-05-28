@@ -17,12 +17,12 @@
 
 set -u # non initialized variable is an error
 
-# 2 signals are used: SIGUSR1 to decrease delay after level up and SIGUSR2 to quit
+# 2 signals are used: SIGUSR1 to decrease delay after level up and SIGTERM to quit
 # they are sent to all instances of this script
 # because of that we should process them in each instance
 # in this instance we are ignoring both signals
 # in shell enviroment, should Drop the SIG prefix, just input the signal name.
-trap '' USR1 USR2
+trap '' USR1 TERM
 
 # Those are commands sent to controller by key press processing code
 # In controller they are used as index to retrieve actual function from array
@@ -37,7 +37,7 @@ ROTATE_CCW=7
 HOLD=8
 TOGGLE_COLOR=9
 TOGGLE_HELP=10
-REDRAW_SCREEN=11
+REFRESH_SCREEN=11
 
 # The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line. 
 # The current level of the game determines the normal Fall Speed using the following equation:
@@ -196,16 +196,11 @@ z         Rotate Counter-Clockwise
 c         Hold
 ↓         Soft Drop
 Space     Hard Drop
-R         Redraw Screen
+R         Refresh Screen
 C         Toggle Color
 H         Toggle Help
 Q, ESCx2  Quit
 '
-help_on=true     # if this flag is true help is shown, if false, hide
-no_color=false   # do we use color or not
-showtime=true    # controller runs while this flag is true
-empty_cell=' .'  # how we draw empty cell
-filled_cell='[]' # how we draw filled cell
 
 # the queue of the next tetoriminos to be placed.
 # the reference says the next six tetrimonos should be shown.
@@ -235,21 +230,20 @@ bag=''
 # at level 1 / 100 = Total Line Clears
 goal=5
 
-already_hold=false       #
 score=0                  # score variable initialization
 level=1                  # level variable initialization
 lines_completed=0        # completed lines counter initialization
+already_hold=false       #
+help_on=true             # if this flag is true help is shown, if false, hide
+no_color=false           # do we use color or not
+showtime=true            # controller runs while this flag is true
 discard_cmds_timepoint=0 # cmds issued before this time is discarded
-
-current_tty=$(
-  ps -p $$ | tail -n 1 | (
-    set $(cat)
-    printf "$2"
-  )
-)
+empty_cell=' .'          # how we draw empty cell
+filled_cell='[]'         # how we draw filled cell
 
 # screen_buffer is variable, that accumulates all screen changes
 # this variable is printed in controller once per game cycle
+screen_buffer=''
 puts() {
   screen_buffer="$screen_buffer""$1"
 }
@@ -293,6 +287,10 @@ reset_colors() {
 
 set_bold() {
   puts "\033[1m"
+}
+
+discard_cmds() {
+  discard_cmds_timepoint=$(date +%s)
 }
 
 # playfield is 2-dimensional array, data is stored as follows:
@@ -394,15 +392,6 @@ $Z_TETORIMINO" |
       done
     )
   )
-
-  # bag=$(
-  #   shuf -e $O_TETORIMINO $I_TETORIMINO $T_TETORIMINO $L_TETORIMINO $J_TETORIMINO $S_TETORIMINO $Z_TETORIMINO |
-  #   (
-  #     while read piece; do
-  #       printf "$piece"' '
-  #     done
-  #   )
-  # )
 }
 
 #  the Tetrimino at the front of the line in the bag is placed at the end of the Next Queue
@@ -805,12 +794,12 @@ draw_help() {
   reset_colors
 }
 
-discard_cmds() {
-  discard_cmds_timepoint=$(date +%s)
+refresh_screen() {
+  clear
+  redraw_screen
 }
 
 redraw_screen() {
-  clear
   show_next
   show_hold
   update_score "$ACTION_NONE"
@@ -827,7 +816,7 @@ toggle_help() {
 
 toggle_color() {
   $no_color && no_color=false || no_color=true
-  redraw_screen
+  redraw_screen 
 }
 
 cmd_right(){
@@ -866,11 +855,11 @@ cmd_hold() {
 }
 
 cmd_quit() {
-  showtime=false                                      # let's stop controller ...
-  pkill -USR2 -t "$current_tty" ${0##*/}              # ... send SIGUSR2 to all script instances to stop forked process ...
+  showtime=false                                        # let's stop controller ...
+  pkill -TERM -t "$current_tty" ${0##*/}                # let's kill ticker process ...
   xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
   xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H + 1)) '> Quit' # put message at bottom of playfield so that game screen will keep its shape. 
-  printf "$screen_buffer"                        # ... and print final message
+  flush_screen
 }
 
 init() {
@@ -896,7 +885,6 @@ init() {
     i=$((i + 1))
   done
 
-  screen_buffer=''
   clear
   hide_cursor
   get_next
@@ -904,28 +892,29 @@ init() {
   flush_screen
 }
 
+
 # this function runs in separate process
 # it sends DOWN commands to controller with appropriate delay
 ticker() {
-  # on SIGUSR2 this process should exit
-  trap exit USR2
+  # on SIGTERM this process should exit
+  trap exit TERM
   # on SIGUSR1 fall speed should be increased, this happens during level ups
   trap 'level=$((level + 1))' USR1
 
   # the game level, which SIGUSR1 counts up.
   level=1
 
-  while true ; do 
-    echo "$(date +%s) $FALL" # <timestamp> <cmd>
+  while true ; do
     eval sleep \"\$FALL_SPEED_LEVEL_$level\"
+    echo "$(date +%s) $FALL" # <timestamp> <cmd>
   done
 }
 
 # this function processes keyboard input
 reader() {
-  trap exit USR2 # this process exits on SIGUSR2
+  trap exit TERM # this process exits on SIGTERM
   trap '' USR1   # SIGUSR1 is ignored
-  local key a='' b='' cmd esc_ch='1b'
+  local key a='' b='' esc_ch='1b' cmd
 
   stty -echo # disable terminal local echo (echoback)
   while true ;do
@@ -966,7 +955,7 @@ reader() {
         cmd="$TOGGLE_COLOR"
         ;;
       *'52')              # 'R'
-        cmd="$REDRAW_SCREEN"
+        cmd="$REFRESH_SCREEN"
         ;;
       *'48')              # 'H'
         cmd="$TOGGLE_HELP"
@@ -982,10 +971,10 @@ reader() {
 }
 
 controller() {
-  # SIGUSR1 and SIGUSR2 are ignored
-  trap '' USR1 USR2
-  local cmd commands statement issued_time
-  
+  # SIGUSR1 and SIGTERM are ignored
+  trap '' USR1 TERM
+  local cmd statement issued_time
+
   # initialization of commands array with appropriate functions
   eval commands_"$QUIT"=cmd_quit
   eval commands_"$RIGHT"=cmd_right
@@ -996,16 +985,13 @@ controller() {
   eval commands_"$SOFT_DROP"=cmd_soft_drop
   eval commands_"$HARD_DROP"=cmd_hard_drop
   eval commands_"$HOLD"=cmd_hold
-  eval commands_"$REDRAW_SCREEN"=redraw_screen
+  eval commands_"$REFRESH_SCREEN"=refresh_screen
   eval commands_"$TOGGLE_COLOR"=toggle_color
   eval commands_"$TOGGLE_HELP"=toggle_help
 
   init
 
-  while $showtime; do               # run while showtime variable is true, it is changed to false in cmd_quit function
-    printf "$screen_buffer"         # output screen buffer ...
-    screen_buffer=""                # ... and reset it
-    
+  while $showtime; do # run while showtime variable is true, it is changed to false in cmd_quit function
     # read next command from stdout
     # skip cmds issued before discard_cmds_timepoint
     while read statement; do
@@ -1015,21 +1001,24 @@ controller() {
       [ "$issued_time" -gt "$discard_cmds_timepoint" ] && break
     done
     eval eval \"\$commands_"$cmd"\" # run command
+    flush_screen
   done
 }
 
-stty_g=`stty -g` # let's save terminal state
+main() {
+  stty_g=`stty -g`                                         # let's save terminal state
+  current_tty=$(ps -p $$ | tail -n 1 | awk '{ print $2 }')
 
-# output of ticker and reader is joined and piped into controller
-(
-  ticker & # ticker runs as separate process
-  reader
-) 2> /dev/null | (
-  controller
-) 2> /dev/null
+  # output of ticker and reader is joined and piped into controller
+  (
+    ticker & # ticker runs as separate process
+    reader
+  ) | (
+    controller
+  )
+  
+  show_cursor
+  stty "$stty_g" # let's restore terminal state
+}
 
-sleep 1
-wait
-
-show_cursor
-stty "$stty_g" # let's restore terminal state
+main 2> /dev/null # discard stderr of kill command saying 'User defined signal ...'
