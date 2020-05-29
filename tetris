@@ -37,9 +37,9 @@ VERSION='1.0.1-alpha'
 # in shell enviroment, should Drop the SIG prefix, just input the signal name.
 SIGNAL_TERM=TERM
 SIGNAL_LEVEL_UP=USR1
-SIGNAL_RESET_LOCKDOWN_TIMER=USR2
+SIGNAL_START_LOCKDOWN_TIMER=USR2
 
-trap '' $SIGNAL_TERM $SIGNAL_LEVEL_UP $SIGNAL_RESET_LOCKDOWN_TIMER
+trap '' $SIGNAL_TERM $SIGNAL_LEVEL_UP $SIGNAL_START_LOCKDOWN_TIMER
 
 # Those are commands sent to controller by key press processing code
 # In controller they are used as index to retrieve actual function from array
@@ -225,6 +225,7 @@ Usage: ${0##*/} [options]
 
 Options:
  -d, --debug  debug mode
+ -l, --level  game level. range from 1 to $LEVEL_MAX
  -h, --help   display this help and exit
 
 Version:
@@ -269,6 +270,7 @@ showtime=true            # controller runs while this flag is true
 discard_cmds_timepoint=0 # cmds issued before this time is discarded
 empty_cell=' .'          # how we draw empty cell
 filled_cell='[]'         # how we draw filled cell
+lands_on=false           #
 
 # screen_buffer is variable, that accumulates all screen changes
 # this variable is printed in controller once per game cycle
@@ -348,6 +350,12 @@ print_usage_and_exit () {
   exit 1
 }
 
+level_up() {
+  level=$((level + 1))         # increment level
+  goal=$((goal + level * 5))   # adding an additional five lines to the Goal
+  send_signal $SIGNAL_LEVEL_UP # and send level-up signal to all instances of this script (please see ticker for more details)
+}
+
 # playfield is 2-dimensional array, data is stored as follows:
 # a_{y,x}
 #   x - 0, ..., (PLAYFIELD_W-1)
@@ -411,9 +419,7 @@ update_score() {
 
   [ "$level" -le "$LEVEL_MAX" ]      &&
   [ "$lines_completed" -ge "$goal" ] && {
-    goal=$((goal + level * 5))   # adding an additional five lines to the Goal
-    level=$((level + 1))         # increment level
-    send_signal $SIGNAL_LEVEL_UP # and send level-up signal to all instances of this script (please see ticker for more details)
+    level_up
   }
 
   set_bold
@@ -785,21 +791,26 @@ move_piece() {
   # moves the piece to the new location if possible
   immediately_lockdown=${3:-false}
 
-  if new_piece_location_ok "$1" "$2"; then    # if new location is ok
-    clear_current                             # let's wipe out piece current location
-    current_piece_x="$1"                      # update x ...
-    current_piece_y="$2"                      # ... and y of new location
-    show_current                              # and draw piece in new location
-    return 0                                  # nothing more to do here
-  fi                                          # if we could not move piece to new location
-  [ "$2" -eq "$current_piece_y" ] && return 0 # and this was not horizontal move
+  if new_piece_location_ok "$1" "$2"; then            # if new location is ok
+    [ "$2" -lt "$current_piece_y" ] && lands_on=false # can move down means not lands on
+    clear_current                                     # let's wipe out piece current location
+    current_piece_x="$1"                              # update x ...
+    current_piece_y="$2"                              # ... and y of new location
+    show_current                                      # and draw piece in new location
+    return 0                                          # nothing more to do here
+  fi                                                  # if we could not move piece to new location
+
+  [ "$2" -eq "$current_piece_y" ] && return 0         # and this was horizontal move
   
   if "$immediately_lockdown"; then
     lockdown
   else
-    send_signal "$SIGNAL_RESET_LOCKDOWN_TIMER"
+    "$lands_on" || {
+      send_signal "$SIGNAL_START_LOCKDOWN_TIMER"
+    }
   fi
-  
+  lands_on=true
+
   return 1
 }
 
@@ -953,6 +964,11 @@ init() {
     i=$((i + 1))
   done
 
+  # level up until reach starting level
+  while [ $level -lt $starting_level ]; do
+    level_up
+  done
+
   clear
   hide_cursor
   get_next
@@ -964,7 +980,7 @@ lockdown_timer() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
   # on this signal reset the timer
-  trap 'trigger_time=$(now)' $SIGNAL_RESET_LOCKDOWN_TIMER
+  trap 'trigger_time=$(now)' $SIGNAL_START_LOCKDOWN_TIMER
   # these signals are ignored
   trap '' $SIGNAL_LEVEL_UP
 
@@ -995,13 +1011,14 @@ ticker() {
   # on this signal fall speed should be increased, this happens during level ups
   trap 'level=$((level + 1))' $SIGNAL_LEVEL_UP
   # these signals are ignored
-  trap '' $SIGNAL_RESET_LOCKDOWN_TIMER
+  trap '' $SIGNAL_START_LOCKDOWN_TIMER
 
   # the game level, which levelup-signal counts up.
   level=1
 
   while true ; do
-    eval sleep \"\$FALL_SPEED_LEVEL_$level\"
+    eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
+    wait
     echo "$(now) $FALL" # <timestamp> <cmd>
   done
 }
@@ -1011,7 +1028,7 @@ reader() {
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
   # these signals are ignored
-  trap '' $SIGNAL_LEVEL_UP $SIGNAL_RESET_LOCKDOWN_TIMER
+  trap '' $SIGNAL_LEVEL_UP $SIGNAL_START_LOCKDOWN_TIMER
 
   local key a='' b='' esc_ch='1b' cmd
 
@@ -1071,7 +1088,7 @@ reader() {
 
 controller() {
   # These signals are ignored
-  trap '' $SIGNAL_TERM $SIGNAL_LEVEL_UP $SIGNAL_RESET_LOCKDOWN_TIMER
+  trap '' $SIGNAL_TERM $SIGNAL_LEVEL_UP $SIGNAL_START_LOCKDOWN_TIMER
   local cmd statement issued_time
 
   # initialization of commands array with appropriate functions
@@ -1127,11 +1144,27 @@ main() {
     --help|-h) print_usage_and_exit;;
   esac
 
+  starting_level=1
   debug=false
   while [ $# -gt 0 ]; do
     case $1 in
-      -d|--debug) debug=true; shift; continue;;
-      *)          print_usage_and_exit;;
+      -d|--debug)
+        debug=true
+        shift; continue
+        ;;
+      -l|--level)
+        [ $# -le 1 ]                                    || # if next parameter not exists...
+        { expr $2 + 1 > /dev/null 2>&1; [ $? -gt 1 ]; } || # ...not number
+        [ $2 -lt 1 ]                                    || # ...less than 1
+        [ $2 -gt $LEVEL_MAX ]                           && # ...greater than LEVEL_MAX
+        print_usage_and_exit                               # then exit
+
+        starting_level=$2
+        shift 2; continue
+        ;;
+      *)
+        print_usage_and_exit
+        ;;
     esac
   done
 
