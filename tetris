@@ -215,6 +215,17 @@ H         Toggle Help
 Q, ESCx2  Quit
 '
 
+usage="
+Usage: ${0##*/} [options]
+
+Options:
+ -d, --debug  debug mode
+ -h, --help   display this help and exit
+
+Version:
+ 1.0.0
+"
+
 # the queue of the next tetoriminos to be placed.
 # the reference says the next six tetrimonos should be shown.
 next_queue=''
@@ -325,6 +336,11 @@ rand() {
   awk 'BEGIN{a=-2147483648;}
       {a+=$1;}
       END{srand(a); print rand();}'
+}
+
+print_usage_and_exit () {
+  echo "$usage" 1>&2
+  exit 1
 }
 
 # playfield is 2-dimensional array, data is stored as follows:
@@ -1077,7 +1093,7 @@ controller() {
   done
 }
 
-main() {
+game() {
   stty_g=`stty -g`                        # let's save terminal state
   current_tty=$(tty | sed -e "s:/dev/::") # get current tty. remove string '/dev/' of tty output
 
@@ -1094,37 +1110,24 @@ main() {
   stty "$stty_g" # let's restore terminal state
 }
 
-print_usage_and_exit () {
-  cat <<USAGE 1>&2
+main() {
+  case "${1:-}" in
+    --help|-h) print_usage_and_exit;;
+  esac
 
-Usage: ${0##*/} [options]
+  debug=false
+  while [ $# -gt 0 ]; do
+    case $1 in
+      -d|--debug) debug=true; shift; continue;;
+      *)          print_usage_and_exit;;
+    esac
+  done
 
-Options:
- -d, --debug  debug mode
- -h, --help   display this help and exit
-
-Version:
- 1.0.0
-
-USAGE
-  exit 1
+  if $debug; then
+    game
+  else
+    game 2> /dev/null # discard stderr of kill command saying 'User defined signal ...'
+  fi
 }
 
-case "${1:-}" in
-  --help|-h) print_usage_and_exit;;
-esac
-
-debug=false
-while [ $# -gt 0 ]; do
-  case $1 in
-    -d|--debug) debug=true; shift; continue;;
-    *)          print_usage_and_exit;;
-  esac
-done
-
-if $debug; then
-  main
-else
-  main 2> /dev/null # discard stderr of kill command saying 'User defined signal ...'
-fi
-
+main "$@"
