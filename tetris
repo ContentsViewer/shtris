@@ -949,6 +949,8 @@ quit() {
 init() {
   local x y i
 
+  echo 'Loading...'
+
   # playfield is initialized with -1s (empty cells)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
   # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y)
@@ -972,6 +974,7 @@ init() {
   # level up until reach starting level
   while [ $level -lt $starting_level ]; do
     level_up
+    sleep 0.1
   done
 
   clear
