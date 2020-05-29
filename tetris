@@ -88,16 +88,16 @@ WHITE=7
 ORANGE=208
 
 # Those are Tetrimino type
-O_TETORIMINO=0
-I_TETORIMINO=1
-T_TETORIMINO=2
-L_TETORIMINO=3
-J_TETORIMINO=4
-S_TETORIMINO=5
-Z_TETORIMINO=6
+O_TETRIMINO=0
+I_TETRIMINO=1
+T_TETRIMINO=2
+L_TETRIMINO=3
+J_TETRIMINO=4
+S_TETRIMINO=5
+Z_TETRIMINO=6
 
 # Those are the facing
-# Tetorimino has four facings
+# Tetrimino has four facings
 NORTH=0
 EAST=1
 SOUTH=2
@@ -158,53 +158,53 @@ START_Y=21
 # each string is sequence of relative xy coordinates
 
 # O-Tetrimino
-eval piece_"$O_TETORIMINO"_color=\"$YELLOW\"
-eval piece_"$O_TETORIMINO"_minos_"$NORTH"=\'1 0 2 0 1 1 2 1\'
-eval piece_"$O_TETORIMINO"_minos_"$EAST"=\'1 0 2 0 1 1 2 1\'
-eval piece_"$O_TETORIMINO"_minos_"$SOUTH"=\'1 0 2 0 1 1 2 1\'
-eval piece_"$O_TETORIMINO"_minos_"$WEST"=\'1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETRIMINO"_color=\"$YELLOW\"
+eval piece_"$O_TETRIMINO"_minos_"$NORTH"=\'1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETRIMINO"_minos_"$EAST"=\'1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETRIMINO"_minos_"$SOUTH"=\'1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETRIMINO"_minos_"$WEST"=\'1 0 2 0 1 1 2 1\'
 
-# I-Tetorimino
-eval piece_"$I_TETORIMINO"_color=\"$CYAN\"
-eval piece_"$I_TETORIMINO"_minos_"$NORTH"=\'0 1 1 1 2 1 3 1\'
-eval piece_"$I_TETORIMINO"_minos_"$EAST"=\'2 0 2 1 2 2 2 3\'
-eval piece_"$I_TETORIMINO"_minos_"$SOUTH"=\'0 2 1 2 2 2 3 2\'
-eval piece_"$I_TETORIMINO"_minos_"$WEST"=\'1 0 1 1 1 2 1 3\'
+# I-Tetrimino
+eval piece_"$I_TETRIMINO"_color=\"$CYAN\"
+eval piece_"$I_TETRIMINO"_minos_"$NORTH"=\'0 1 1 1 2 1 3 1\'
+eval piece_"$I_TETRIMINO"_minos_"$EAST"=\'2 0 2 1 2 2 2 3\'
+eval piece_"$I_TETRIMINO"_minos_"$SOUTH"=\'0 2 1 2 2 2 3 2\'
+eval piece_"$I_TETRIMINO"_minos_"$WEST"=\'1 0 1 1 1 2 1 3\'
 
-# T-Tetorimino
-eval piece_"$T_TETORIMINO"_color=\"$MAGENTA\"
-eval piece_"$T_TETORIMINO"_minos_"$NORTH"=\'1 0 0 1 1 1 2 1\'
-eval piece_"$T_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 1 2\'
-eval piece_"$T_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 1 2\'
-eval piece_"$T_TETORIMINO"_minos_"$WEST"=\'1 0 0 1 1 1 1 2\'
+# T-Tetrimino
+eval piece_"$T_TETRIMINO"_color=\"$MAGENTA\"
+eval piece_"$T_TETRIMINO"_minos_"$NORTH"=\'1 0 0 1 1 1 2 1\'
+eval piece_"$T_TETRIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 1 2\'
+eval piece_"$T_TETRIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 1 2\'
+eval piece_"$T_TETRIMINO"_minos_"$WEST"=\'1 0 0 1 1 1 1 2\'
 
-# L-Tetorimino
-eval piece_"$L_TETORIMINO"_color=\"$ORANGE\"
-eval piece_"$L_TETORIMINO"_minos_"$NORTH"=\'2 0 0 1 1 1 2 1\'
-eval piece_"$L_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 1 2 2 2\'
-eval piece_"$L_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 0 2\'
-eval piece_"$L_TETORIMINO"_minos_"$WEST"=\'0 0 1 0 1 1 1 2\'
+# L-Tetrimino
+eval piece_"$L_TETRIMINO"_color=\"$ORANGE\"
+eval piece_"$L_TETRIMINO"_minos_"$NORTH"=\'2 0 0 1 1 1 2 1\'
+eval piece_"$L_TETRIMINO"_minos_"$EAST"=\'1 0 1 1 1 2 2 2\'
+eval piece_"$L_TETRIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 0 2\'
+eval piece_"$L_TETRIMINO"_minos_"$WEST"=\'0 0 1 0 1 1 1 2\'
 
-# J-Tetorimino
-eval piece_"$J_TETORIMINO"_color=\"$BLUE\"
-eval piece_"$J_TETORIMINO"_minos_"$NORTH"=\'0 0 0 1 1 1 2 1\'
-eval piece_"$J_TETORIMINO"_minos_"$EAST"=\'1 0 2 0 1 1 1 2\'
-eval piece_"$J_TETORIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 2 2\'
-eval piece_"$J_TETORIMINO"_minos_"$WEST"=\'1 0 1 1 0 2 1 2\'
+# J-Tetrimino
+eval piece_"$J_TETRIMINO"_color=\"$BLUE\"
+eval piece_"$J_TETRIMINO"_minos_"$NORTH"=\'0 0 0 1 1 1 2 1\'
+eval piece_"$J_TETRIMINO"_minos_"$EAST"=\'1 0 2 0 1 1 1 2\'
+eval piece_"$J_TETRIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 2 2\'
+eval piece_"$J_TETRIMINO"_minos_"$WEST"=\'1 0 1 1 0 2 1 2\'
 
-# S-Tetorimino
-eval piece_"$S_TETORIMINO"_color=\"$GREEN\"
-eval piece_"$S_TETORIMINO"_minos_"$NORTH"=\'1 0 2 0 0 1 1 1\'
-eval piece_"$S_TETORIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 2 2\'
-eval piece_"$S_TETORIMINO"_minos_"$SOUTH"=\'1 1 2 1 0 2 1 2\'
-eval piece_"$S_TETORIMINO"_minos_"$WEST"=\'0 0 0 1 1 1 1 2\'
+# S-Tetrimino
+eval piece_"$S_TETRIMINO"_color=\"$GREEN\"
+eval piece_"$S_TETRIMINO"_minos_"$NORTH"=\'1 0 2 0 0 1 1 1\'
+eval piece_"$S_TETRIMINO"_minos_"$EAST"=\'1 0 1 1 2 1 2 2\'
+eval piece_"$S_TETRIMINO"_minos_"$SOUTH"=\'1 1 2 1 0 2 1 2\'
+eval piece_"$S_TETRIMINO"_minos_"$WEST"=\'0 0 0 1 1 1 1 2\'
 
-# Z-Tetorimino
-eval piece_"$Z_TETORIMINO"_color=\"$RED\"
-eval piece_"$Z_TETORIMINO"_minos_"$NORTH"=\"0 0 1 0 1 1 2 1\"
-eval piece_"$Z_TETORIMINO"_minos_"$EAST"=\"2 0 1 1 2 1 1 2\"
-eval piece_"$Z_TETORIMINO"_minos_"$SOUTH"=\"0 1 1 1 1 2 2 2\"
-eval piece_"$Z_TETORIMINO"_minos_"$WEST"=\"1 0 0 1 1 1 0 2\"
+# Z-Tetrimino
+eval piece_"$Z_TETRIMINO"_color=\"$RED\"
+eval piece_"$Z_TETRIMINO"_minos_"$NORTH"=\"0 0 1 0 1 1 2 1\"
+eval piece_"$Z_TETRIMINO"_minos_"$EAST"=\"2 0 1 1 2 1 1 2\"
+eval piece_"$Z_TETRIMINO"_minos_"$SOUTH"=\"0 1 1 1 1 2 2 2\"
+eval piece_"$Z_TETRIMINO"_minos_"$WEST"=\"1 0 0 1 1 1 0 2\"
 
 help='
 ←         Move Left or Right
@@ -232,11 +232,11 @@ Version:
  $VERSION
 "
 
-# the queue of the next tetoriminos to be placed.
+# the queue of the next tetriminos to be placed.
 # the reference says the next six tetrimonos should be shown.
 next_queue=''
 
-# the hold queue allows the player to hold a falling tetorimino for as long as they wish.
+# the hold queue allows the player to hold a falling tetrimino for as long as they wish.
 hold_queue=''
 
 # Tetris uses a “bag” system to determine the sequence of Tetriminos that appear during game
@@ -436,13 +436,13 @@ update_score() {
 fill_bag() {
   bag=$(
     echo \
-"$(rand) $O_TETORIMINO
-$(rand) $I_TETORIMINO
-$(rand) $T_TETORIMINO
-$(rand) $L_TETORIMINO
-$(rand) $J_TETORIMINO
-$(rand) $S_TETORIMINO
-$(rand) $Z_TETORIMINO" |
+"$(rand) $O_TETRIMINO
+$(rand) $I_TETRIMINO
+$(rand) $T_TETRIMINO
+$(rand) $L_TETRIMINO
+$(rand) $J_TETRIMINO
+$(rand) $S_TETRIMINO
+$(rand) $Z_TETRIMINO" |
     sort -k1 | 
     cut -d' ' -f2 | 
     (
@@ -459,8 +459,8 @@ feed_next_queue() {
 
   [ -z "$bag" ] && fill_bag       # if bag is empty, then fill the bag.
   set $bag
-  poped="$1"; shift; bag="$*"     # pop the tetorimino
-  next_queue="$next_queue $poped" # place tetorimino at the end of the Next Queue
+  poped="$1"; shift; bag="$*"     # pop the tetrimino
+  next_queue="$next_queue $poped" # place tetrimino at the end of the Next Queue
 }
 
 get_next() {
@@ -469,14 +469,10 @@ get_next() {
   set $next_queue
   next_piece="$1"; # peek the next piece
 
-  #next piece becomes current
-  current_piece="$next_piece"
-  current_piece_rotation="$NORTH"
-
+  # next piece becomes current
   # place current at the top of play field.
-  current_piece_x="$START_X"
-  current_piece_y="$START_Y"
-
+  generate_tetrimino "$next_piece"
+  
   # check if piece can be placed at this location, if not - game over
   new_piece_location_ok $current_piece_x $current_piece_y || quit
   show_current
@@ -484,18 +480,18 @@ get_next() {
   # now let's shift next queue
   clear_next
   shift; next_queue="$*" # pop the next piece from the front of queue
-  feed_next_queue        # push tetorimino into queue; keep queue size
+  feed_next_queue        # push tetrimino into queue; keep queue size
   show_next
 }
 
-hold_tetorimino() {
+hold_tetrimino() {
   #  Between Holds, A Lock Down must take place. reset this flag in move_piece().
   "$already_hold" && return
   already_hold=true
 
   # if hold queue is empty,
   [ -z "$hold_queue" ] && {
-    hold_queue="$current_piece" # hold current tetorimino
+    hold_queue="$current_piece" # hold current tetrimino
     clear_current
     get_next                    # the Next Tetrimino is generated from the Next Queue and begins to fall
     show_hold
@@ -507,14 +503,23 @@ hold_tetorimino() {
   # swap piece
   held_piece="$hold_queue"
   hold_queue="$current_piece"
-  current_piece="$held_piece"
-  
+
+  generate_tetrimino "$held_piece"
+  show_hold
+}
+
+# generate tetrimino in play field
+generate_tetrimino() {
+  # Arguments:
+  #   1 - tetrimino to generate
+  current_piece="$1"
+
   # beginning from its generation position and North Facing orientation.
   current_piece_x="$START_X"
   current_piece_y="$START_Y"
   current_piece_rotation="$NORTH"
 
-  show_hold
+  lands_on=false
 }
 
 draw_piece() {
@@ -529,7 +534,7 @@ draw_piece() {
   # set minos coordinates.
   set $(eval echo \"\$piece_"$type"_minos_"$rotation"\")
 
-  # loop through tetorimino minos: 4 minos, each has 2 coordinates
+  # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     # relative coordinates are retrieved bassed on orientation and added to absolute coordinates
     lx=$1; ly=$2
@@ -634,7 +639,7 @@ new_piece_location_ok() {
   # $1 - x, $2 - y
   set $(eval echo \"\$piece_"$current_piece"_minos_"$current_piece_rotation"\")
   
-  # loop through tetorimino minos: 4 minos, each has 2 coordinates
+  # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     lx="$1"; ly="$2"
     x=$((x_test + lx)) # new x coordinate of piece cell
@@ -694,7 +699,7 @@ flatten_playfield() {
   # $1 - x, $2 - y
   set $(eval echo \"\$piece_"$current_piece"_minos_"$current_piece_rotation"\")
   
-  # loop through tetorimino minos: 4 minos, each has 2 coordinates
+  # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     lx="$1"; ly="$2"
     x=$((current_piece_x + lx))
@@ -820,7 +825,7 @@ lockdown() {
   
   process_fallen_piece # let's finalize this piece
   get_next             # and start the new one
-  already_hold=false   # player can hold the falling tetorimino.
+  already_hold=false   # player can hold the falling tetrimino.
 }
 
 rotate_piece() {
@@ -928,7 +933,7 @@ rotate_ccw() {
 }
 
 hold() {
-  hold_tetorimino
+  hold_tetrimino
 }
 
 quit() {
@@ -957,7 +962,7 @@ init() {
     y=$((y + 1))
   done
 
-  # prepare next queue filled with NEXT_MAX tetorimino 
+  # prepare next queue filled with NEXT_MAX tetrimino 
   i=0
   while [ "$i" -lt "$NEXT_MAX" ]; do
     feed_next_queue
