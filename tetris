@@ -1028,6 +1028,7 @@ ticker() {
     eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
     wait
     echo "$(now) $FALL" # <timestamp> <cmd>
+    echo "$level" >> .log
   done
 }
 
