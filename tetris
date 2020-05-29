@@ -23,6 +23,11 @@
 
 set -u # non initialized variable is an error
 
+# game versioin
+# should follow "Semantic Versioning 2.0.0" <https://semver.org/> 
+# so that users have a clear indicator of when an upgrade will introduce breaking changes.
+VERSION='1.0.1-alpha'
+
 # 3 signals are used: SIGUSR1 to decrease delay after level up and SIGTERM to quit
 # they are sent to all instances of this script
 # because of that we should process them in each instance
@@ -223,7 +228,7 @@ Options:
  -h, --help   display this help and exit
 
 Version:
- 1.0.1-alpha
+ $VERSION
 "
 
 # the queue of the next tetoriminos to be placed.
@@ -963,12 +968,19 @@ lockdown_timer() {
   # these signals are ignored
   trap '' $SIGNAL_LEVEL_UP
 
+  local timestamp trigger_time
+
   trigger_time=-1
   while true; do
-    [ "$trigger_time" -gt 0 ]        &&
-    [ "$(now)" -gt "$trigger_time" ] && {
+    timestamp=''
+    while [ -z "$timestamp" ]; do # in some case, timestamp suddenly becaomes empty string. I dont know why :-)
+      timestamp=$(now)            # so get time again...
+    done
+
+    [ "$trigger_time" -gt 0 ]            &&
+    [ "$timestamp" -gt "$trigger_time" ] && {
       trigger_time=-1
-      echo "$(now) $LOCKDOWN"
+      echo "$timestamp $LOCKDOWN"
     }
     sleep 0.1 & # for reducing loop
     wait
@@ -1007,7 +1019,7 @@ reader() {
   while true ;do
     # read one key, and convert to hex value
     key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null | od -An -tx1)
-    key=$(echo $(echo "$key")) # Strip whitespace from the beginning and end of a string
+    key=$(echo $key) # Strip whitespace from the beginning and end of a string
     cmd=''
     # echo "$a$b$key" # For debugging to check the input sequence.
     case "$a$b$key" in
@@ -1097,9 +1109,9 @@ game() {
   stty_g=`stty -g`                        # let's save terminal state
   current_tty=$(tty | sed -e "s:/dev/::") # get current tty. remove string '/dev/' of tty output
 
-  # output of ticker and reader is joined and piped into controller
+  # output of ticker, timer and reader is joined and piped into controller
   (
-    ticker &         # ticker runs as separate process
+    ticker         & # runs as separate process
     lockdown_timer &
     reader
   ) | (

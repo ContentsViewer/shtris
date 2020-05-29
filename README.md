@@ -8,7 +8,7 @@ I implemented
 
 * Hold Queue
 * Next Queue
-* Random Generation with Bag system
+* Random Generation with Bag System
 * Score System
 * Variable Goal System
 * Classic Lock Down
