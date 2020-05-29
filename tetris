@@ -223,7 +223,7 @@ Options:
  -h, --help   display this help and exit
 
 Version:
- 1.0.0
+ 1.0.1-alpha
 "
 
 # the queue of the next tetoriminos to be placed.
