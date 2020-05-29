@@ -949,8 +949,6 @@ quit() {
 init() {
   local x y i
 
-  echo 'Loading...'
-
   # playfield is initialized with -1s (empty cells)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
   # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y)
@@ -971,10 +969,23 @@ init() {
     i=$((i + 1))
   done
 
+  echo "leveling up to $starting_level"
+  printf "> $level "
   # level up until reach starting level
   while [ $level -lt $starting_level ]; do
     level_up
-    sleep 0.1
+    printf "$level "
+    sleep 1
+  done
+  echo "... OK"
+
+  echo 'READY'
+  printf '> '
+  i=3
+  while [ $i -gt 0 ]; do
+    printf "$i "
+    sleep 1
+    i=$((i - 1))
   done
 
   clear
@@ -1028,7 +1039,7 @@ ticker() {
     eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
     wait
     echo "$(now) $FALL" # <timestamp> <cmd>
-    echo "$level" >> .log
+    # echo "$level" >> .log # For debuging. check level variable
   done
 }
 
@@ -1116,7 +1127,8 @@ controller() {
   eval commands_"$LOCKDOWN"=lockdown
 
   init
-
+  discard_cmds
+  
   while $showtime; do # run while showtime variable is true, it is changed to false in quit function
     # read next command from stdout
     # skip cmds issued before discard_cmds_timepoint
