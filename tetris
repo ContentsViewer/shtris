@@ -26,7 +26,7 @@ set -u # non initialized variable is an error
 # game versioin
 # should follow "Semantic Versioning 2.0.0" <https://semver.org/> 
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
-VERSION='1.1.0'
+VERSION='1.2.0-alpha'
 
 # 3 signals are used: SIGUSR1 to decrease delay after level up and SIGTERM to quit
 # they are sent to all instances of this script
@@ -998,26 +998,27 @@ init() {
 lockdown_timer() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
-  # on this signal reset the timer. at 1 sec after receiving signal
-  trap 'trigger_time=$(($(now) + 1 ))' $SIGNAL_START_LOCKDOWN_TIMER
+  # on this signal reset the timer. lockdown 0.5 sec after receiving signal
+  trap 'trigger_counter=4' $SIGNAL_START_LOCKDOWN_TIMER
   # these signals are ignored
   trap '' $SIGNAL_LEVEL_UP
 
-  local timestamp trigger_time
-
-  trigger_time=-1
+  local trigger_counter timestamp
+  trigger_counter=-1  # -1 - already triggerd; 0 - triggered; greater than 0 - count to trigger
   while true; do
-    timestamp=''
-    while [ -z "$timestamp" ]; do # in some case, timestamp suddenly becaomes empty string. I dont know why :-)
-      timestamp=$(now)            # so get time again...
-    done
-
-    [ "$trigger_time" -gt 0 ]            &&
-    [ "$timestamp" -gt "$trigger_time" ] && {
-      trigger_time=-1
+    
+    [ "$trigger_counter" -eq 0 ] && {
+      timestamp=''
+      while [ -z "$timestamp" ]; do # in some case, timestamp suddenly becomes empty string. I dont know why ;-)
+        timestamp=$(now)            # so get time again...
+      done
+      trigger_counter=-1
+      echo 'TRG' >> .log # for debugging to check when signal fired.
       echo "$timestamp $LOCKDOWN"
     }
-    sleep 0.1 & # for reducing loop
+    [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
+
+    sleep 0.1 & # wait in background for receiving the signal 
     wait
   done
 }
@@ -1134,7 +1135,7 @@ controller() {
     # skip cmds issued before discard_cmds_timepoint
     while read statement; do
       shift $#; set $statement
-      [ $# -ne 2 ] && continue   # in some case, param counts is unexpected(not 2). I dont know why :-)
+      [ $# -ne 2 ] && continue   # validate param counts is 2
       issued_time="$1"; cmd="$2"
       [ "$issued_time" -gt "$discard_cmds_timepoint" ] && break
     done
