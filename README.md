@@ -12,7 +12,7 @@ I implemented
 * Score System
 * Variable Goal System
 * Classic Lock Down
-* Classic Rotation System
+* Super/Classic Rotation System
 * Changing the Starting Level 
 
 not implemented
@@ -20,7 +20,6 @@ not implemented
 * T-Spin / Mini T-Spin
 * Ghost Piece
 * Back-to-Back Bonus
-* Super Rotation System 
 * Extended Placement Lock Down
 * Infinite Placement Lock Down
 
