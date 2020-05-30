@@ -1013,7 +1013,7 @@ lockdown_timer() {
         timestamp=$(now)            # so get time again...
       done
       trigger_counter=-1
-      echo 'TRG' >> .log # for debugging to check when signal fired.
+      # echo 'TRG' >> .log # for debugging to check when signal fired.
       echo "$timestamp $LOCKDOWN"
     }
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
