@@ -1156,7 +1156,8 @@ game() {
   ) | (
     controller
   )
-  
+
+  echo ''        # add new line
   show_cursor
   stty "$stty_g" # let's restore terminal state
 }
