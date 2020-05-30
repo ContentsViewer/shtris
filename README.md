@@ -12,7 +12,7 @@ I implemented
 * Score System
 * Variable Goal System
 * Back-to-Back Bonus
-* Classic Lock Down
+* Extended Placement/Infinite Placement/Classic Lock Down
 * Super/Classic Rotation System
 * Changing the Starting Level 
 
@@ -20,8 +20,6 @@ not implemented
 
 * T-Spin / Mini T-Spin
 * Ghost Piece
-* Extended Placement Lock Down
-* Infinite Placement Lock Down
 
 This script is based on bash-tetris (Author: Kirill Timofeev)
 Thank you!

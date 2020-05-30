@@ -16,7 +16,7 @@
 # * Score System
 # * Variable Goal System
 # * Back-to-Back Bonus
-# * Classic Lock Down
+# * Extended Placement/Infinite Placement/Classic Lock Down
 # * Super/Classic Rotation System
 # * Changing the Starting Level 
 # 
@@ -24,8 +24,6 @@
 # 
 # * T-Spin / Mini T-Spin
 # * Ghost Piece
-# * Extended Placement Lock Down
-# * Infinite Placement Lock Down
 # 
 # Enjoy :-)
 #
@@ -148,6 +146,45 @@ ACTION_TRIPLE=3
 ACTION_TETRIS=4
 ACTION_SOFT_DROP=5
 ACTION_HARD_DROP=6
+ACTION_TSPIN=7
+ACTION_TSPIN_SINGLE=8
+ACTION_TSPIN_DOBLE=9
+ACTION_TSPIN_TRIPLE=10
+ACTION_MINI_TSPIN=11
+ACTION_MINI_TSPIN_SINGLE=12
+
+# A Tetrimino that is Hard Dropped Locks Down immediately. However, if a Tetrimino naturally falls
+# or Soft Drops onto a Surface, it is given 0.5 seconds on a Lock Down Timer before it actually
+# Locks Down. Three rulesets —Infinite Placement, Extended, and Classic— dictate the conditions
+# for Lock Down. The default is Extended Placement.
+# 
+# Extended Placement Lock Down
+#   This is the default Lock Down setting.
+#   Once the Tetrimino in play lands on a Surface in the Matrix, the Lock Down Timer starts counting
+#   down from 0.5 seconds. Once it hits zero, the Tetrimino Locks Down and the Next Tetrimino’s
+#   generation phase starts. The Lock Down Timer resets to 0.5 seconds if the player simply moves
+#   or rotates the Tetrimino. In Extended Placement, a Tetrimino gets 15 left/right movements or
+#   rotations before it Locks Down, regardless of the time left on the Lock Down Timer. However, if
+#   the Tetrimino falls one row below the lowest row yet reached, this counter is reset. In all other
+#   cases, it is not reset.
+#
+# Infinite Placement Lock Down
+#   Once the Tetrimino in play lands on a Surface in the Matrix, the Lock Down Timer starts counting
+#   down from 0.5 seconds. Once it hits zero, the Tetrimino Locks Down and the Next Tetrimino’s
+#   generation phase starts. However, the Lock Down Timer resets to 0.5 seconds if the player simply
+#   moves or rotates the Tetrimino. Thus, Infinite Placement allows the player to continue movement
+#   and rotation of a Tetrimino as long as there is an actual change in its position or orientation
+#   before the timer expires.
+#
+# Classic Lock Down
+#   Classic Lock Down rules apply if Infinite Placement and Extended Placement are turned off.
+#   Like Infinite Placement, the Lock Down Timer starts counting down from 0.5 seconds once the
+#   Tetrimino in play lands on a Surface. The y-coordinate of the Tetrimino must decrease (i.e., the
+#   Tetrimino falls further down in the Matrix) in order for the timer to be reset.
+LOCKDOWN_RULE_EXTENDED=0
+LOCKDOWN_RULE_INFINITE=1
+LOCKDOWN_RULE_CLASSIC=2
+LOCKDOWN_ALLOWED_MANIPULATIONS=15
 
 eval SCORE_FACTOR_"$ACTION_NONE"=0
 eval SCORE_FACTOR_"$ACTION_SINGLE"=100
@@ -284,10 +321,13 @@ usage="
 Usage: ${0##*/} [options]
 
 Options:
- -d, --debug            debug mode
- -l, --level <LEVEL>    game level (default=1). range from 1 to $LEVEL_MAX
- -r, --rotation <MODE>  use 'Super' or 'Classic' rotation system
-                        MODE can be 'super'(default) or 'classic'
+ -d, --debug          debug mode
+ -l, --level <LEVEL>  game level (default=1). range from 1 to $LEVEL_MAX
+ --rotation <MODE>    use 'Super' or 'Classic' rotation system
+                      MODE can be 'super'(default) or 'classic'
+ --lockdown <RULE>    Three rulesets —Infinite Placement, Extended, and Classic— 
+                      dictate the conditions for Lock Down.
+                      RULE can be 'extended'(default), 'infinite', 'classic'
 
  -h, --help  display this help and exit
 
@@ -332,6 +372,8 @@ goal=5
 #   performed consecutively in a B2B sequence.
 b2b_sequence_continues=false
 
+lockdown_rule=$LOCKDOWN_RULE_EXTENDED
+
 score=0                  # score variable initialization
 level=1                  # level variable initialization
 lines_completed=0        # completed lines counter initialization
@@ -343,6 +385,8 @@ discard_cmds_timepoint=0 # cmds issued before this time is discarded
 empty_cell=' .'          # how we draw empty cell
 filled_cell='[]'         # how we draw filled cell
 lands_on=false           #
+manipulation_counter=0   #
+lowest_line=$START_X
 
 # screen_buffer is variable, that accumulates all screen changes
 # this variable is printed in controller once per game cycle
@@ -620,10 +664,10 @@ generate_tetrimino() {
   current_piece="$1"
 
   # beginning from its generation position and North Facing orientation.
-  current_piece_x="$START_X"
-  current_piece_y="$START_Y"
+  update_location $START_X $START_Y
   current_piece_rotation="$NORTH"
 
+  lowest_line=$START_Y
   lands_on=false
 }
 
@@ -896,6 +940,35 @@ process_fallen_piece() {
   discard_cmds
 }
 
+update_location() {
+  current_piece_x="$1"
+  current_piece_y="$2"
+  [ $current_piece_y -lt $lowest_line ] && {
+    lowest_line=$current_piece_y
+    on_reach_lowest
+  }
+}
+
+on_reach_lowest() {
+  manipulation_counter=0
+}
+
+# this function called when player manipulate tetrimino.
+on_manipulation() {
+  case $lockdown_rule in
+    $LOCKDOWN_RULE_INFINITE)
+      send_signal "$SIGNAL_START_LOCKDOWN_TIMER"
+      ;;
+    $LOCKDOWN_RULE_EXTENDED)
+      [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
+        send_signal "$SIGNAL_START_LOCKDOWN_TIMER"
+        manipulation_counter=$((manipulation_counter + 1))
+        # echo "mc $manipulation_counter" >> .log # For debugging
+      }
+      ;;
+  esac
+}
+
 move_piece() {
   # arguments: 1 - new x coordinate, 2 - new y coordinate
   # moves the piece to the new location if possible
@@ -904,13 +977,12 @@ move_piece() {
   if new_piece_location_ok "$1" "$2"; then            # if new location is ok
     [ "$2" -lt "$current_piece_y" ] && lands_on=false # can move down means not lands on
     clear_current                                     # let's wipe out piece current location
-    current_piece_x="$1"                              # update x ...
-    current_piece_y="$2"                              # ... and y of new location
+    update_location $1 $2                             # update location
     show_current                                      # and draw piece in new location
     return 0                                          # nothing more to do here
   fi                                                  # if we could not move piece to new location
 
-  [ "$2" -eq "$current_piece_y" ] && return 0         # and this was horizontal move
+  [ "$2" -eq "$current_piece_y" ] && return 0       # and this was horizontal move
   
   if "$immediately_lockdown"; then
     lockdown
@@ -946,9 +1018,11 @@ rotate_piece_classic() {
     clear_current                                                  # ... clear piece image 
     current_piece_rotation=$new_rotation                           # ... set new orientation
     show_current                                                   # ... draw piece with new orientation
-  else                                                             # if new orientation is not ok
-    current_piece_rotation=$old_rotation                           # restore old orientation
+    return 0
   fi
+  # if new orientation is not ok
+  current_piece_rotation=$old_rotation # restore old orientation
+  return 1
 }
 
 rotate_piece_super() {
@@ -979,10 +1053,9 @@ rotate_piece_super() {
       current_piece_rotation=$old_rotation       # if yes - restore old rotation ...
       clear_current                              # ... clear piece image
       current_piece_rotation=$new_rotation       # ... set new orientation
-      current_piece_x=$new_x                     # ... set new location
-      current_piece_y=$new_y                     #
+      update_location $new_x $new_y              # ... set new location
       show_current                               # ... draw piece with new pose
-      return                                     # nothing to do more here
+      return 0                                   # nothing to do more here
     fi
     
     shift 2 # test next rotation point
@@ -990,6 +1063,7 @@ rotate_piece_super() {
 
   # if new orientation is not ok
   current_piece_rotation=$old_rotation # restore old orientation
+  return 1
 }
 
 draw_help() {
@@ -1047,12 +1121,12 @@ toggle_color() {
   redraw_screen 
 }
 
-move_right(){
-  move_piece $((current_piece_x + 1)) "$current_piece_y"
+move_right() {
+  move_piece $((current_piece_x + 1)) "$current_piece_y" && on_manipulation
 }
 
 move_left() {
-  move_piece $((current_piece_x - 1)) "$current_piece_y"
+  move_piece $((current_piece_x - 1)) "$current_piece_y" && on_manipulation
 }
 
 fall() {
@@ -1060,7 +1134,9 @@ fall() {
 }
 
 soft_drop() {
-  move_piece "$current_piece_x" $((current_piece_y - 1)) && update_score "$ACTION_SOFT_DROP"
+  move_piece "$current_piece_x" $((current_piece_y - 1)) && {
+    update_score "$ACTION_SOFT_DROP"
+  }
 }
 
 hard_drop() {
@@ -1071,11 +1147,11 @@ hard_drop() {
 }
 
 rotate_cw() {
-  $rotate_piece_func 1
+  $rotate_piece_func 1 && on_manipulation
 }
 
 rotate_ccw() {
-  $rotate_piece_func -1
+  $rotate_piece_func -1 && on_manipulation
 }
 
 hold() {
@@ -1158,6 +1234,7 @@ lockdown_timer() {
       while [ -z "$timestamp" ]; do # in some case, timestamp suddenly becomes empty string. I dont know why ;-)
         timestamp=$(now)            # so get time again...
       done
+      [ "$trigger_counter" -gt 0 ] && continue # final check
       trigger_counter=-1
       # echo 'TRG' >> .log # for debugging to check when signal fired.
       echo "$timestamp $LOCKDOWN"
@@ -1335,13 +1412,26 @@ main() {
         starting_level=$2
         shift 2; continue
         ;;
-      -r|--rotation)
+      --rotation)
         [ $# -le 1 ] && print_usage_and_exit
         case $2 in
           classic) rotate_piece_func=rotate_piece_classic ;;
           super)   rotate_piece_func=rotate_piece_super   ;;
           *)
             echo "${0##*/}: unrecognized rotation mode '$2'" 1>&2
+            print_usage_and_exit
+            ;;
+        esac
+        shift 2; continue
+        ;;
+      --lockdown)
+        [ $# -le 1 ] && print_usage_and_exit
+        case $2 in
+          extended) lockdown_rule=$LOCKDOWN_RULE_EXTENDED ;;
+          infinite) lockdown_rule=$LOCKDOWN_RULE_INFINITE ;;
+          classic)  lockdown_rule=$LOCKDOWN_RULE_CLASSIC  ;;
+          *)
+            echo "${0##*/}: unrecognized lockdown rule '$2'" 1>&2
             print_usage_and_exit
             ;;
         esac
