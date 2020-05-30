@@ -998,8 +998,8 @@ init() {
 lockdown_timer() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
-  # on this signal reset the timer. lockdown 0.5 sec after receiving signal
-  trap 'trigger_counter=4' $SIGNAL_START_LOCKDOWN_TIMER
+  # on this signal reset the timer. lockdown 0.5~0.6(0.5 is correct) sec after receiving signal
+  trap 'trigger_counter=5' $SIGNAL_START_LOCKDOWN_TIMER
   # these signals are ignored
   trap '' $SIGNAL_LEVEL_UP
 
