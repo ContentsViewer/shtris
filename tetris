@@ -8,17 +8,44 @@
 # This script is based on bash-tetris (Author: Kirill Timofeev <kt97679@gmail.com>)
 # Thank you!
 #
-# Linux   sh | o
-# FreeBSD sh | o
-# BusyBox sh | o
-# Solaris sh | x
+# I implemented
 # 
-# Author: IOE <Github: ContentsViewer>
+# * Hold Queue
+# * Next Queue
+# * Random Generation with Bag System
+# * Score System
+# * Variable Goal System
+# * Classic Lock Down
+# * Classic Rotation System
+# * Changing the Starting Level 
+# 
+# not implemented
+# 
+# * T-Spin / Mini T-Spin
+# * Ghost Piece
+# * Back-to-Back Bonus
+# * Super Rotation System 
+# * Extended Placement Lock Down
+# * Infinite Placement Lock Down
+# 
+# Enjoy :-)
+#
+# Supported Environments:
+#   Linux   sh | o
+#   FreeBSD sh | o
+#   BusyBox sh | o
+#   Solaris sh | x
+#
+# Github Page:
+#   <https://github.com/ContentsViewer/sh-tetris>
+# 
+# Author:
+#   IOE <Github: ContentsViewer>
 # 
 # Scripting NOTE:
-#  * We cannot use `read -s -n 1`
-#  * Any process cannot send signals to control(main) process
-#    * stty issues error -> cannot read keyboard inputs
+#   * We cannot use `read -s -n 1`
+#   * Any process cannot send signals to control(main) process
+#     * stty issues error -> cannot read keyboard inputs
 #
 
 set -u # non initialized variable is an error
