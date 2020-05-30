@@ -11,6 +11,7 @@ I implemented
 * Random Generation with Bag System
 * Score System
 * Variable Goal System
+* Back-to-Back Bonus
 * Classic Lock Down
 * Super/Classic Rotation System
 * Changing the Starting Level 
@@ -19,7 +20,6 @@ not implemented
 
 * T-Spin / Mini T-Spin
 * Ghost Piece
-* Back-to-Back Bonus
 * Extended Placement Lock Down
 * Infinite Placement Lock Down
 

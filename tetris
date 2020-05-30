@@ -15,6 +15,7 @@
 # * Random Generation with Bag System
 # * Score System
 # * Variable Goal System
+# * Back-to-Back Bonus
 # * Classic Lock Down
 # * Super/Classic Rotation System
 # * Changing the Starting Level 
@@ -23,7 +24,6 @@
 # 
 # * T-Spin / Mini T-Spin
 # * Ghost Piece
-# * Back-to-Back Bonus
 # * Extended Placement Lock Down
 # * Infinite Placement Lock Down
 # 
@@ -323,6 +323,15 @@ bag=''
 # at level 1 / 100 = Total Line Clears
 goal=5
 
+# There is a special bonus for Back-to-Backs, which is when two actions
+# such as a Tetris and T-Spin Double take place without a Single, Double, or Triple Line Clear 
+# occurring between them. 
+# 
+# Back-to-Back Bonus
+#   Bonus for Tetrises, T-Spin Line Clears, and Mini T-Spin Line Clears
+#   performed consecutively in a B2B sequence.
+b2b_sequence_continues=false
+
 score=0                  # score variable initialization
 level=1                  # level variable initialization
 lines_completed=0        # completed lines counter initialization
@@ -451,34 +460,66 @@ redraw_playfield() {
 
 update_score() {
   # Arguments: 1 - ACTION name. ex: ACTION_SINGLE
-  local factor
+  local factor score_to_add lines_to_add
 
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
+  score_to_add=0
+  lines_to_add=0
+  action_to_show='             ' # empty strings to clear prev
+
+  # A Back-to-Back sequence is only broken by a Single, Double, or Triple Line Clear. Locking down
+  # a Tetrimino without clearing a line or holding a Tetrimino does not break the
+  # Back-to-Back sequence.
   case "$1" in
     "$ACTION_SINGLE")
-      lines_completed=$((lines_completed + factor / 100)) # with Awarded Line Clears
-      score=$((score + level * factor))
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      b2b_sequence_continues=false
+      action_to_show='Single'
       ;;
     "$ACTION_DOUBLE")
-      lines_completed=$((lines_completed + factor / 100))
-      score=$((score + level * factor))
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      b2b_sequence_continues=false
+      action_to_show='Double'
       ;;
     "$ACTION_TRIPLE")
-      lines_completed=$((lines_completed + factor / 100))
-      score=$((score + level * factor))
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      b2b_sequence_continues=false
+      action_to_show='Triple'
       ;;
     "$ACTION_TETRIS")
-      lines_completed=$((lines_completed + factor / 100))
-      score=$((score + level * factor))
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      action_to_show='Tetris'
       ;;
     "$ACTION_SOFT_DROP")
-      score=$((score + factor))
+      score_to_add=$factor
       ;;
     "$ACTION_HARD_DROP")
-      score=$((score + factor))
+      score_to_add=$factor
       ;;
   esac
+
+  # Awarded Back-to-Back Bonus
+  # start a Back-to-Back sequence after Awarded b2b bonus
+  # The first Line Clear in the Back-to-Back sequence does not receive the Back-to-Back
+  # Bonus. Only consecutive qualifying Back-to-Back Line Clears after the first in the sequence
+  # receive the Back-to-Back Bonus.
+  case $1 in
+    "$ACTION_TETRIS")
+      $b2b_sequence_continues && {
+        score_to_add=$((score_to_add + score_to_add / 2))
+        lines_to_add=$((lines_to_add + lines_to_add / 2))
+        action_to_show="$action_to_show B2B"
+      }
+      b2b_sequence_continues=true;;
+  esac
+
+  score=$((score + score_to_add))
+  lines_completed=$((lines_completed + lines_to_add))
 
   [ "$level" -le "$LEVEL_MAX" ]      &&
   [ "$lines_completed" -ge "$goal" ] && {
@@ -493,6 +534,7 @@ update_score() {
   xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES   $lines_completed"
   xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   $level"
   xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    $goal"
+  xyprint "$SCORE_X" $((SCORE_Y + 7)) "$action_to_show"
   reset_colors
 }
 
