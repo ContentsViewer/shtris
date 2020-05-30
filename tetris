@@ -516,7 +516,7 @@ update_score() {
 
   score_to_add=0
   lines_to_add=0
-  action_to_show='             ' # empty strings to clear prev
+  action_to_show=''
 
   # A Back-to-Back sequence is only broken by a Single, Double, or Triple Line Clear.
   # Locking down a Tetrimino without clearing a line or holding a Tetrimino does not
@@ -584,6 +584,7 @@ update_score() {
   xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES   $lines_completed"
   xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   $level"
   xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    $goal"
+  xyprint "$SCORE_X" $((SCORE_Y + 7)) "             "             # clear
   xyprint "$SCORE_X" $((SCORE_Y + 7)) "$action_to_show"
   reset_colors
 }
