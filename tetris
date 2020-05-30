@@ -510,7 +510,7 @@ redraw_playfield() {
 
 update_score() {
   # Arguments: 1 - ACTION name. ex: ACTION_SINGLE
-  local factor score_to_add lines_to_add
+  local factor score_to_add lines_to_add action_to_show
 
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
@@ -518,9 +518,9 @@ update_score() {
   lines_to_add=0
   action_to_show='             ' # empty strings to clear prev
 
-  # A Back-to-Back sequence is only broken by a Single, Double, or Triple Line Clear. Locking down
-  # a Tetrimino without clearing a line or holding a Tetrimino does not break the
-  # Back-to-Back sequence.
+  # A Back-to-Back sequence is only broken by a Single, Double, or Triple Line Clear.
+  # Locking down a Tetrimino without clearing a line or holding a Tetrimino does not
+  # break the Back-to-Back sequence.
   case "$1" in
     "$ACTION_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
