@@ -1273,10 +1273,10 @@ refresh_screen() {
 }
 
 redraw_screen() {
+  draw_help                   # should first. draw help on the lowest layer
   show_next
   show_hold
   update_score "$ACTION_NONE"
-  draw_help
   draw_border
   redraw_playfield
   show_current
