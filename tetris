@@ -439,7 +439,7 @@ hide_cursor() {
 }
 
 beep() {
-  $beep_on && return
+  $beep_on || return
   printf '\007'
 }
 
@@ -568,6 +568,36 @@ update_score() {
       lines_to_add=$((factor / 100))
       actions_to_show='Tetris'
       ;;
+    "$ACTION_MINI_TSPIN")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='Mini T-Spin'
+      ;;
+    "$ACTION_MINI_TSPIN_SINGLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='Mini T-Spin:Single'
+      ;;
+    "$ACTION_TSPIN")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='T-Spin'
+      ;;
+    "$ACTION_TSPIN_SINGLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='T-Spin:Single'
+      ;;
+    "$ACTION_TSPIN_DOUBLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='T-Spin:Double'
+      ;;
+    "$ACTION_TSPIN_TRIPLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='T-Spin:Triple'
+      ;;
     "$ACTION_SOFT_DROP")
       score_to_add=$factor
       ;;
@@ -608,7 +638,7 @@ update_score() {
   xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   $level"
   xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    $goal"
   
-  [ -z $actions_to_show ] || {
+  [ -z "$actions_to_show" ] || {
     IFS_SAVE=$IFS; IFS=:
     shift $#; set $actions_to_show
     IFS=$IFS_SAVE
@@ -819,6 +849,68 @@ clear_hold() {
   draw_hold false
 }
 
+draw_border() {
+  local x1 x2 y1 y2 i x y
+
+  set_bold
+  set_fg $BORDER_COLOR
+  x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
+  x2=$((PLAYFIELD_X + PLAYFIELD_W * 2)) # 2 here is because each cell on play field is 2 characters wide
+  y1=$((PLAYFIELD_Y - 1))
+  y2=$((PLAYFIELD_Y + PLAYFIELD_H))
+
+  i=0
+  while [ "$i" -lt "$PLAYFIELD_H" ]; do
+    y=$((i + PLAYFIELD_Y))
+    xyprint $x1 $y "│"
+    xyprint $x2 $y "│"
+    i=$((i + 1))
+  done
+  
+  i=0
+  while [ "$i" -lt "$PLAYFIELD_W" ]; do
+    x=$((i * 2 + PLAYFIELD_X)) # 2 here is because each cell on play field is 2 characters width
+    xyprint $x $y1 '──'
+    xyprint $x $y2 '──'
+    i=$((i + 1))
+  done
+  
+  xyprint $x1 $y1 "┌"; xyprint $x2 $y1 "┐" # draw the corners
+  xyprint $x1 $y2 "└"; xyprint $x2 $y2 "┘"
+
+  reset_colors
+}
+
+draw_help() {
+  # Arguments: 1 - visibility ( false - no, true - yes), if this argument is skipped $help_on is used
+  local visible=${1:-$help_on} x y line
+
+  x="$HELP_X"; y="$HELP_Y"
+
+  set_bold
+  set_fg "$HELP_COLOR"
+
+  additional_buffer=$(
+    echo "$help" | {
+      # in this process, the change of screen_buffer is ignored out of this process. 
+      # should return the buffer.
+      screen_buffer=''
+      while read line; do
+        "$visible" || {
+          empty_line=''; i=0
+          while [ "$i" -lt ${#line} ]; do empty_line="$empty_line "; i=$((i + 1)); done
+          line="$empty_line"
+        }
+        eval xyprint \"$x\" \"$y\" \'"$line"\'
+        y=$((y + 1))
+      done
+      echo "$screen_buffer"
+    }
+  )
+  puts "$additional_buffer"
+  reset_colors
+}
+
 what_type_tspin() {
   local pos_x=$1 pos_y=$2 rotation=$3 side_x side_y side
 
@@ -892,38 +984,6 @@ new_piece_location_ok() {
     shift 2 # shift to next minos coordinates
   done
   return 0
-}
-
-draw_border() {
-  local x1 x2 y1 y2 i x y
-
-  set_bold
-  set_fg $BORDER_COLOR
-  x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
-  x2=$((PLAYFIELD_X + PLAYFIELD_W * 2)) # 2 here is because each cell on play field is 2 characters wide
-  y1=$((PLAYFIELD_Y - 1))
-  y2=$((PLAYFIELD_Y + PLAYFIELD_H))
-
-  i=0
-  while [ "$i" -lt "$PLAYFIELD_H" ]; do
-    y=$((i + PLAYFIELD_Y))
-    xyprint $x1 $y "│"
-    xyprint $x2 $y "│"
-    i=$((i + 1))
-  done
-  
-  i=0
-  while [ "$i" -lt "$PLAYFIELD_W" ]; do
-    x=$((i * 2 + PLAYFIELD_X)) # 2 here is because each cell on play field is 2 characters width
-    xyprint $x $y1 '──'
-    xyprint $x $y2 '──'
-    i=$((i + 1))
-  done
-  
-  xyprint $x1 $y1 "┌"; xyprint $x2 $y1 "┐" # draw the corners
-  xyprint $x1 $y2 "└"; xyprint $x2 $y2 "┘"
-
-  reset_colors
 }
 
 # this function updated occupied cells in playfield array after piece is dropped
@@ -1022,8 +1082,6 @@ process_complete_lines() {
 process_fallen_piece() {
   flatten_playfield
   process_complete_lines; action="$?"
-  [ "$action" -eq "$ACTION_NONE" ] && return
-
   [ $current_piece -eq $T_TETRIMINO ]                &&
   [ $current_piece_behaviour -eq $BEHAVIOUR_ROTATE ] && {
     case $current_tspin in
@@ -1032,18 +1090,25 @@ process_fallen_piece() {
           $ACTION_SINGLE) action=$ACTION_TSPIN_SINGLE ;;
           $ACTION_DOUBLE) action=$ACTION_TSPIN_DOUBLE ;;
           $ACTION_TRIPLE) action=$ACTION_TSPIN_TRIPLE ;;
+          $ACTION_NONE)   action=$ACTION_TSPIN        ;;
           *)              echo "T: $action" >> .log   ;; # For Debugging. cannot be reached
         esac
         ;;
       $ACTION_MINI_TSPIN)
         case $action in
           $ACTION_SINGLE) action=$ACTION_MINI_TSPIN_SINGLE ;;
+          $ACTION_NONE)   action=$ACTION_MINI_TSPIN        ;;
           *)              echo "T: $action" >> .log        ;; # For Debugging. cannot be reached
         esac
         ;;
     esac
   }
   update_score "$action"
+
+  [ "$action" -eq $ACTION_NONE ]       ||
+  [ "$action" -eq $ACTION_MINI_TSPIN ] ||
+  [ "$action" -eq $ACTION_TSPIN ]      && return
+
   beep
   redraw_playfield
   discard_cmds
@@ -1154,7 +1219,6 @@ rotate_piece_super() {
   # now parameters setted like below
   # '<POINT1> <POINT2> <POINT3> <POINT4> <POINT5>'
   #   <POINT<NO>>: '<LEFT_SHIFT_X> <LEFT_SHIFT_Y> <RIGHT_SHIFT_X> <RIGHT_SHIFT_Y>'
-  point=1
   while [ $# -gt 0 ]; do
     [ $1 = 'n' ] && { shift 4; continue; } # if 'not used' appears, skip this point
     [ $direction -eq 1 ] && shift 2        # if rotate clockwise(RIGHT) shift 2 to next xy-coordinates of RIGHT
@@ -1164,13 +1228,6 @@ rotate_piece_super() {
     new_y=$((current_piece_y + shift_y))
     if new_piece_location_ok $new_x $new_y; then # check if new orientation is ok
       [ $current_piece -eq $T_TETRIMINO ] && {
-        # if [ $point -eq 5 ]; then
-        #   # echo 'TSPIN' >> .log # For Debugging
-        #   current_tspin=$ACTION_TSPIN
-        # else
-        #   # echo $(what_type_tspin $new_x $new_y $new_rotation) >> .log # For Debugging
-        #   current_tspin=$(what_type_tspin $new_x $new_y $new_rotation)
-        # fi
         current_tspin=$(what_type_tspin $new_x $new_y $new_rotation)
       }
       current_piece_rotation=$old_rotation       # if yes - restore old rotation ...
@@ -1182,42 +1239,11 @@ rotate_piece_super() {
     fi
     
     shift 2 # test next rotation point
-    point=$((point + 1))
   done
 
   # if new orientation is not ok
   current_piece_rotation=$old_rotation # restore old orientation
   return 1
-}
-
-draw_help() {
-  # Arguments: 1 - visibility ( false - no, true - yes), if this argument is skipped $help_on is used
-  local visible=${1:-$help_on} x y line
-
-  x="$HELP_X"; y="$HELP_Y"
-
-  set_bold
-  set_fg "$HELP_COLOR"
-
-  additional_buffer=$(
-    echo "$help" | {
-      # in this process, the change of screen_buffer is ignored out of this process. 
-      # should return the buffer.
-      screen_buffer=''
-      while read line; do
-        "$visible" || {
-          empty_line=''; i=0
-          while [ "$i" -lt ${#line} ]; do empty_line="$empty_line "; i=$((i + 1)); done
-          line="$empty_line"
-        }
-        eval xyprint \"$x\" \"$y\" \'"$line"\'
-        y=$((y + 1))
-      done
-      echo "$screen_buffer"
-    }
-  )
-  puts "$additional_buffer"
-  reset_colors
 }
 
 refresh_screen() {
