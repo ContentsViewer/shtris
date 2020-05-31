@@ -13,8 +13,8 @@ I implemented
 * Variable Goal System
 * T-Spin / Mini T-Spin
 * Back-to-Back Bonus
-* Extended Placement/Infinite Placement/Classic Lock Down
-* Super/Classic Rotation System
+* Extended Placement / Infinite Placement / Classic Lock Down
+* Super / Classic Rotation System
 * Changing the Starting Level 
 
 not implemented
