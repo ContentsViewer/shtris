@@ -50,7 +50,7 @@ set -u # non initialized variable is an error
 # game versioin
 # should follow "Semantic Versioning 2.0.0" <https://semver.org/> 
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
-VERSION='1.2.0-alpha'
+VERSION='1.2.0'
 
 # 3 signals are used: SIGUSR1 to decrease delay after level up and SIGTERM to quit
 # they are sent to all instances of this script
@@ -645,9 +645,11 @@ update_score() {
     shift $#; set $actions_to_show
     IFS=$IFS_SAVE
 
+    xyprint "$SCORE_X" $((SCORE_Y + 7)) "             " # clear 3 rows
+    xyprint "$SCORE_X" $((SCORE_Y + 8)) "             " #
+    xyprint "$SCORE_X" $((SCORE_Y + 9)) "             " #
     i=7
     while [ $# -gt 0 ]; do
-      xyprint "$SCORE_X" $((SCORE_Y + i)) "             " # clear
       xyprint "$SCORE_X" $((SCORE_Y + i)) "$1"
       i=$((i + 1)); shift
     done
@@ -1235,7 +1237,10 @@ rotate_piece_super() {
   #   <POINT<NO>>: '<LEFT_SHIFT_X> <LEFT_SHIFT_Y> <RIGHT_SHIFT_X> <RIGHT_SHIFT_Y>'
   [ $direction -eq 1 ] && shift 2 # if rotate clockwise(RIGHT) shift 2 to next xy-coordinates of RIGHT
   while [ $# -gt 0 ]; do
-    [ $1 = 'n' ] && { shift 4; continue; } # if 'not used' appears, skip this point
+    [ $1 = 'n' ] && {        # if 'not used' appears, skip this point
+      [ $# -lt 4 ] && break;
+      shift 4; continue; 
+    }
 
     shift_x=$1; shift_y=$2
     new_x=$((current_piece_x + shift_x))
@@ -1253,6 +1258,7 @@ rotate_piece_super() {
       return 0                                   # nothing to do more here
     fi
     
+    [ $# -lt 4 ] && break;
     shift 4 # test next rotation point
   done
 
