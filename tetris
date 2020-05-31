@@ -76,10 +76,19 @@ HARD_DROP=5
 ROTATE_CW=6
 ROTATE_CCW=7
 HOLD=8
-TOGGLE_COLOR=9
-TOGGLE_HELP=10
-REFRESH_SCREEN=11
-LOCKDOWN=12
+TOGGLE_BEEP=9
+TOGGLE_COLOR=10
+TOGGLE_HELP=11
+REFRESH_SCREEN=12
+LOCKDOWN=13
+
+BEHAVIOUR_NON=0
+BEHAVIOUR_RIGHT=1
+BEHAVIOUR_LEFT=2
+BEHAVIOUR_ROTATE=3
+BEHAVIOUR_FALL=4
+BEHAVIOUR_SOFT_DROP=5
+BEHAVIOUR_HARD_DROP=6
 
 # The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line. 
 # The current level of the game determines the normal Fall Speed using the following equation:
@@ -148,7 +157,7 @@ ACTION_SOFT_DROP=5
 ACTION_HARD_DROP=6
 ACTION_TSPIN=7
 ACTION_TSPIN_SINGLE=8
-ACTION_TSPIN_DOBLE=9
+ACTION_TSPIN_DOUBLE=9
 ACTION_TSPIN_TRIPLE=10
 ACTION_MINI_TSPIN=11
 ACTION_MINI_TSPIN_SINGLE=12
@@ -160,7 +169,7 @@ eval SCORE_FACTOR_"$ACTION_TRIPLE"=500
 eval SCORE_FACTOR_"$ACTION_TETRIS"=800
 eval SCORE_FACTOR_"$ACTION_TSPIN"=400
 eval SCORE_FACTOR_"$ACTION_TSPIN_SINGLE"=800
-eval SCORE_FACTOR_"$ACTION_TSPIN_DOBLE"=1200
+eval SCORE_FACTOR_"$ACTION_TSPIN_DOUBLE"=1200
 eval SCORE_FACTOR_"$ACTION_TSPIN_TRIPLE"=1600
 eval SCORE_FACTOR_"$ACTION_MINI_TSPIN"=100
 eval SCORE_FACTOR_"$ACTION_MINI_TSPIN_SINGLE"=200
@@ -202,7 +211,7 @@ LOCKDOWN_ALLOWED_MANIPULATIONS=15
 
 # Location and color of help information
 HELP_X=56
-HELP_Y=10
+HELP_Y=9
 HELP_COLOR=$YELLOW
 
 # Next piece location
@@ -234,10 +243,10 @@ START_Y=21
 
 # O-Tetrimino
 eval piece_"$O_TETRIMINO"_color=\"$YELLOW\"
-eval piece_"$O_TETRIMINO"_minos_"$NORTH"=\'1 0 2 0 1 1 2 1\'
-eval piece_"$O_TETRIMINO"_minos_"$EAST"=\' 1 0 2 0 1 1 2 1\'
-eval piece_"$O_TETRIMINO"_minos_"$SOUTH"=\'1 0 2 0 1 1 2 1\'
-eval piece_"$O_TETRIMINO"_minos_"$WEST"=\' 1 0 2 0 1 1 2 1\'
+eval piece_"$O_TETRIMINO"_minos_"$NORTH"=\'1 0  2 0  1 1  2 1\'
+eval piece_"$O_TETRIMINO"_minos_"$EAST"=\' 1 0  2 0  1 1  2 1\'
+eval piece_"$O_TETRIMINO"_minos_"$SOUTH"=\'1 0  2 0  1 1  2 1\'
+eval piece_"$O_TETRIMINO"_minos_"$WEST"=\' 1 0  2 0  1 1  2 1\'
 eval piece_"$O_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 eval piece_"$O_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 eval piece_"$O_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
@@ -245,10 +254,10 @@ eval piece_"$O_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0   0  0  0  0   0  0  0  
 
 # I-Tetrimino
 eval piece_"$I_TETRIMINO"_color=\"$CYAN\"
-eval piece_"$I_TETRIMINO"_minos_"$NORTH"=\'0 1 1 1 2 1 3 1\'
-eval piece_"$I_TETRIMINO"_minos_"$EAST"=\' 2 0 2 1 2 2 2 3\'
-eval piece_"$I_TETRIMINO"_minos_"$SOUTH"=\'0 2 1 2 2 2 3 2\'
-eval piece_"$I_TETRIMINO"_minos_"$WEST"=\' 1 0 1 1 1 2 1 3\'
+eval piece_"$I_TETRIMINO"_minos_"$NORTH"=\'0 1  1 1  2 1  3 1\'
+eval piece_"$I_TETRIMINO"_minos_"$EAST"=\' 2 0  2 1  2 2  2 3\'
+eval piece_"$I_TETRIMINO"_minos_"$SOUTH"=\'0 2  1 2  2 2  3 2\'
+eval piece_"$I_TETRIMINO"_minos_"$WEST"=\' 1 0  1 1  1 2  1 3\'
 eval piece_"$I_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0  -1  0 -2  0   2  0  1  0  -1  2 -2 -1   2 -1  1  2\"
 eval piece_"$I_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   2  0 -1  0  -1  0  2  0   2  1 -1  2  -1 -2  2 -1\"
 eval piece_"$I_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   1  0  2  0  -2  0 -1  0   1 -2  2  1  -2  1 -1 -2\"
@@ -256,10 +265,10 @@ eval piece_"$I_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -2  0  1  0   1  0 -2  
 
 # T-Tetrimino
 eval piece_"$T_TETRIMINO"_color=\"$MAGENTA\"
-eval piece_"$T_TETRIMINO"_minos_"$NORTH"=\'1 0 0 1 1 1 2 1\'
-eval piece_"$T_TETRIMINO"_minos_"$EAST"=\' 1 0 1 1 2 1 1 2\'
-eval piece_"$T_TETRIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 1 2\'
-eval piece_"$T_TETRIMINO"_minos_"$WEST"=\' 1 0 0 1 1 1 1 2\'
+eval piece_"$T_TETRIMINO"_minos_"$NORTH"=\'1 0  0 1  1 1  2 1\'
+eval piece_"$T_TETRIMINO"_minos_"$EAST"=\' 1 0  1 1  2 1  1 2\'
+eval piece_"$T_TETRIMINO"_minos_"$SOUTH"=\'0 1  1 1  2 1  1 2\'
+eval piece_"$T_TETRIMINO"_minos_"$WEST"=\' 1 0  0 1  1 1  1 2\'
 eval piece_"$T_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  1   n  n  n  n   1 -2 -1 -2\"
 eval piece_"$T_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$T_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0   n  n  n  n   0 -2  0 -2  -1 -2  1 -2\"
@@ -267,10 +276,10 @@ eval piece_"$T_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -
 
 # L-Tetrimino
 eval piece_"$L_TETRIMINO"_color=\"$ORANGE\"
-eval piece_"$L_TETRIMINO"_minos_"$NORTH"=\'2 0 0 1 1 1 2 1\'
-eval piece_"$L_TETRIMINO"_minos_"$EAST"=\' 1 0 1 1 1 2 2 2\'
-eval piece_"$L_TETRIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 0 2\'
-eval piece_"$L_TETRIMINO"_minos_"$WEST"=\' 0 0 1 0 1 1 1 2\'
+eval piece_"$L_TETRIMINO"_minos_"$NORTH"=\'2 0  0 1  1 1  2 1\'
+eval piece_"$L_TETRIMINO"_minos_"$EAST"=\' 1 0  1 1  1 2  2 2\'
+eval piece_"$L_TETRIMINO"_minos_"$SOUTH"=\'0 1  1 1  2 1  0 2\'
+eval piece_"$L_TETRIMINO"_minos_"$WEST"=\' 0 0  1 0  1 1  1 2\'
 eval piece_"$L_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  1   0 -2  0 -2   1 -2 -1 -2\"
 eval piece_"$L_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$L_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
@@ -278,10 +287,10 @@ eval piece_"$L_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -
 
 # J-Tetrimino
 eval piece_"$J_TETRIMINO"_color=\"$BLUE\"
-eval piece_"$J_TETRIMINO"_minos_"$NORTH"=\'0 0 0 1 1 1 2 1\'
-eval piece_"$J_TETRIMINO"_minos_"$EAST"=\' 1 0 2 0 1 1 1 2\'
-eval piece_"$J_TETRIMINO"_minos_"$SOUTH"=\'0 1 1 1 2 1 2 2\'
-eval piece_"$J_TETRIMINO"_minos_"$WEST"=\' 1 0 1 1 0 2 1 2\'
+eval piece_"$J_TETRIMINO"_minos_"$NORTH"=\'0 0  0 1  1 1  2 1\'
+eval piece_"$J_TETRIMINO"_minos_"$EAST"=\' 1 0  2 0  1 1  1 2\'
+eval piece_"$J_TETRIMINO"_minos_"$SOUTH"=\'0 1  1 1  2 1  2 2\'
+eval piece_"$J_TETRIMINO"_minos_"$WEST"=\' 1 0  1 1  0 2  1 2\'
 eval piece_"$J_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  1   0 -2  0 -2   1 -2 -1 -2\"
 eval piece_"$J_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$J_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
@@ -289,10 +298,10 @@ eval piece_"$J_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -
 
 # S-Tetrimino
 eval piece_"$S_TETRIMINO"_color=\"$GREEN\"
-eval piece_"$S_TETRIMINO"_minos_"$NORTH"=\'1 0 2 0 0 1 1 1\'
-eval piece_"$S_TETRIMINO"_minos_"$EAST"=\' 1 0 1 1 2 1 2 2\'
-eval piece_"$S_TETRIMINO"_minos_"$SOUTH"=\'1 1 2 1 0 2 1 2\'
-eval piece_"$S_TETRIMINO"_minos_"$WEST"=\' 0 0 0 1 1 1 1 2\'
+eval piece_"$S_TETRIMINO"_minos_"$NORTH"=\'1 0  2 0  0 1  1 1\'
+eval piece_"$S_TETRIMINO"_minos_"$EAST"=\' 1 0  1 1  2 1  2 2\'
+eval piece_"$S_TETRIMINO"_minos_"$SOUTH"=\'1 1  2 1  0 2  1 2\'
+eval piece_"$S_TETRIMINO"_minos_"$WEST"=\' 0 0  0 1  1 1  1 2\'
 eval piece_"$S_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  1   0 -2  0 -2   1 -2 -1 -2\"
 eval piece_"$S_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$S_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
@@ -300,14 +309,19 @@ eval piece_"$S_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -
 
 # Z-Tetrimino
 eval piece_"$Z_TETRIMINO"_color=\"$RED\"
-eval piece_"$Z_TETRIMINO"_minos_"$NORTH"=\"0 0 1 0 1 1 2 1\"
-eval piece_"$Z_TETRIMINO"_minos_"$EAST"=\" 2 0 1 1 2 1 1 2\"
-eval piece_"$Z_TETRIMINO"_minos_"$SOUTH"=\"0 1 1 1 1 2 2 2\"
-eval piece_"$Z_TETRIMINO"_minos_"$WEST"=\" 1 0 0 1 1 1 0 2\"
+eval piece_"$Z_TETRIMINO"_minos_"$NORTH"=\"0 0  1 0  1 1  2 1\"
+eval piece_"$Z_TETRIMINO"_minos_"$EAST"=\" 2 0  1 1  2 1  1 2\"
+eval piece_"$Z_TETRIMINO"_minos_"$SOUTH"=\"0 1  1 1  1 2  2 2\"
+eval piece_"$Z_TETRIMINO"_minos_"$WEST"=\" 1 0  0 1  1 1  0 2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  1   0 -2  0 -2   1 -2 -1 -2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+
+eval T_TETRIMINO_"$NORTH"_SIDES=\"0 0  2 0  0 2  2 2\"
+eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  0 2  0 0  0 2\"
+eval T_TETRIMINO_"$SOUTH"_SIDES=\"2 2  0 2  2 0  0 0\"
+eval T_TETRIMINO_"$WEST"_SIDES=\" 0 2  0 0  2 2  2 0\"
 
 help='
 ←         Move Left or Right
@@ -319,6 +333,7 @@ c         Hold
 Space     Hard Drop
 R         Refresh Screen
 C         Toggle Color
+B         Toggle Beep
 H         Toggle Help
 Q, ESCx2  Quit
 '
@@ -380,19 +395,22 @@ b2b_sequence_continues=false
 
 lockdown_rule=$LOCKDOWN_RULE_EXTENDED
 
-score=0                  # score variable initialization
-level=1                  # level variable initialization
-lines_completed=0        # completed lines counter initialization
-already_hold=false       #
-help_on=true             # if this flag is true help is shown, if false, hide
-no_color=false           # do we use color or not
-showtime=true            # controller runs while this flag is true
-discard_cmds_timepoint=0 # cmds issued before this time is discarded
-empty_cell=' .'          # how we draw empty cell
-filled_cell='[]'         # how we draw filled cell
-lands_on=false           #
-manipulation_counter=0   #
-lowest_line=$START_X
+score=0                    # score variable initialization
+level=1                    # level variable initialization
+lines_completed=0          # completed lines counter initialization
+already_hold=false         #
+help_on=true               # if this flag is true help is shown, if false, hide
+beep_on=true               #
+no_color=false             # do we use color or not
+showtime=true              # controller runs while this flag is true
+discard_cmds_timepoint=0   # cmds issued before this time is discarded
+empty_cell=' .'            # how we draw empty cell
+filled_cell='[]'           # how we draw filled cell
+lands_on=false             #
+manipulation_counter=0     #
+lowest_line=$START_X       #
+current_tspin=$ACTION_NONE #
+
 
 # screen_buffer is variable, that accumulates all screen changes
 # this variable is printed in controller once per game cycle
@@ -418,6 +436,11 @@ show_cursor() {
 
 hide_cursor() {
   printf "\033[?25l"
+}
+
+beep() {
+  $beep_on && return
+  printf '\007'
 }
 
 # foreground color
@@ -510,13 +533,13 @@ redraw_playfield() {
 
 update_score() {
   # Arguments: 1 - ACTION name. ex: ACTION_SINGLE
-  local factor score_to_add lines_to_add action_to_show
+  local factor score_to_add lines_to_add actions_to_show i
 
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
   score_to_add=0
   lines_to_add=0
-  action_to_show=''
+  actions_to_show=''
 
   # A Back-to-Back sequence is only broken by a Single, Double, or Triple Line Clear.
   # Locking down a Tetrimino without clearing a line or holding a Tetrimino does not
@@ -526,24 +549,24 @@ update_score() {
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      action_to_show='Single'
+      actions_to_show='Single'
       ;;
     "$ACTION_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      action_to_show='Double'
+      actions_to_show='Double'
       ;;
     "$ACTION_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      action_to_show='Triple'
+      actions_to_show='Triple'
       ;;
     "$ACTION_TETRIS")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      action_to_show='Tetris'
+      actions_to_show='Tetris'
       ;;
     "$ACTION_SOFT_DROP")
       score_to_add=$factor
@@ -563,7 +586,7 @@ update_score() {
       $b2b_sequence_continues && {
         score_to_add=$((score_to_add + score_to_add / 2))
         lines_to_add=$((lines_to_add + lines_to_add / 2))
-        action_to_show="$action_to_show B2B"
+        actions_to_show="$actions_to_show:B2B"
       }
       b2b_sequence_continues=true;;
   esac
@@ -584,8 +607,20 @@ update_score() {
   xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES   $lines_completed"
   xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   $level"
   xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    $goal"
-  xyprint "$SCORE_X" $((SCORE_Y + 7)) "             "             # clear
-  xyprint "$SCORE_X" $((SCORE_Y + 7)) "$action_to_show"
+  
+  [ -z $actions_to_show ] || {
+    IFS_SAVE=$IFS; IFS=:
+    shift $#; set $actions_to_show
+    IFS=$IFS_SAVE
+
+    i=7
+    while [ $# -gt 0 ]; do
+      xyprint "$SCORE_X" $((SCORE_Y + i)) "             " # clear
+      xyprint "$SCORE_X" $((SCORE_Y + i)) "$1"
+      i=$((i + 1)); shift
+    done
+  }
+
   reset_colors
 }
 
@@ -673,6 +708,8 @@ generate_tetrimino() {
   # beginning from its generation position and North Facing orientation.
   update_location $START_X $START_Y
   current_piece_rotation="$NORTH"
+
+  current_piece_behaviour=$BEHAVIOUR_NON
 
   lowest_line=$START_Y
   lands_on=false
@@ -780,6 +817,50 @@ show_hold() {
 
 clear_hold() {
   draw_hold false
+}
+
+what_type_tspin() {
+  local pos_x=$1 pos_y=$2 rotation=$3 side_x side_y side
+
+  shift $#
+  eval set \$T_TETRIMINO_"$rotation"_SIDES
+  side=0 # 1: A; 2: B; 3: C; 4: D
+  while [ $# -gt 0 ]; do
+    side=$((side + 1))
+    side_x=$1; side_y=$2
+    side_x=$((pos_x + side_x)); side_y=$((pos_y - side_y))
+
+    [ $side_x -lt 0 ]            || 
+    [ $side_x -ge $PLAYFIELD_W ] ||
+    [ $side_y -lt 0 ]            && {
+      # touching wall
+      eval is_touched_${side}=true
+      shift 2; continue
+    }
+
+    field_cell=$(eval echo \"\$playfield_"$side_y"_"$side_x"\")
+    [ $field_cell -ne -1 ]       && 
+    eval is_touched_${side}=true || eval is_touched_${side}=false
+
+    shift 2
+  done
+
+  # if Sides A and B + (C or D) are touching a Surface
+  # considered a T-Spin
+  $is_touched_3 || $is_touched_4 && $is_touched_1 && $is_touched_2 && {
+    echo $ACTION_TSPIN
+    return
+  }
+
+  # if Sides C and D + (A or B) are touching a Surface
+  # considered a Mini T-Spin
+  $is_touched_1 || $is_touched_2 && $is_touched_3 && $is_touched_4 && {
+    echo $ACTION_MINI_TSPIN
+    return
+  }
+
+  echo $ACTION_NONE
+  return
 }
 
 new_piece_location_ok() {
@@ -942,7 +1023,28 @@ process_fallen_piece() {
   flatten_playfield
   process_complete_lines; action="$?"
   [ "$action" -eq "$ACTION_NONE" ] && return
+
+  [ $current_piece -eq $T_TETRIMINO ]                &&
+  [ $current_piece_behaviour -eq $BEHAVIOUR_ROTATE ] && {
+    case $current_tspin in
+      $ACTION_TSPIN)
+        case $action in
+          $ACTION_SINGLE) action=$ACTION_TSPIN_SINGLE ;;
+          $ACTION_DOUBLE) action=$ACTION_TSPIN_DOUBLE ;;
+          $ACTION_TRIPLE) action=$ACTION_TSPIN_TRIPLE ;;
+          *)              echo "T: $action" >> .log   ;; # For Debugging. cannot be reached
+        esac
+        ;;
+      $ACTION_MINI_TSPIN)
+        case $action in
+          $ACTION_SINGLE) action=$ACTION_MINI_TSPIN_SINGLE ;;
+          *)              echo "T: $action" >> .log        ;; # For Debugging. cannot be reached
+        esac
+        ;;
+    esac
+  }
   update_score "$action"
+  beep
   redraw_playfield
   discard_cmds
 }
@@ -1021,6 +1123,9 @@ rotate_piece_classic() {
   new_rotation=$((new_rotation % 4))                               # calculate new orientation
   current_piece_rotation=$new_rotation                             # set orientation to new
   if new_piece_location_ok $current_piece_x $current_piece_y; then # check if new orientation is ok
+    [ $current_piece -eq $T_TETRIMINO ] && {
+      current_tspin=$(what_type_tspin $current_piece_x $current_piece_y $new_rotation)
+    }
     current_piece_rotation=$old_rotation                           # if yes - restore old rotation ...
     clear_current                                                  # ... clear piece image 
     current_piece_rotation=$new_rotation                           # ... set new orientation
@@ -1034,7 +1139,7 @@ rotate_piece_classic() {
 
 rotate_piece_super() {
   # arguments: 1 - rotation direction. 1: clockwise; -1: counter-clockwise
-  local direction="$1" old_rotation new_rotation shift_x shift_y new_x new_y
+  local direction="$1" old_rotation new_rotation shift_x shift_y new_x new_y point
   
   old_rotation=$current_piece_rotation # preserve current orientation
 
@@ -1049,6 +1154,7 @@ rotate_piece_super() {
   # now parameters setted like below
   # '<POINT1> <POINT2> <POINT3> <POINT4> <POINT5>'
   #   <POINT<NO>>: '<LEFT_SHIFT_X> <LEFT_SHIFT_Y> <RIGHT_SHIFT_X> <RIGHT_SHIFT_Y>'
+  point=1
   while [ $# -gt 0 ]; do
     [ $1 = 'n' ] && { shift 4; continue; } # if 'not used' appears, skip this point
     [ $direction -eq 1 ] && shift 2        # if rotate clockwise(RIGHT) shift 2 to next xy-coordinates of RIGHT
@@ -1057,6 +1163,16 @@ rotate_piece_super() {
     new_x=$((current_piece_x + shift_x))
     new_y=$((current_piece_y + shift_y))
     if new_piece_location_ok $new_x $new_y; then # check if new orientation is ok
+      [ $current_piece -eq $T_TETRIMINO ] && {
+        # if [ $point -eq 5 ]; then
+        #   # echo 'TSPIN' >> .log # For Debugging
+        #   current_tspin=$ACTION_TSPIN
+        # else
+        #   # echo $(what_type_tspin $new_x $new_y $new_rotation) >> .log # For Debugging
+        #   current_tspin=$(what_type_tspin $new_x $new_y $new_rotation)
+        # fi
+        current_tspin=$(what_type_tspin $new_x $new_y $new_rotation)
+      }
       current_piece_rotation=$old_rotation       # if yes - restore old rotation ...
       clear_current                              # ... clear piece image
       current_piece_rotation=$new_rotation       # ... set new orientation
@@ -1066,6 +1182,7 @@ rotate_piece_super() {
     fi
     
     shift 2 # test next rotation point
+    point=$((point + 1))
   done
 
   # if new orientation is not ok
@@ -1119,8 +1236,13 @@ redraw_screen() {
 }
 
 toggle_help() {
-  "$help_on" && help_on=false || help_on=true
+  $help_on && help_on=false || help_on=true
   draw_help
+}
+
+toggle_beep() {
+  $beep_on && beep_on=false || beep_on=true
+  beep
 }
 
 toggle_color() {
@@ -1129,19 +1251,32 @@ toggle_color() {
 }
 
 move_right() {
-  move_piece $((current_piece_x + 1)) "$current_piece_y" && on_manipulation
+  move_piece $((current_piece_x + 1)) "$current_piece_y" && {
+    # if successfuly move
+    current_piece_behaviour=$BEHAVIOUR_RIGHT
+    on_manipulation
+  }
 }
 
 move_left() {
-  move_piece $((current_piece_x - 1)) "$current_piece_y" && on_manipulation
+  move_piece $((current_piece_x - 1)) "$current_piece_y" && {
+    # if successfuly move
+    current_piece_behaviour=$BEHAVIOUR_LEFT
+    on_manipulation
+  } 
 }
 
 fall() {
-  move_piece "$current_piece_x" $((current_piece_y - 1))
+  move_piece "$current_piece_x" $((current_piece_y - 1)) && {
+    # if successfuly move
+    current_piece_behaviour=$BEHAVIOUR_FALL
+  }
 }
 
 soft_drop() {
   move_piece "$current_piece_x" $((current_piece_y - 1)) && {
+    # if successfuly move
+    current_piece_behaviour=$BEHAVIOUR_SOFT_DROP
     update_score "$ACTION_SOFT_DROP"
   }
 }
@@ -1149,16 +1284,27 @@ soft_drop() {
 hard_drop() {
   # move piece all way down
   while move_piece $current_piece_x $((current_piece_y - 1)) true; do
+    # if successfuly move
     update_score "$ACTION_HARD_DROP"
   done
+  
+  current_piece_behaviour=$BEHAVIOUR_HARD_DROP
 }
 
 rotate_cw() {
-  $rotate_piece_func 1 && on_manipulation
+  $rotate_piece_func 1 && {
+    # if successfuly rotate
+    current_piece_behaviour=$BEHAVIOUR_ROTATE
+    on_manipulation
+  }
 }
 
 rotate_ccw() {
-  $rotate_piece_func -1 && on_manipulation
+  $rotate_piece_func -1 && {
+    # if successfuly rotate
+    current_piece_behaviour=$BEHAVIOUR_ROTATE
+    on_manipulation
+  }
 }
 
 hold() {
@@ -1318,6 +1464,9 @@ reader() {
       *'7a')               # 'z'
         cmd="$ROTATE_CCW"
         ;;
+      *'42')               # 'B'
+        cmd="$TOGGLE_BEEP"
+        ;;
       *'43')               # 'C'
         cmd="$TOGGLE_COLOR"
         ;;
@@ -1353,6 +1502,7 @@ controller() {
   eval commands_"$HARD_DROP"=hard_drop
   eval commands_"$HOLD"=hold
   eval commands_"$REFRESH_SCREEN"=refresh_screen
+  eval commands_"$TOGGLE_BEEP"=toggle_beep
   eval commands_"$TOGGLE_COLOR"=toggle_color
   eval commands_"$TOGGLE_HELP"=toggle_help
   eval commands_"$LOCKDOWN"=lockdown
