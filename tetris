@@ -612,7 +612,9 @@ update_score() {
   # Bonus. Only consecutive qualifying Back-to-Back Line Clears after the first in the sequence
   # receive the Back-to-Back Bonus.
   case $1 in
-    "$ACTION_TETRIS")
+    "$ACTION_TETRIS"|\
+    "$ACTION_TSPIN_SINGLE"|"$ACTION_TSPIN_DOUBLE"|"$ACTION_TSPIN_TRIPLE"|\
+    "$ACTION_MINI_TSPIN_SINGLE")
       $b2b_sequence_continues && {
         score_to_add=$((score_to_add + score_to_add / 2))
         lines_to_add=$((lines_to_add + lines_to_add / 2))
@@ -1124,6 +1126,7 @@ update_location() {
 }
 
 on_reach_lowest() {
+  # echo 'LOW' >> .log # For Debugging
   manipulation_counter=0
 }
 
@@ -1137,10 +1140,21 @@ on_manipulation() {
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
         send_signal "$SIGNAL_START_LOCKDOWN_TIMER"
         manipulation_counter=$((manipulation_counter + 1))
-        # echo "mc $manipulation_counter" >> .log # For debugging
+        # echo "mc $manipulation_counter" >> .log # For Debugging. to check counter
       }
       ;;
   esac
+}
+
+can_maniqulate() {
+  case $lockdown_rule in
+    $LOCKDOWN_RULE_EXTENDED)
+      [ $manipulation_counter -ge $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
+        return 1 # false
+      }
+      ;;
+  esac
+  return 0
 }
 
 move_piece() {
@@ -1219,15 +1233,16 @@ rotate_piece_super() {
   # now parameters setted like below
   # '<POINT1> <POINT2> <POINT3> <POINT4> <POINT5>'
   #   <POINT<NO>>: '<LEFT_SHIFT_X> <LEFT_SHIFT_Y> <RIGHT_SHIFT_X> <RIGHT_SHIFT_Y>'
+  [ $direction -eq 1 ] && shift 2 # if rotate clockwise(RIGHT) shift 2 to next xy-coordinates of RIGHT
   while [ $# -gt 0 ]; do
     [ $1 = 'n' ] && { shift 4; continue; } # if 'not used' appears, skip this point
-    [ $direction -eq 1 ] && shift 2        # if rotate clockwise(RIGHT) shift 2 to next xy-coordinates of RIGHT
 
     shift_x=$1; shift_y=$2
     new_x=$((current_piece_x + shift_x))
     new_y=$((current_piece_y + shift_y))
     if new_piece_location_ok $new_x $new_y; then # check if new orientation is ok
       [ $current_piece -eq $T_TETRIMINO ] && {
+        # echo $# >> .log # For Debugging. to check parameter position
         current_tspin=$(what_type_tspin $new_x $new_y $new_rotation)
       }
       current_piece_rotation=$old_rotation       # if yes - restore old rotation ...
@@ -1238,7 +1253,7 @@ rotate_piece_super() {
       return 0                                   # nothing to do more here
     fi
     
-    shift 2 # test next rotation point
+    shift 4 # test next rotation point
   done
 
   # if new orientation is not ok
@@ -1277,6 +1292,7 @@ toggle_color() {
 }
 
 move_right() {
+  can_maniqulate || return
   move_piece $((current_piece_x + 1)) "$current_piece_y" && {
     # if successfuly move
     current_piece_behaviour=$BEHAVIOUR_RIGHT
@@ -1285,11 +1301,30 @@ move_right() {
 }
 
 move_left() {
+  can_maniqulate || return
   move_piece $((current_piece_x - 1)) "$current_piece_y" && {
     # if successfuly move
     current_piece_behaviour=$BEHAVIOUR_LEFT
     on_manipulation
   } 
+}
+
+rotate_cw() {
+  can_maniqulate || return
+  $rotate_piece_func 1 && {
+    # if successfuly rotate
+    current_piece_behaviour=$BEHAVIOUR_ROTATE
+    on_manipulation
+  }
+}
+
+rotate_ccw() {
+  can_maniqulate || return
+  $rotate_piece_func -1 && {
+    # if successfuly rotate
+    current_piece_behaviour=$BEHAVIOUR_ROTATE
+    on_manipulation
+  }
 }
 
 fall() {
@@ -1315,22 +1350,6 @@ hard_drop() {
   done
   
   current_piece_behaviour=$BEHAVIOUR_HARD_DROP
-}
-
-rotate_cw() {
-  $rotate_piece_func 1 && {
-    # if successfuly rotate
-    current_piece_behaviour=$BEHAVIOUR_ROTATE
-    on_manipulation
-  }
-}
-
-rotate_ccw() {
-  $rotate_piece_func -1 && {
-    # if successfuly rotate
-    current_piece_behaviour=$BEHAVIOUR_ROTATE
-    on_manipulation
-  }
 }
 
 hold() {
