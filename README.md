@@ -11,6 +11,7 @@ I implemented
 * Random Generation with Bag System
 * Score System
 * Variable Goal System
+* T-Spin / Mini T-Spin
 * Back-to-Back Bonus
 * Extended Placement/Infinite Placement/Classic Lock Down
 * Super/Classic Rotation System
@@ -18,7 +19,6 @@ I implemented
 
 not implemented
 
-* T-Spin / Mini T-Spin
 * Ghost Piece
 
 This script is based on bash-tetris (Author: Kirill Timofeev)

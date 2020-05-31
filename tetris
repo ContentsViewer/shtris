@@ -15,6 +15,7 @@
 # * Random Generation with Bag System
 # * Score System
 # * Variable Goal System
+# * T-Spin / Mini T-Spin
 # * Back-to-Back Bonus
 # * Extended Placement/Infinite Placement/Classic Lock Down
 # * Super/Classic Rotation System
@@ -22,7 +23,6 @@
 # 
 # not implemented
 # 
-# * T-Spin / Mini T-Spin
 # * Ghost Piece
 # 
 # Enjoy :-)
