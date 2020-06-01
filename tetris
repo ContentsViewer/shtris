@@ -356,6 +356,9 @@ Options:
  --lockdown <RULE>    Three rulesets —Infinite Placement, Extended, and Classic— 
                       dictate the conditions for Lock Down.
                       RULE can be 'extended'(default), 'infinite', 'classic'
+ --no_color           dont display colors
+ --no_beep            disable beep
+ --hide_help          dont show help on start
 
  -h, --help  display this help and exit
 
@@ -445,11 +448,6 @@ hide_cursor() {
   printf "\033[?25l"
 }
 
-beep() {
-  $beep_on || return
-  printf '\007'
-}
-
 # foreground color
 set_fg() {
   $no_color && return
@@ -472,10 +470,21 @@ set_bold() {
   puts "\033[1m"
 }
 
+beep() {
+  $beep_on || return
+  printf '\007'
+}
+
 now() {
   echo $(date +%s)
 }
 
+# Get pid of current process regardless of subshell
+# 
+# $$: 
+#   Expands to the process ID of the shell. 
+#   In a () subshell, it expands to the process ID of the current shell, not the subshell.
+# 
 # Notice that some shells (eg. zsh or ksh93) do NOT start a subprocess 
 # for each subshell created with (...); in that case, $pid may be end up 
 # being the same as $$, which is just right, because that's the PID of 
@@ -519,163 +528,6 @@ level_up() {
   level=$((level + 1))                     # increment level
   goal=$((goal + level * 5))               # adding an additional five lines to the Goal
   send_signal $SIGNAL_LEVEL_UP $ticker_pid # and send level-up signal to all instances of this script (please see ticker for more details)
-}
-
-# playfield is 2-dimensional array, data is stored as follows:
-# a_{y,x}
-#   x - 0, ..., (PLAYFIELD_W-1)
-#   y - 0, ..., (PLAYFIELD_H-1), ..., (START_Y-1)
-# each array element contains cell color value or -1 if cell is empty
-redraw_playfield() {
-  local x y yp field_cell
-
-  y=0
-  while [ "$y" -lt "$PLAYFIELD_H" ]; do
-    yp=$((PLAYFIELD_Y + PLAYFIELD_H - y - 1))
-    xyprint $PLAYFIELD_X $yp '' # put the cursor on the front of line
-    x=0
-    while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      field_cell=$(eval echo \"\$playfield_"$y"_"$x"\")
-      
-      if [ "$field_cell" -eq -1 ]; then
-        puts "$empty_cell"
-      else
-        set_fg "$field_cell"
-        set_bg "$field_cell"
-        puts "$filled_cell"
-        reset_colors
-      fi
-      x=$((x + 1))
-    done
-    y=$((y + 1))
-  done
-}
-
-update_score() {
-  # Arguments: 1 - ACTION name. ex: ACTION_SINGLE
-  local factor score_to_add lines_to_add actions_to_show i
-
-  eval factor=\"\$SCORE_FACTOR_"$1"\"
-
-  score_to_add=0
-  lines_to_add=0
-  actions_to_show=''
-
-  # A Back-to-Back sequence is only broken by a Single, Double, or Triple Line Clear.
-  # Locking down a Tetrimino without clearing a line or holding a Tetrimino does not
-  # break the Back-to-Back sequence.
-  case "$1" in
-    "$ACTION_SINGLE")
-      score_to_add=$((level * factor)) # Awarded Line Clears
-      lines_to_add=$((factor / 100))
-      b2b_sequence_continues=false
-      actions_to_show='Single'
-      ;;
-    "$ACTION_DOUBLE")
-      score_to_add=$((level * factor)) # Awarded Line Clears
-      lines_to_add=$((factor / 100))
-      b2b_sequence_continues=false
-      actions_to_show='Double'
-      ;;
-    "$ACTION_TRIPLE")
-      score_to_add=$((level * factor)) # Awarded Line Clears
-      lines_to_add=$((factor / 100))
-      b2b_sequence_continues=false
-      actions_to_show='Triple'
-      ;;
-    "$ACTION_TETRIS")
-      score_to_add=$((level * factor)) # Awarded Line Clears
-      lines_to_add=$((factor / 100))
-      actions_to_show='Tetris'
-      ;;
-    "$ACTION_MINI_TSPIN")
-      score_to_add=$((level * factor)) # Awarded Line Clears
-      lines_to_add=$((factor / 100))
-      actions_to_show='Mini T-Spin'
-      ;;
-    "$ACTION_MINI_TSPIN_SINGLE")
-      score_to_add=$((level * factor)) # Awarded Line Clears
-      lines_to_add=$((factor / 100))
-      actions_to_show='Mini T-Spin:Single'
-      ;;
-    "$ACTION_TSPIN")
-      score_to_add=$((level * factor)) # Awarded Line Clears
-      lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin'
-      ;;
-    "$ACTION_TSPIN_SINGLE")
-      score_to_add=$((level * factor)) # Awarded Line Clears
-      lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin:Single'
-      ;;
-    "$ACTION_TSPIN_DOUBLE")
-      score_to_add=$((level * factor)) # Awarded Line Clears
-      lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin:Double'
-      ;;
-    "$ACTION_TSPIN_TRIPLE")
-      score_to_add=$((level * factor)) # Awarded Line Clears
-      lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin:Triple'
-      ;;
-    "$ACTION_SOFT_DROP")
-      score_to_add=$factor
-      ;;
-    "$ACTION_HARD_DROP")
-      score_to_add=$factor
-      ;;
-  esac
-
-  # Awarded Back-to-Back Bonus
-  # start a Back-to-Back sequence after Awarded b2b bonus
-  # The first Line Clear in the Back-to-Back sequence does not receive the Back-to-Back
-  # Bonus. Only consecutive qualifying Back-to-Back Line Clears after the first in the sequence
-  # receive the Back-to-Back Bonus.
-  case $1 in
-    "$ACTION_TETRIS"|\
-    "$ACTION_TSPIN_SINGLE"|"$ACTION_TSPIN_DOUBLE"|"$ACTION_TSPIN_TRIPLE"|\
-    "$ACTION_MINI_TSPIN_SINGLE")
-      $b2b_sequence_continues && {
-        score_to_add=$((score_to_add + score_to_add / 2))
-        lines_to_add=$((lines_to_add + lines_to_add / 2))
-        actions_to_show="$actions_to_show:B2B"
-      }
-      b2b_sequence_continues=true;;
-  esac
-
-  score=$((score + score_to_add))
-  lines_completed=$((lines_completed + lines_to_add))
-
-  [ "$level" -le "$LEVEL_MAX" ]      &&
-  [ "$lines_completed" -ge "$goal" ] && {
-    level_up
-  }
-
-  set_bold
-  set_fg "$SCORE_COLOR"
-  xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE: "
-  xyprint "$SCORE_X" $((SCORE_Y + 1)) "│$score"
-  xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
-  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES   $lines_completed"
-  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   $level"
-  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    $goal"
-  
-  [ -z "$actions_to_show" ] || {
-    IFS_SAVE=$IFS; IFS=:
-    shift $#; set $actions_to_show
-    IFS=$IFS_SAVE
-
-    xyprint "$SCORE_X" $((SCORE_Y + 7)) "             " # clear 3 rows
-    xyprint "$SCORE_X" $((SCORE_Y + 8)) "             " #
-    xyprint "$SCORE_X" $((SCORE_Y + 9)) "             " #
-    i=7
-    while [ $# -gt 0 ]; do
-      xyprint "$SCORE_X" $((SCORE_Y + i)) "$1"
-      i=$((i + 1)); shift
-    done
-  }
-
-  reset_colors
 }
 
 fill_bag() {
@@ -767,172 +619,6 @@ generate_tetrimino() {
 
   lowest_line=$START_Y
   lands_on=false
-}
-
-draw_piece() {
-  # Arguments:
-  #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content, 6 - mask with playfield
-  local posx posy type rotation content lx ly x y mask
-
-  # at first, we should save arguments.
-  posx="$1"; posy="$2"; type="$3"; rotation="$4"; content="$5"; mask="${6:-false}"
-  shift $#
-
-  # set minos coordinates.
-  eval set \$piece_"$type"_minos_"$rotation"
-
-  # loop through tetrimino minos: 4 minos, each has 2 coordinates
-  while [ $# -gt 0 ]; do
-    # relative coordinates are retrieved bassed on orientation and added to absolute coordinates
-    lx=$1; ly=$2
-    x=$((posx + lx * 2)) # the width of cell is 2 characters thick
-    y=$((posy + ly))
-
-    "$mask"                                         &&
-    [ "$y" -ge "$PLAYFIELD_Y" ]                     &&
-    [ "$y" -lt $((PLAYFIELD_Y + PLAYFIELD_H)) ]     &&
-    [ "$x" -ge "$PLAYFIELD_X" ]                     &&
-    [ "$x" -lt $((PLAYFIELD_X + PLAYFIELD_W * 2)) ] && xyprint $x $y "$content" # draw mino within playfield
-    "$mask"                                         || xyprint $x $y "$content"
-
-    shift 2
-  done
-}
-
-draw_current() {
-  # Arguments: 1 - string to draw single cell
-  # factor 2 for x because each cell is 2 characters wide
-  draw_piece $((PLAYFIELD_X + current_piece_x * 2)) $((PLAYFIELD_Y + PLAYFIELD_H - 1 - current_piece_y)) $current_piece $current_piece_rotation "$1" true
-}
-
-show_current() {
-  local color
-  eval color=\"\$piece_"$current_piece"_color\"
-  set_fg "$color"
-  set_bg "$color"
-  draw_current "$filled_cell"
-  reset_colors
-}
-
-clear_current() {
-  draw_current "$empty_cell"
-}
-
-draw_next() {
-  # Arguments: 1 - visibility ( false - no, true - yes)
-  local color visible x y content
-
-  x="$NEXT_X"; y="$NEXT_Y"; visible="$1"
-  shift $#
-  set $next_queue
-  while [ $# -gt 0 ]; do
-    content='  '
-    "$visible" && {
-      eval color=\"\$piece_"$1"_color\"
-      set_fg "$color"
-      set_bg "$color"
-      content="$filled_cell"
-    }
-    draw_piece "$x" "$y" "$1" "$NORTH" "$content"
-    "$visible" && reset_colors
-    shift
-    y=$((y + 3))
-  done
-}
-
-show_next() {
-  draw_next true
-}
-
-clear_next() {
-  draw_next false
-}
-
-draw_hold() {
-  # Arguments: 1 - visibility ( false - no, true - yes)
-  local visible="$1" color
-
-  [ -z "$hold_queue" ] && return
-
-  content='  '
-  "$visible" && {
-    eval color=\"\$piece_"$hold_queue"_color\"
-    set_fg "$color"
-    set_bg "$color"
-    content="$filled_cell"
-  }
-  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$content"
-  "$visible" && reset_colors
-}
-
-show_hold() {
-  draw_hold true
-}
-
-clear_hold() {
-  draw_hold false
-}
-
-draw_border() {
-  local x1 x2 y1 y2 i x y
-
-  set_bold
-  set_fg $BORDER_COLOR
-  x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
-  x2=$((PLAYFIELD_X + PLAYFIELD_W * 2)) # 2 here is because each cell on play field is 2 characters wide
-  y1=$((PLAYFIELD_Y - 1))
-  y2=$((PLAYFIELD_Y + PLAYFIELD_H))
-
-  i=0
-  while [ "$i" -lt "$PLAYFIELD_H" ]; do
-    y=$((i + PLAYFIELD_Y))
-    xyprint $x1 $y "│"
-    xyprint $x2 $y "│"
-    i=$((i + 1))
-  done
-  
-  i=0
-  while [ "$i" -lt "$PLAYFIELD_W" ]; do
-    x=$((i * 2 + PLAYFIELD_X)) # 2 here is because each cell on play field is 2 characters width
-    xyprint $x $y1 '──'
-    xyprint $x $y2 '──'
-    i=$((i + 1))
-  done
-  
-  xyprint $x1 $y1 "┌"; xyprint $x2 $y1 "┐" # draw the corners
-  xyprint $x1 $y2 "└"; xyprint $x2 $y2 "┘"
-
-  reset_colors
-}
-
-draw_help() {
-  # Arguments: 1 - visibility ( false - no, true - yes), if this argument is skipped $help_on is used
-  local visible=${1:-$help_on} x y line
-
-  x="$HELP_X"; y="$HELP_Y"
-
-  set_bold
-  set_fg "$HELP_COLOR"
-
-  additional_buffer=$(
-    echo "$help" | {
-      # in this process, the change of screen_buffer is ignored out of this process. 
-      # should return the buffer.
-      screen_buffer=''
-      while read line; do
-        "$visible" || {
-          empty_line=''; i=0
-          while [ "$i" -lt ${#line} ]; do empty_line="$empty_line "; i=$((i + 1)); done
-          line="$empty_line"
-        }
-        eval xyprint \"$x\" \"$y\" \'"$line"\'
-        y=$((y + 1))
-      done
-      echo "$screen_buffer"
-    }
-  )
-  puts "$additional_buffer"
-  reset_colors
 }
 
 what_type_tspin() {
@@ -1138,6 +824,133 @@ process_fallen_piece() {
   discard_cmds
 }
 
+update_score() {
+  # Arguments: 1 - ACTION name. ex: ACTION_SINGLE
+  local factor score_to_add lines_to_add actions_to_show i
+
+  eval factor=\"\$SCORE_FACTOR_"$1"\"
+
+  score_to_add=0
+  lines_to_add=0
+  actions_to_show=''
+
+  # A Back-to-Back sequence is only broken by a Single, Double, or Triple Line Clear.
+  # Locking down a Tetrimino without clearing a line or holding a Tetrimino does not
+  # break the Back-to-Back sequence.
+  case "$1" in
+    "$ACTION_SINGLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      b2b_sequence_continues=false
+      actions_to_show='Single'
+      ;;
+    "$ACTION_DOUBLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      b2b_sequence_continues=false
+      actions_to_show='Double'
+      ;;
+    "$ACTION_TRIPLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      b2b_sequence_continues=false
+      actions_to_show='Triple'
+      ;;
+    "$ACTION_TETRIS")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='Tetris'
+      ;;
+    "$ACTION_MINI_TSPIN")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='Mini T-Spin'
+      ;;
+    "$ACTION_MINI_TSPIN_SINGLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='Mini T-Spin:Single'
+      ;;
+    "$ACTION_TSPIN")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='T-Spin'
+      ;;
+    "$ACTION_TSPIN_SINGLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='T-Spin:Single'
+      ;;
+    "$ACTION_TSPIN_DOUBLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='T-Spin:Double'
+      ;;
+    "$ACTION_TSPIN_TRIPLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      actions_to_show='T-Spin:Triple'
+      ;;
+    "$ACTION_SOFT_DROP")
+      score_to_add=$factor
+      ;;
+    "$ACTION_HARD_DROP")
+      score_to_add=$factor
+      ;;
+  esac
+
+  # Awarded Back-to-Back Bonus
+  # start a Back-to-Back sequence after Awarded b2b bonus
+  # The first Line Clear in the Back-to-Back sequence does not receive the Back-to-Back
+  # Bonus. Only consecutive qualifying Back-to-Back Line Clears after the first in the sequence
+  # receive the Back-to-Back Bonus.
+  case $1 in
+    "$ACTION_TETRIS"|\
+    "$ACTION_TSPIN_SINGLE"|"$ACTION_TSPIN_DOUBLE"|"$ACTION_TSPIN_TRIPLE"|\
+    "$ACTION_MINI_TSPIN_SINGLE")
+      $b2b_sequence_continues && {
+        score_to_add=$((score_to_add + score_to_add / 2))
+        lines_to_add=$((lines_to_add + lines_to_add / 2))
+        actions_to_show="$actions_to_show:B2B"
+      }
+      b2b_sequence_continues=true;;
+  esac
+
+  score=$((score + score_to_add))
+  lines_completed=$((lines_completed + lines_to_add))
+
+  [ "$level" -le "$LEVEL_MAX" ]      &&
+  [ "$lines_completed" -ge "$goal" ] && {
+    level_up
+  }
+
+  set_bold
+  set_fg "$SCORE_COLOR"
+  xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE: "
+  xyprint "$SCORE_X" $((SCORE_Y + 1)) "│$score"
+  xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
+  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES   $lines_completed"
+  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   $level"
+  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    $goal"
+  
+  [ -z "$actions_to_show" ] || {
+    IFS_SAVE=$IFS; IFS=:
+    shift $#; set $actions_to_show
+    IFS=$IFS_SAVE
+
+    xyprint "$SCORE_X" $((SCORE_Y + 7)) "             " # clear 3 rows
+    xyprint "$SCORE_X" $((SCORE_Y + 8)) "             " #
+    xyprint "$SCORE_X" $((SCORE_Y + 9)) "             " #
+    i=7
+    while [ $# -gt 0 ]; do
+      xyprint "$SCORE_X" $((SCORE_Y + i)) "$1"
+      i=$((i + 1)); shift
+    done
+  }
+
+  reset_colors
+}
+
 update_location() {
   current_piece_x="$1"
   current_piece_y="$2"
@@ -1287,36 +1100,6 @@ rotate_piece_super() {
   return 1
 }
 
-refresh_screen() {
-  clear
-  redraw_screen
-}
-
-redraw_screen() {
-  draw_help                   # should first. draw help on the lowest layer
-  show_next
-  show_hold
-  update_score "$ACTION_NONE"
-  draw_border
-  redraw_playfield
-  show_current
-}
-
-toggle_help() {
-  $help_on && help_on=false || help_on=true
-  draw_help
-}
-
-toggle_beep() {
-  $beep_on && beep_on=false || beep_on=true
-  beep
-}
-
-toggle_color() {
-  $no_color && no_color=false || no_color=true
-  redraw_screen 
-}
-
 move_right() {
   can_maniqulate || return
   move_piece $((current_piece_x + 1)) "$current_piece_y" && {
@@ -1380,6 +1163,232 @@ hard_drop() {
 
 hold() {
   hold_tetrimino
+}
+
+# playfield is 2-dimensional array, data is stored as follows:
+# a_{y,x}
+#   x - 0, ..., (PLAYFIELD_W-1)
+#   y - 0, ..., (PLAYFIELD_H-1), ..., (START_Y-1)
+# each array element contains cell color value or -1 if cell is empty
+redraw_playfield() {
+  local x y yp field_cell
+
+  y=0
+  while [ "$y" -lt "$PLAYFIELD_H" ]; do
+    yp=$((PLAYFIELD_Y + PLAYFIELD_H - y - 1))
+    xyprint $PLAYFIELD_X $yp '' # put the cursor on the front of line
+    x=0
+    while [ "$x" -lt "$PLAYFIELD_W" ]; do
+      field_cell=$(eval echo \"\$playfield_"$y"_"$x"\")
+      
+      if [ "$field_cell" -eq -1 ]; then
+        puts "$empty_cell"
+      else
+        set_fg "$field_cell"
+        set_bg "$field_cell"
+        puts "$filled_cell"
+        reset_colors
+      fi
+      x=$((x + 1))
+    done
+    y=$((y + 1))
+  done
+}
+
+draw_piece() {
+  # Arguments:
+  #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content, 6 - mask with playfield
+  local posx posy type rotation content lx ly x y mask
+
+  # at first, we should save arguments.
+  posx="$1"; posy="$2"; type="$3"; rotation="$4"; content="$5"; mask="${6:-false}"
+  shift $#
+
+  # set minos coordinates.
+  eval set \$piece_"$type"_minos_"$rotation"
+
+  # loop through tetrimino minos: 4 minos, each has 2 coordinates
+  while [ $# -gt 0 ]; do
+    # relative coordinates are retrieved bassed on orientation and added to absolute coordinates
+    lx=$1; ly=$2
+    x=$((posx + lx * 2)) # the width of cell is 2 characters thick
+    y=$((posy + ly))
+
+    "$mask"                                         &&
+    [ "$y" -ge "$PLAYFIELD_Y" ]                     &&
+    [ "$y" -lt $((PLAYFIELD_Y + PLAYFIELD_H)) ]     &&
+    [ "$x" -ge "$PLAYFIELD_X" ]                     &&
+    [ "$x" -lt $((PLAYFIELD_X + PLAYFIELD_W * 2)) ] && xyprint $x $y "$content" # draw mino within playfield
+    "$mask"                                         || xyprint $x $y "$content"
+
+    shift 2
+  done
+}
+
+draw_current() {
+  # Arguments: 1 - string to draw single cell
+  # factor 2 for x because each cell is 2 characters wide
+  draw_piece $((PLAYFIELD_X + current_piece_x * 2)) $((PLAYFIELD_Y + PLAYFIELD_H - 1 - current_piece_y)) $current_piece $current_piece_rotation "$1" true
+}
+
+show_current() {
+  local color
+  eval color=\"\$piece_"$current_piece"_color\"
+  set_fg "$color"
+  set_bg "$color"
+  draw_current "$filled_cell"
+  reset_colors
+}
+
+clear_current() {
+  draw_current "$empty_cell"
+}
+
+draw_next() {
+  # Arguments: 1 - visibility ( false - no, true - yes)
+  local color visible x y content
+
+  x="$NEXT_X"; y="$NEXT_Y"; visible="$1"
+  shift $#
+  set $next_queue
+  while [ $# -gt 0 ]; do
+    content='  '
+    "$visible" && {
+      eval color=\"\$piece_"$1"_color\"
+      set_fg "$color"
+      set_bg "$color"
+      content="$filled_cell"
+    }
+    draw_piece "$x" "$y" "$1" "$NORTH" "$content"
+    "$visible" && reset_colors
+    shift
+    y=$((y + 3))
+  done
+}
+
+show_next() {
+  draw_next true
+}
+
+clear_next() {
+  draw_next false
+}
+
+draw_hold() {
+  # Arguments: 1 - visibility ( false - no, true - yes)
+  local visible="$1" color
+
+  [ -z "$hold_queue" ] && return
+
+  content='  '
+  "$visible" && {
+    eval color=\"\$piece_"$hold_queue"_color\"
+    set_fg "$color"
+    set_bg "$color"
+    content="$filled_cell"
+  }
+  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$content"
+  "$visible" && reset_colors
+}
+
+show_hold() {
+  draw_hold true
+}
+
+clear_hold() {
+  draw_hold false
+}
+
+draw_border() {
+  local x1 x2 y1 y2 i x y
+
+  set_bold
+  set_fg $BORDER_COLOR
+  x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
+  x2=$((PLAYFIELD_X + PLAYFIELD_W * 2)) # 2 here is because each cell on play field is 2 characters wide
+  y1=$((PLAYFIELD_Y - 1))
+  y2=$((PLAYFIELD_Y + PLAYFIELD_H))
+
+  i=0
+  while [ "$i" -lt "$PLAYFIELD_H" ]; do
+    y=$((i + PLAYFIELD_Y))
+    xyprint $x1 $y "│"
+    xyprint $x2 $y "│"
+    i=$((i + 1))
+  done
+  
+  i=0
+  while [ "$i" -lt "$PLAYFIELD_W" ]; do
+    x=$((i * 2 + PLAYFIELD_X)) # 2 here is because each cell on play field is 2 characters width
+    xyprint $x $y1 '──'
+    xyprint $x $y2 '──'
+    i=$((i + 1))
+  done
+  
+  xyprint $x1 $y1 "┌"; xyprint $x2 $y1 "┐" # draw the corners
+  xyprint $x1 $y2 "└"; xyprint $x2 $y2 "┘"
+
+  reset_colors
+}
+
+draw_help() {
+  # Arguments: 1 - visibility ( false - no, true - yes), if this argument is skipped $help_on is used
+  local visible=${1:-$help_on} x y line
+
+  x="$HELP_X"; y="$HELP_Y"
+
+  set_bold
+  set_fg "$HELP_COLOR"
+
+  additional_buffer=$(
+    echo "$help" | {
+      # in this process, the change of screen_buffer is ignored out of this process. 
+      # should return the buffer.
+      screen_buffer=''
+      while read line; do
+        "$visible" || {
+          empty_line=''; i=0
+          while [ "$i" -lt ${#line} ]; do empty_line="$empty_line "; i=$((i + 1)); done
+          line="$empty_line"
+        }
+        eval xyprint \"$x\" \"$y\" \'"$line"\'
+        y=$((y + 1))
+      done
+      echo "$screen_buffer"
+    }
+  )
+  puts "$additional_buffer"
+  reset_colors
+}
+
+refresh_screen() {
+  clear
+  redraw_screen
+}
+
+redraw_screen() {
+  draw_help                   # should first. draw help on the lowest layer
+  show_next
+  show_hold
+  update_score "$ACTION_NONE"
+  draw_border
+  redraw_playfield
+  show_current
+}
+
+toggle_help() {
+  $help_on && help_on=false || help_on=true
+  draw_help
+}
+
+toggle_beep() {
+  $beep_on && beep_on=false || beep_on=true
+  beep
+}
+
+toggle_color() {
+  $no_color && no_color=false || no_color=true
+  redraw_screen 
 }
 
 quit() {
@@ -1706,6 +1715,18 @@ main() {
             ;;
         esac
         shift 2; continue
+        ;;
+      --no_beep)
+        no_beep=true
+        shift; continue
+        ;;
+      --no_color)
+        no_color=true
+        shift; continue
+        ;;
+      --hide_help)
+        help_on=false
+        shift; continue
         ;;
       *)
         echo "${0##*/}: unrecognized option '$1'" 1>&2
