@@ -356,9 +356,9 @@ Options:
  --lockdown <RULE>    Three rulesets —Infinite Placement, Extended, and Classic— 
                       dictate the conditions for Lock Down.
                       RULE can be 'extended'(default), 'infinite', 'classic'
- --no_color           dont display colors
- --no_beep            disable beep
- --hide_help          dont show help on start
+ --no-color           don't display colors
+ --no-beep            disable beep
+ --hide-help          don't show help on start
 
  -h, --help  display this help and exit
 
@@ -1716,15 +1716,15 @@ main() {
         esac
         shift 2; continue
         ;;
-      --no_beep)
+      --no-beep)
         no_beep=true
         shift; continue
         ;;
-      --no_color)
+      --no-color)
         no_color=true
         shift; continue
         ;;
-      --hide_help)
+      --hide-help)
         help_on=false
         shift; continue
         ;;
