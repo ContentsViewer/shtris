@@ -243,6 +243,7 @@ START_Y=21
 # each string is sequence of relative xy coordinates
 # Format:
 #   piece_<TETRIMINO>_minos_<FACING>='<mino_0_x> <mino_1_y> ...'
+#     (0, 0) is top left
 #   
 #   piece_<TETRIMINO>_rchifts_<FACING>='<POINT_1> <POINT_2> ...'
 #     <POINT_<NO>>: <ROTATION_LEFT_shifts> <ROTATION_RIGHT_shifts>
@@ -1405,6 +1406,7 @@ init() {
   # playfield is initialized with -1s (empty cells)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
   # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y)
+  # (0, 0) is bottom left
   y=0
   while [ "$y" -le "$START_Y" ]; do
     x=0
