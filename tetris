@@ -50,7 +50,7 @@ set -u # non initialized variable is an error
 # game versioin
 # should follow "Semantic Versioning 2.0.0" <https://semver.org/> 
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
-VERSION='2.0.0'
+VERSION='2.0.1'
 
 # 3 signals are used: SIGUSR1 to decrease delay after level up and SIGTERM to quit
 # they are sent to all instances of this script
@@ -1002,7 +1002,7 @@ move_piece() {
     return 0                                          # nothing more to do here
   fi                                                  # if we could not move piece to new location
 
-  [ "$2" -eq "$current_piece_y" ] && return 0       # and this was horizontal move
+  [ "$2" -eq "$current_piece_y" ] && return 1         # and this was horizontal move
   
   if "$immediately_lockdown"; then
     lockdown
