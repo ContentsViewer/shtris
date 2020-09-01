@@ -52,11 +52,12 @@ set -u # non initialized variable is an error
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
 VERSION='2.0.2'
 
-# signals are used for communicating with each process(i.e. reader, timer, ticker).
-# 
-# in shell enviroment, should Drop the SIG prefix, just input the signal name.
+# these signals are used for communicating with each process(i.e. reader, timer, ticker, controller).
+# Note:
+#   in shell enviroment, should Drop the SIG prefix, just input the signal name.
 SIGNAL_TERM=TERM
 SIGNAL_LEVEL_UP=USR1
+SIGNAL_CANCEL_LOCKDOWN_TIMER=USR1
 SIGNAL_RESTART_LOCKDOWN_TIMER=USR2
 
 # Those are commands sent to controller by key press processing code
@@ -954,6 +955,11 @@ update_location() {
 on_reach_lowest() {
   # echo 'LOW' >> .log # For Debugging
   manipulation_counter=0
+
+  # if the tetrimino reached the lowest, it means that tetrimino has space to fall
+  # and not lifts up before it lands on.
+  # so, we can cancel lockdown timer which is running.
+  send_signal "$SIGNAL_CANCEL_LOCKDOWN_TIMER" $timer_pid
 }
 
 # this function called when player manipulate tetrimino.
@@ -1482,7 +1488,8 @@ lockdown_timer() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
   # on this signal reset the timer. lockdown 0.5~0.6(0.5 is correct) sec after receiving signal
-  trap 'trigger_counter=5' $SIGNAL_RESTART_LOCKDOWN_TIMER
+  trap 'trigger_counter=5'  $SIGNAL_RESTART_LOCKDOWN_TIMER
+  trap 'trigger_counter=-1' $SIGNAL_CANCEL_LOCKDOWN_TIMER
 
   local trigger_counter timestamp
 
