@@ -50,20 +50,14 @@ set -u # non initialized variable is an error
 # game versioin
 # should follow "Semantic Versioning 2.0.0" <https://semver.org/> 
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
-VERSION='2.0.1'
+VERSION='2.0.2'
 
-# 3 signals are used: SIGUSR1 to decrease delay after level up and SIGTERM to quit
-# they are sent to all instances of this script
-# because of that we should process them in each instance
-#
-# in this instance we are ignoring these signals
+# signals are used for communicating with each process(i.e. reader, timer, ticker).
 # 
 # in shell enviroment, should Drop the SIG prefix, just input the signal name.
 SIGNAL_TERM=TERM
 SIGNAL_LEVEL_UP=USR1
-SIGNAL_START_LOCKDOWN_TIMER=USR2
-
-trap '' $SIGNAL_TERM $SIGNAL_LEVEL_UP $SIGNAL_START_LOCKDOWN_TIMER
+SIGNAL_RESTART_LOCKDOWN_TIMER=USR2
 
 # Those are commands sent to controller by key press processing code
 # In controller they are used as index to retrieve actual function from array
@@ -966,11 +960,11 @@ on_reach_lowest() {
 on_manipulation() {
   case $lockdown_rule in
     $LOCKDOWN_RULE_INFINITE)
-      send_signal "$SIGNAL_START_LOCKDOWN_TIMER" $timer_pid
+      send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
       ;;
     $LOCKDOWN_RULE_EXTENDED)
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
-        send_signal "$SIGNAL_START_LOCKDOWN_TIMER" $timer_pid
+        send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
         manipulation_counter=$((manipulation_counter + 1))
         # echo "mc $manipulation_counter" >> .log # For Debugging. to check counter
       }
@@ -1008,7 +1002,8 @@ move_piece() {
     lockdown
   else
     "$lands_on" || {
-      send_signal "$SIGNAL_START_LOCKDOWN_TIMER" $timer_pid
+      # echo 'Send Lock' >> .log # for debugging to check when signal fired.
+      send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
     }
   fi
   lands_on=true
@@ -1487,7 +1482,7 @@ lockdown_timer() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
   # on this signal reset the timer. lockdown 0.5~0.6(0.5 is correct) sec after receiving signal
-  trap 'trigger_counter=5' $SIGNAL_START_LOCKDOWN_TIMER
+  trap 'trigger_counter=5' $SIGNAL_RESTART_LOCKDOWN_TIMER
 
   local trigger_counter timestamp
 
@@ -1504,7 +1499,7 @@ lockdown_timer() {
       done
       [ "$trigger_counter" -gt 0 ] && continue # final check
       trigger_counter=-1
-      # echo 'TRG' >> .log # for debugging to check when signal fired.
+      # echo 'Fire Lock' >> .log # for debugging to check when signal fired.
       echo "$timestamp $PROCESS_TIMER $LOCKDOWN"
     }
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
@@ -1604,7 +1599,7 @@ reader() {
 
 controller() {
   # These signals are ignored
-  trap '' $SIGNAL_TERM $SIGNAL_LEVEL_UP $SIGNAL_START_LOCKDOWN_TIMER
+  trap '' $SIGNAL_TERM
   local cmd statement issued_time from
 
   # initialization of commands array with appropriate functions
