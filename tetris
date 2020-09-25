@@ -50,7 +50,7 @@ set -u # non initialized variable is an error
 # game versioin
 # should follow "Semantic Versioning 2.0.0" <https://semver.org/> 
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
-VERSION='2.0.2'
+VERSION='2.1.0-alpha'
 
 # these signals are used for communicating with each process(i.e. reader, timer, ticker, controller).
 # Note:
@@ -225,9 +225,13 @@ NEXT_MAX=7
 HOLD_X=9
 HOLD_Y=2
 
-# Location of 'game over' in the end of the game
-GAMEOVER_X=$((PLAYFIELD_X + PLAYFIELD_W / 2))
+# Location of 'Game Over!' at end of the game
+GAMEOVER_X=$((PLAYFIELD_X + PLAYFIELD_W - 5))  # 1 width equals 2 character
 GAMEOVER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
+
+# Location of 'READY' at start of the game
+READY_X=$((PLAYFIELD_X + PLAYFIELD_W))
+READY_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
 
 # piece starting location
 START_X=3
@@ -1231,6 +1235,7 @@ draw_current() {
 
 show_current() {
   local color
+  ${current_piece+:} return
   eval color=\"\$piece_"$current_piece"_color\"
   set_fg "$color"
   set_bg "$color"
@@ -1403,7 +1408,8 @@ quit() {
 
 init() {
   local x y i from cmd pid statement
-  echo 'loading...'
+
+  echo 'Loading...'
   # playfield is initialized with -1s (empty cells)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
   # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y)
@@ -1425,7 +1431,7 @@ init() {
     i=$((i + 1))
   done
 
-  $debug && echo 'checking subprocess pid'
+  $debug && echo 'Checking subprocess pid'
   ticker_pid=''; timer_pid=''; reader_pid=''
   while [ -z $ticker_pid ] || [ -z $timer_pid ] || [ -z $reader_pid ]; do
     read statement
@@ -1451,7 +1457,7 @@ init() {
     }
   done
 
-  $debug && echo "leveling up to $starting_level"
+  $debug && echo "Leveling up to $starting_level"
   $debug && printf "> $level "
   # level up until reach starting level
   while [ $level -lt $starting_level ]; do
@@ -1469,16 +1475,22 @@ init() {
   done
   $debug && echo " ...OK"
 
-  echo 'READY'; printf '> '
+  clear
+  hide_cursor
+  redraw_screen
+  xyprint $((READY_X - 3)) $READY_Y 'READY'
+  flush_screen
+  sleep 1
+
+  # counting down 3 seconds
   i=3
   while [ $i -gt 0 ]; do
-    printf "$i "
+    xyprint $((READY_X - 1)) $((READY_Y + 1)) $i
+    flush_screen
     sleep 1
     i=$((i - 1))
   done
 
-  clear
-  hide_cursor
   get_next
   redraw_screen
   flush_screen
