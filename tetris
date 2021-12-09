@@ -520,7 +520,7 @@ RAND_VALUE=$(now) # seed value > 0
 shuffle() {
   local varname=$1 shuffled='' len=$(($# - 1)) pos arg
   shift
-  while [ $# -gt 0 ]; do
+  while [ $# -gt 1 ]; do
     randgen
     pos=$((${RAND_VALUE#-} % len))
     for arg in "$@"; do
@@ -533,7 +533,7 @@ shuffle() {
     done
     shift $((len + 1))
   done
-  eval "$varname=\$shuffled"
+  eval "$varname=\$shuffled\$1"
 }
 
 level_up() {
