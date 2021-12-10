@@ -1,7 +1,8 @@
 # sh-tetris
+
 Tetris game written in pure sh.
 
-I tried to follow the Tetris Guideline(2009). 
+I tried to follow the Tetris Guideline(2009).
 URL: [Tetris Guideline. Tetris Wiki. accessed at 2020-05-23](https://tetris.fandom.com/wiki/Tetris_Guideline)
 
 I implemented
@@ -15,7 +16,7 @@ I implemented
 * Back-to-Back Bonus
 * Extended Placement / Infinite Placement / Classic Lock Down
 * Super / Classic Rotation System
-* Changing the Starting Level 
+* Changing the Starting Level
 
 not implemented
 
@@ -29,24 +30,24 @@ Thank you!
 ### From source
 
 ```sh
-$ git clone https://github.com/ContentsViewer/sh-tetris.git
-$ cd sh-tetris
-$ chmod 755 ./tetris
-$ ./tetris
+git clone https://github.com/ContentsViewer/sh-tetris.git
+cd sh-tetris
+chmod 755 ./tetris
+./tetris
 ```
 
 ### From Docker
 
 ```sh
-$ wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/master/Dockerfile
-$ docker build -t sh-tetris .
-$ docker run --rm -it sh-tetris
+wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/master/Dockerfile
+docker build -t sh-tetris .
+docker run --rm -it sh-tetris
 ```
 
 ### From DockerHub
 
 ```sh
-$ docker run --rm -it eggplanter/sh-tetirs
+docker run --rm -it eggplanter/sh-tetris
 ```
 
 ![Tetris](https://contentsviewer.work/Master/ShellScript/Apps/Tetris/Images/tetris.jpg)
@@ -54,10 +55,14 @@ $ docker run --rm -it eggplanter/sh-tetirs
 Enjoy :-)
 
 ## Supported Environments
-    Linux   sh | o
-    FreeBSD sh | o
-    BusyBox sh | o
-    Solaris sh | x
+
+| Environment | ? |
+|-------------|---|
+| Linux   sh  | o |
+| FreeBSD sh  | o |
+| BusyBox sh  | o |
+| Solaris sh  | x |
 
 ## Author
+
 IOE <Github: ContentsViewer>
