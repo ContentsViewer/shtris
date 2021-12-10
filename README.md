@@ -1,4 +1,5 @@
 # sh-tetris
+
 Tetris game written in pure sh.
 
 I tried to follow the Tetris Guideline(2009).
@@ -25,10 +26,11 @@ This script is based on bash-tetris (Author: Kirill Timofeev)
 Thank you!
 
 ## Usage
+
 ```sh
-$ git clone --depth 1 -b v2.1.0 https://github.com/ContentsViewer/sh-tetris
-$ cd sh-tetris
-$ ./sh-tetris
+git clone --depth 1 -b v2.1.0 https://github.com/ContentsViewer/sh-tetris
+cd sh-tetris
+./sh-tetris
 ```
 
 ![Tetris](https://contentsviewer.work/Master/ShellScript/Apps/Tetris/Images/tetris.jpg)
@@ -36,10 +38,14 @@ $ ./sh-tetris
 Enjoy :-)
 
 ## Supported Environments
-    Linux   sh | o
-    FreeBSD sh | o
-    BusyBox sh | o
-    Solaris sh | x
+
+| Environment | Support? |
+| :---------: | :------: |
+| Linux   sh  | o        |
+| FreeBSD sh  | o        |
+| BusyBox sh  | o        |
+| Solaris sh  | x        |
 
 ## Author
+
 IOE <Github: ContentsViewer>
