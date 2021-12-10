@@ -25,11 +25,28 @@ This script is based on bash-tetris (Author: Kirill Timofeev)
 Thank you!
 
 ## Usage
+
+### From source
+
 ```sh
 $ git clone https://github.com/ContentsViewer/sh-tetris.git
 $ cd sh-tetris
 $ chmod 755 ./tetris
 $ ./tetris
+```
+
+### From Docker
+
+```sh
+$ wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/master/Dockerfile
+$ docker build -t sh-tetris .
+$ docker run --rm -it sh-tetris
+```
+
+### From DockerHub
+
+```sh
+$ docker run --rm -it eggplanter/sh-tetirs
 ```
 
 ![Tetris](https://contentsviewer.work/Master/ShellScript/Apps/Tetris/Images/tetris.jpg)
