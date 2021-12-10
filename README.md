@@ -30,7 +30,7 @@ Thank you!
 ### From source
 
 ```sh
-git clone https://github.com/ContentsViewer/sh-tetris.git
+git clone -b v2.1.0 --depth 1 https://github.com/ContentsViewer/sh-tetris.git
 cd sh-tetris
 chmod 755 ./tetris
 ./tetris
