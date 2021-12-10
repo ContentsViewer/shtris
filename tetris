@@ -52,6 +52,15 @@ set -u # non initialized variable is an error
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
 VERSION='2.2.0-alpha'
 
+# Prevent import of IFS from the environment (e.g. dash <= 0.5.10.2, FreeBSD sh <= 10.4).
+IFS=$(printf ' \t\n_') && IFS=${IFS%_}
+
+# For zsh support.
+if [ "${ZSH_VERSION:-}" ]; then
+  IFS="$IFS"$'\0' # default IFS value for zsh
+  setopt shwordsplit
+fi
+
 # these signals are used for communicating with each process(i.e. reader, timer, ticker, controller).
 # Note:
 #   in shell enviroment, should Drop the SIG prefix, just input the signal name.
@@ -422,6 +431,18 @@ manipulation_counter=0     #
 lowest_line=$START_X       #
 current_tspin=$ACTION_NONE #
 
+# Function for defining local variables for cross-shells support.
+if (PATH=/dev/null; f() { local v; }; f) 2>/dev/null; then
+  localvar() {
+    set -- "$1" "$*"
+    eval "$1() { local${2#"$1"}; _$1 \"\$@\"; }"
+  }
+else
+  localvar() {
+    set -- "$1" "$*"
+    eval "function $1 { typeset${2#"$1"}; _$1 \"\$@\"; }"
+  }
+fi
 
 # screen_buffer is variable, that accumulates all screen changes
 # this variable is printed in controller once per game cycle
@@ -517,8 +538,9 @@ randgen() {
 }
 RAND_VALUE=$(now) # seed value > 0
 
-shuffle() {
-  local varname=$1 shuffled='' len=$(($# - 1)) pos arg
+localvar shuffle varname len shuffled pos arg
+_shuffle() {
+  varname=$1 len=$(($# - 1)) shuffled=''
   shift
   while [ $# -gt 1 ]; do
     randgen
@@ -547,18 +569,16 @@ fill_bag() {
 }
 
 #  the Tetrimino at the front of the line in the bag is placed at the end of the Next Queue
-feed_next_queue() {
-  local poped
-
+localvar feed_next_queue poped
+_feed_next_queue() {
   [ -z "$bag" ] && fill_bag       # if bag is empty, then fill the bag.
   set $bag
   poped="$1"; shift; bag="$*"     # pop the tetrimino
   next_queue="$next_queue $poped" # place tetrimino at the end of the Next Queue
 }
 
-get_next() {
-  local next_piece
-
+localvar get_next next_piece
+_get_next() {
   set $next_queue
   next_piece="$1"; # peek the next piece
 
@@ -617,8 +637,9 @@ generate_tetrimino() {
   lands_on=false
 }
 
-what_type_tspin() {
-  local varname=$1 pos_x=$2 pos_y=$3 rotation=$4 side_x side_y side
+localvar what_type_tspin pos_x pos_y rotation side_x side_y side
+_what_type_tspin() {
+  varname=$1 pos_x=$2 pos_y=$3 rotation=$4
 
   shift $#
   eval set \$T_TETRIMINO_"$rotation"_SIDES
@@ -661,12 +682,10 @@ what_type_tspin() {
   return
 }
 
-new_piece_location_ok() {
+localvar new_piece_location_ok x_test y_test x y lx ly field_cell
+_new_piece_location_ok() {
   # Arguments: 1 - new x coordinate of the piece, 2 - new y coordinate of the piece
   # test if piece can be moved to new location
-
-  local x_test y_test x y lx ly field_cell
-
   x_test="$1"; y_test="$2" # at first, we should preserve the parameters ...
   shift $#                 # .. and we shift all.
 
@@ -693,9 +712,8 @@ new_piece_location_ok() {
 }
 
 # this function updated occupied cells in playfield array after piece is dropped
-flatten_playfield() {
-  local color lx ly x y
-
+localvar flatten_playfield color lx ly x y
+_flatten_playfield() {
   eval color=\"\$piece_"$current_piece"_color\"
 
   # set minos coordinates into parameters
@@ -712,10 +730,11 @@ flatten_playfield() {
   done
 }
 
-is_line_completed() {
+localvar is_line_completed x line_y
+_is_line_completed() {
   # Arguments: 1 - line y of playfield you want to check
   # check the line is completed
-  local x line_y="$1"
+  line_y="$1"
 
   x=$((PLAYFIELD_W - 1))
   while [ "$x" -ge 0 ]; do
@@ -728,9 +747,8 @@ is_line_completed() {
 }
 
 # this function goes through playfield array and eliminates lines without empty cells
-process_complete_lines() {
-  local x y yi completed_lines field_cell completed_lines_count action
-
+localvar process_complete_lines x y yi completed_lines field_cell completed_lines_count action
+_process_complete_lines() {
   completed_lines=''
   y=0
   while [ "$y" -lt "$PLAYFIELD_H" ]; do
@@ -820,10 +838,9 @@ process_fallen_piece() {
   discard_cmds
 }
 
-update_score() {
+localvar update_score factor score_to_add lines_to_add actions_to_show i
+_update_score() {
   # Arguments: 1 - ACTION name. ex: ACTION_SINGLE
-  local factor score_to_add lines_to_add actions_to_show i
-
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
   score_to_add=0
@@ -1030,9 +1047,10 @@ lockdown() {
   already_hold=false   # player can hold the falling tetrimino.
 }
 
-rotate_piece_classic() {
+localvar rotate_piece_classic direction old_rotation new_rotation
+_rotate_piece_classic() {
   # arguments: 1 - rotation direction; 1: clockwise; -1: counter-clockwise
-  local direction="$1" old_rotation new_rotation
+  direction="$1"
   
   old_rotation=$current_piece_rotation                             # preserve current orientation
   new_rotation=$((old_rotation + direction + 4))
@@ -1053,9 +1071,10 @@ rotate_piece_classic() {
   return 1
 }
 
-rotate_piece_super() {
+localvar rotate_piece_super direction old_rotation new_rotation shift_x shift_y new_x new_y point
+_rotate_piece_super() {
   # arguments: 1 - rotation direction. 1: clockwise; -1: counter-clockwise
-  local direction="$1" old_rotation new_rotation shift_x shift_y new_x new_y point
+  direction="$1"
   
   old_rotation=$current_piece_rotation # preserve current orientation
 
@@ -1172,9 +1191,8 @@ hold() {
 #   x - 0, ..., (PLAYFIELD_W-1)
 #   y - 0, ..., (PLAYFIELD_H-1), ..., (START_Y-1)
 # each array element contains cell color value or -1 if cell is empty
-redraw_playfield() {
-  local x y yp field_cell
-
+localvar redraw_playfield x y yp field_cell
+_redraw_playfield() {
   y=0
   while [ "$y" -lt "$PLAYFIELD_H" ]; do
     yp=$((PLAYFIELD_Y + PLAYFIELD_H - y - 1))
@@ -1197,11 +1215,10 @@ redraw_playfield() {
   done
 }
 
-draw_piece() {
+localvar draw_piece posx posy type rotation content lx ly x y mask
+_draw_piece() {
   # Arguments:
   #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content, 6 - mask with playfield
-  local posx posy type rotation content lx ly x y mask
-
   # at first, we should save arguments.
   posx="$1"; posy="$2"; type="$3"; rotation="$4"; content="$5"; mask="${6:-false}"
   shift $#
@@ -1233,8 +1250,8 @@ draw_current() {
   draw_piece $((PLAYFIELD_X + current_piece_x * 2)) $((PLAYFIELD_Y + PLAYFIELD_H - 1 - current_piece_y)) $current_piece $current_piece_rotation "$1" true
 }
 
-show_current() {
-  local color
+localvar show_current color
+_show_current() {
   ${current_piece+:} return
   eval color=\"\$piece_"$current_piece"_color\"
   set_fg "$color"
@@ -1247,10 +1264,9 @@ clear_current() {
   draw_current "$empty_cell"
 }
 
-draw_next() {
+localvar draw_next color visible x y content
+_draw_next() {
   # Arguments: 1 - visibility ( false - no, true - yes)
-  local color visible x y content
-
   x="$NEXT_X"; y="$NEXT_Y"; visible="$1"
   shift $#
   set $next_queue
@@ -1277,9 +1293,10 @@ clear_next() {
   draw_next false
 }
 
-draw_hold() {
+localvar draw_hold visible color
+_draw_hold() {
   # Arguments: 1 - visibility ( false - no, true - yes)
-  local visible="$1" color
+  visible="$1"
 
   [ -z "$hold_queue" ] && return
 
@@ -1302,9 +1319,8 @@ clear_hold() {
   draw_hold false
 }
 
-draw_border() {
-  local x1 x2 y1 y2 i x y
-
+localvar draw_border x1 x2 y1 y2 i x y
+_draw_border() {
   set_bold
   set_fg $BORDER_COLOR
   x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
@@ -1334,9 +1350,10 @@ draw_border() {
   reset_colors
 }
 
-draw_help() {
+localvar draw_help visible x y line
+_draw_help() {
   # Arguments: 1 - visibility ( false - no, true - yes), if this argument is skipped $help_on is used
-  local visible=${1:-$help_on} x y line
+  visible=${1:-$help_on}
 
   x="$HELP_X"; y="$HELP_Y"
 
@@ -1406,9 +1423,8 @@ quit() {
   flush_screen
 }
 
-init() {
-  local x y i from cmd pid statement
-
+localvar init x y i from cmd pid statement
+_init() {
   echo 'Loading...'
   # playfield is initialized with -1s (empty cells)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
@@ -1496,14 +1512,13 @@ init() {
   flush_screen
 }
 
-lockdown_timer() {
+localvar lockdown_timer trigger_counter timestamp
+_lockdown_timer() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
   # on this signal reset the timer. lockdown 0.5~0.6(0.5 is correct) sec after receiving signal
   trap 'trigger_counter=5'  $SIGNAL_RESTART_LOCKDOWN_TIMER
   trap 'trigger_counter=-1' $SIGNAL_CANCEL_LOCKDOWN_TIMER
-
-  local trigger_counter timestamp
 
   get_pid my_pid
   echo "$(now) $PROCESS_TIMER $MY_PID $my_pid"
@@ -1550,11 +1565,12 @@ ticker() {
 }
 
 # this function processes keyboard input
-reader() {
+localvar reader key a b esc_ch cmd
+_reader() {
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
 
-  local key a='' b='' esc_ch="$(printf '\033')" cmd
+  a='' b='' esc_ch="$(printf '\033')"
 
   get_pid my_pid
   echo "$(now) $PROCESS_READER $MY_PID $my_pid"
@@ -1615,10 +1631,10 @@ reader() {
   done
 }
 
-controller() {
+localvar controller cmd statement issued_time from
+_controller() {
   # These signals are ignored
   trap '' $SIGNAL_TERM
-  local cmd statement issued_time from
 
   # initialization of commands array with appropriate functions
   eval commands_"$QUIT"=quit
