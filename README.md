@@ -28,7 +28,6 @@ Thank you!
 ```sh
 $ git clone https://github.com/ContentsViewer/sh-tetris.git
 $ cd sh-tetris
-$ chmod 755 ./tetris
 $ ./tetris
 ```
 
