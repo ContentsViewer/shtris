@@ -28,6 +28,7 @@ Thank you!
 ```sh
 $ git clone https://github.com/ContentsViewer/sh-tetris.git
 $ cd sh-tetris
+$ git checkout v2.1.0
 $ ./tetris
 ```
 
