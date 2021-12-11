@@ -245,6 +245,9 @@ START_Y=21
 # loading spin sequence
 LOADING_SPIN='/ - \ |'
 
+# constant chars
+ESC_CH="$(printf '\033')"
+
 # this array holds all possible pieces that can be used in the game
 # each piece consists of 4 cells(minos)
 # each string is sequence of relative xy coordinates
@@ -1582,7 +1585,7 @@ reader() {
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
 
-  local key a='' b='' esc_ch="$(printf '\033')" cmd
+  local key a='' b='' cmd
 
   get_pid my_pid
   echo "$(now) $PROCESS_READER $MY_PID $my_pid"
@@ -1597,19 +1600,19 @@ reader() {
     # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
     case "$a$b$key" in
-      *"$esc_ch""$esc_ch") # 2 escapes
+      *"$ESC_CH""$ESC_CH") # 2 escapes
         cmd="$QUIT"
         ;;
-      *"$esc_ch"'[A')      # 'up-cursor'
+      *"$ESC_CH"'[A')      # 'up-cursor'
         cmd="$ROTATE_CW"
         ;;
-      *"$esc_ch"'[B')      # 'down-cursor'
+      *"$ESC_CH"'[B')      # 'down-cursor'
         cmd="$SOFT_DROP"
         ;;
-      *"$esc_ch"'[C')      # 'right-cursor'
+      *"$ESC_CH"'[C')      # 'right-cursor'
         cmd="$RIGHT"
         ;;
-      *"$esc_ch"'[D')      # 'left-cursor'
+      *"$ESC_CH"'[D')      # 'left-cursor'
         cmd="$LEFT"
         ;;
       *' ')                # ' '
