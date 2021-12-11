@@ -245,7 +245,6 @@ START_Y=21
 # loading spin sequence
 LOADING_SPIN='/ - \ |'
 
-
 # this array holds all possible pieces that can be used in the game
 # each piece consists of 4 cells(minos)
 # each string is sequence of relative xy coordinates
@@ -339,7 +338,7 @@ eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  0 2  0 0  0 2\"
 eval T_TETRIMINO_"$SOUTH"_SIDES=\"2 2  0 2  2 0  0 0\"
 eval T_TETRIMINO_"$WEST"_SIDES=\" 0 2  0 0  2 2  2 0\"
 
-help='
+HELP='
 ←         Move Left or Right
 →         Move Right
 ↑, x      Rotate Clockwise
@@ -354,7 +353,7 @@ H         Toggle Help
 Q, ESCx2  Quit
 '
 
-usage="
+USAGE="
 Usage: ${0##*/} [options]
 
 Options:
@@ -1367,7 +1366,7 @@ draw_help() {
   set_fg "$HELP_COLOR"
 
   additional_buffer=$(
-    echo "$help" | {
+    echo "$HELP" | {
       # in this process, the change of screen_buffer is ignored out of this process.
       # should return the buffer.
       screen_buffer=''
@@ -1721,7 +1720,7 @@ main() {
         [ $2 -gt $LEVEL_MAX ]                           && # ...greater than LEVEL_MAX, then exit
         {
           echo "${0##*/}: invalid level '$2'" 1>&2
-          echo "$usage" 1>&2; exit 1
+          echo "$USAGE" 1>&2; exit 1
         }
 
         starting_level=$2
@@ -1730,14 +1729,14 @@ main() {
       --rotation)
         [ $# -le 1 ] && {
           echo "${0##*/}: option '$1' requires an argument" 1>&2
-          echo "$usage" 1>&2; exit 1
+          echo "$USAGE" 1>&2; exit 1
         }
         case $2 in
           classic) rotate_piece_func=rotate_piece_classic ;;
           super)   rotate_piece_func=rotate_piece_super   ;;
           *)
             echo "${0##*/}: unrecognized rotation mode '$2'" 1>&2
-            echo "$usage" 1>&2; exit 1
+            echo "$USAGE" 1>&2; exit 1
             ;;
         esac
         shift 2; continue
@@ -1745,7 +1744,7 @@ main() {
       --lockdown)
         [ $# -le 1 ] && {
           echo "${0##*/}: option '$1' requires an argument" 1>&2
-          echo "$usage" 1>&2; exit 1
+          echo "$USAGE" 1>&2; exit 1
         }
         case $2 in
           extended) lockdown_rule=$LOCKDOWN_RULE_EXTENDED ;;
@@ -1753,7 +1752,7 @@ main() {
           classic)  lockdown_rule=$LOCKDOWN_RULE_CLASSIC  ;;
           *)
             echo "${0##*/}: unrecognized lockdown rule '$2'" 1>&2
-            echo "$usage" 1>&2; exit 1
+            echo "$USAGE" 1>&2; exit 1
             ;;
         esac
         shift 2; continue
@@ -1770,11 +1769,11 @@ main() {
         help_on=false
         shift; continue
         ;;
-      --help|-h)    echo "$usage";   exit ;;
+      --help|-h)    echo "$USAGE";   exit ;;
       --version|-V) echo "$VERSION"; exit ;;
       *)
         echo "${0##*/}: unrecognized option '$1'" 1>&2
-        echo "$usage" 1>&2; exit 1
+        echo "$USAGE" 1>&2; exit 1
         ;;
     esac
   done
