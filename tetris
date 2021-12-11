@@ -1731,7 +1731,7 @@ main() {
         shift 2; continue
         ;;
       --no-beep)
-        no_beep=true
+        beep_on=false
         shift; continue
         ;;
       --no-color)
