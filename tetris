@@ -52,6 +52,11 @@ set -u # non initialized variable is an error
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
 VERSION='2.2.0-alpha'
 
+# Log file to be written for debug.
+# the contents in the file will not be deleted,
+# but always written in appending.
+LOG='.log'
+
 # these signals are used for communicating with each process(i.e. reader, timer, ticker, controller).
 # Note:
 #   in shell enviroment, should Drop the SIG prefix, just input the signal name.
@@ -229,13 +234,19 @@ HOLD_Y=2
 GAMEOVER_X=$((PLAYFIELD_X + PLAYFIELD_W - 5))  # 1 width equals 2 character
 GAMEOVER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
 
-# Location of 'READY' at start of the game
-READY_X=$((PLAYFIELD_X + PLAYFIELD_W))
-READY_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
+# Location of center of play field.
+CENTER_X=$((PLAYFIELD_X + PLAYFIELD_W))
+CENTER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
 
 # piece starting location
 START_X=3
 START_Y=21
+
+# loading spin sequence
+LOADING_SPIN='/ - \ |'
+
+# constant chars
+ESC_CH="$(printf '\033')"
 
 # this array holds all possible pieces that can be used in the game
 # each piece consists of 4 cells(minos)
@@ -330,7 +341,7 @@ eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  0 2  0 0  0 2\"
 eval T_TETRIMINO_"$SOUTH"_SIDES=\"2 2  0 2  2 0  0 0\"
 eval T_TETRIMINO_"$WEST"_SIDES=\" 0 2  0 0  2 2  2 0\"
 
-help='
+HELP='
 ←         Move Left or Right
 →         Move Right
 ↑, x      Rotate Clockwise
@@ -345,7 +356,7 @@ H         Toggle Help
 Q, ESCx2  Quit
 '
 
-usage="
+USAGE="
 Usage: ${0##*/} [options]
 
 Options:
@@ -366,6 +377,7 @@ Options:
 Version:
  $VERSION
 "
+
 
 # the queue of the next tetriminos to be placed.
 # the reference says the next six tetrimonos should be shown.
@@ -478,6 +490,14 @@ beep() {
 
 now() {
   echo $(date +%s)
+}
+
+current_loading_spin_shift=0
+print_loading_spin() {
+  set $LOADING_SPIN
+  shift $current_loading_spin_shift
+  current_loading_spin_shift=$(( (current_loading_spin_shift + 1) % 4 ))
+  printf '%s' "$1"
 }
 
 # Get pid of current process regardless of subshell
@@ -797,14 +817,20 @@ process_fallen_piece() {
           $ACTION_DOUBLE) action=$ACTION_TSPIN_DOUBLE ;;
           $ACTION_TRIPLE) action=$ACTION_TSPIN_TRIPLE ;;
           $ACTION_NONE)   action=$ACTION_TSPIN        ;;
-          *)              echo "T: $action" >> .log   ;; # For Debugging. cannot be reached
+          *)
+            # For Debugging. cannot be reached.
+            echo "invalid tspin action: $action" >> $LOG
+            ;;
         esac
         ;;
       $ACTION_MINI_TSPIN)
         case $action in
           $ACTION_SINGLE) action=$ACTION_MINI_TSPIN_SINGLE ;;
           $ACTION_NONE)   action=$ACTION_MINI_TSPIN        ;;
-          *)              echo "T: $action" >> .log        ;; # For Debugging. cannot be reached
+          *)
+            # For Debugging. cannot be reached.
+            echo "invalid mini-tspin action: $action" >> $LOG
+            ;; 
         esac
         ;;
     esac
@@ -957,7 +983,7 @@ update_location() {
 }
 
 on_reach_lowest() {
-  # echo 'LOW' >> .log # For Debugging
+  # echo 'on_reach_lowest' >> $LOG # For Debugging
   manipulation_counter=0
 
   # if the tetrimino reached the lowest, it means that tetrimino has space to fall
@@ -976,7 +1002,7 @@ on_manipulation() {
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
         send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
         manipulation_counter=$((manipulation_counter + 1))
-        # echo "mc $manipulation_counter" >> .log # For Debugging. to check counter
+        # echo "mc: $manipulation_counter" >> $LOG # For Debugging. to check counter
       }
       ;;
   esac
@@ -1012,7 +1038,7 @@ move_piece() {
     lockdown
   else
     "$lands_on" || {
-      # echo 'Send Lock' >> .log # for debugging to check when signal fired.
+      # echo 'Send Lock' >> $LOG # for debugging to check when signal fired.
       send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
     }
   fi
@@ -1082,7 +1108,6 @@ rotate_piece_super() {
     new_y=$((current_piece_y + shift_y))
     if new_piece_location_ok $new_x $new_y; then # check if new orientation is ok
       [ $current_piece -eq $T_TETRIMINO ] && {
-        # echo $# >> .log # For Debugging. to check parameter position
         what_type_tspin current_tspin $new_x $new_y $new_rotation
       }
       current_piece_rotation=$old_rotation       # if yes - restore old rotation ...
@@ -1344,7 +1369,7 @@ draw_help() {
   set_fg "$HELP_COLOR"
 
   additional_buffer=$(
-    echo "$help" | {
+    echo "$HELP" | {
       # in this process, the change of screen_buffer is ignored out of this process.
       # should return the buffer.
       screen_buffer=''
@@ -1410,6 +1435,7 @@ init() {
   local x y i from cmd pid statement
 
   echo 'Loading...'
+
   # playfield is initialized with -1s (empty cells)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
   # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y)
@@ -1431,7 +1457,7 @@ init() {
     i=$((i + 1))
   done
 
-  $debug && echo 'Checking subprocess pid'
+  $debug && echo 'Checking subprocess pid' >> $LOG
   ticker_pid=''; timer_pid=''; reader_pid=''
   while [ -z $ticker_pid ] || [ -z $timer_pid ] || [ -z $reader_pid ]; do
     read statement
@@ -1443,26 +1469,26 @@ init() {
       case $from in
         $PROCESS_TICKER)
           ticker_pid=$4
-          $debug &&  echo "> ticker $ticker_pid ...OK"
+          $debug &&  echo "> ticker $ticker_pid ...OK" >> $LOG
           ;;
         $PROCESS_READER)
           reader_pid=$4
-          $debug &&  echo "> reader $reader_pid ...OK"
+          $debug &&  echo "> reader $reader_pid ...OK" >> $LOG
           ;;
         $PROCESS_TIMER)
           timer_pid=$4
-          $debug &&  echo "> timer  $timer_pid ...OK"
+          $debug &&  echo "> timer  $timer_pid ...OK" >> $LOG
           ;;
       esac
     }
   done
 
-  $debug && echo "Leveling up to $starting_level"
-  $debug && printf "> $level "
+  $debug && echo "Leveling up to $starting_level" >> $LOG
+  $debug && printf "> $level " >> $LOG
   # level up until reach starting level
   while [ $level -lt $starting_level ]; do
     level_up
-    $debug && printf "$level "
+    $debug && printf "$level " >> $LOG
     while read statement; do
       shift $#; set $statement
       [ $# -eq 3 ]               &&
@@ -1471,21 +1497,26 @@ init() {
         break
       }
     done
+    
+    printf '\r'; print_loading_spin; printf ' %s' "$level/$starting_level"
     sleep 0.1
   done
-  $debug && echo " ...OK"
+  $debug && echo ' ...OK' >> $LOG
 
+  # now setup play screen
   clear
   hide_cursor
   redraw_screen
-  xyprint $((READY_X - 3)) $READY_Y 'READY'
+
+  # show 'READY' for 1 second.
+  xyprint $((CENTER_X - 3)) $CENTER_Y 'READY'
   flush_screen
   sleep 1
 
   # counting down 3 seconds
   i=3
   while [ $i -gt 0 ]; do
-    xyprint $((READY_X - 1)) $((READY_Y + 1)) $i
+    xyprint $((CENTER_X - 1)) $((CENTER_Y + 1)) $i
     flush_screen
     sleep 1
     i=$((i - 1))
@@ -1518,7 +1549,7 @@ lockdown_timer() {
       done
       [ "$trigger_counter" -gt 0 ] && continue # final check
       trigger_counter=-1
-      # echo 'Fire Lock' >> .log # for debugging to check when signal fired.
+      # echo 'Fire Lock' >> $LOG # for debugging to check when signal fired.
       echo "$timestamp $PROCESS_TIMER $LOCKDOWN"
     }
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
@@ -1545,7 +1576,7 @@ ticker() {
     eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
     wait
     echo "$(now) $PROCESS_TICKER $FALL" # <timestamp> <cmd>
-    # echo "$level" >> .log # For debuging. check level variable
+    # echo "$level" >> $LOG # For debuging. check level variable
   done
 }
 
@@ -1554,7 +1585,7 @@ reader() {
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
 
-  local key a='' b='' esc_ch="$(printf '\033')" cmd
+  local key a='' b='' cmd
 
   get_pid my_pid
   echo "$(now) $PROCESS_READER $MY_PID $my_pid"
@@ -1564,21 +1595,24 @@ reader() {
     # read one key
     key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null)
     cmd=''
-    # echo "$a$b$key" # For debugging to check the input sequence.
+
+    # echo "$key" >> $LOG # For debug to check input char.
+    # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
+
     case "$a$b$key" in
-      *"$esc_ch""$esc_ch") # 2 escapes
+      *"$ESC_CH""$ESC_CH") # 2 escapes
         cmd="$QUIT"
         ;;
-      *"$esc_ch"'[A')      # 'up-cursor'
+      *"$ESC_CH"'[A')      # 'up-cursor'
         cmd="$ROTATE_CW"
         ;;
-      *"$esc_ch"'[B')      # 'down-cursor'
+      *"$ESC_CH"'[B')      # 'down-cursor'
         cmd="$SOFT_DROP"
         ;;
-      *"$esc_ch"'[C')      # 'right-cursor'
+      *"$ESC_CH"'[C')      # 'right-cursor'
         cmd="$RIGHT"
         ;;
-      *"$esc_ch"'[D')      # 'left-cursor'
+      *"$ESC_CH"'[D')      # 'left-cursor'
         cmd="$LEFT"
         ;;
       *' ')                # ' '
@@ -1659,7 +1693,7 @@ controller() {
 }
 
 game() {
-  stty_g=`stty -g`                        # let's save terminal state
+  stty_g=$(stty -g) # let's save terminal state
 
   # output of ticker, timer and reader is joined and piped into controller
   (
@@ -1675,6 +1709,14 @@ game() {
   stty "$stty_g" # let's restore terminal state
 }
 
+# Exit with error message and usage
+# Arguments:
+#   Error message
+die_usage() {
+  echo "${0##*/}: $1" 1>&2
+  echo "$USAGE" 1>&2; exit 1
+}
+
 main() {
   rotate_piece_func=rotate_piece_super
   starting_level=1
@@ -1686,46 +1728,40 @@ main() {
         shift; continue
         ;;
       -l|--level)
-        [ $# -le 1 ]                                    || # if next parameter not exists...
-        { expr $2 + 1 > /dev/null 2>&1; [ $? -gt 1 ]; } || # ...not number
-        [ $2 -lt 1 ]                                    || # ...less than 1
-        [ $2 -gt $LEVEL_MAX ]                           && # ...greater than LEVEL_MAX, then exit
+        [ $# -le 1 ] && { # if next arg not exists
+          die_usage "option '$1' requires an argument"
+        }
+        
+        { expr "$2" + 1 > /dev/null 2>&1; [ $? -gt 1 ]; } || # if not number
+        [ "$2" -lt 1 ]                                    || # ...less than 1
+        [ "$2" -gt $LEVEL_MAX ]                           && # ...greater than LEVEL_MAX, then
         {
-          echo "${0##*/}: invalid level '$2'" 1>&2
-          echo "$usage" 1>&2; exit 1
+          die_usage "invalid level '$2'"
         }
 
         starting_level=$2
         shift 2; continue
         ;;
       --rotation)
-        [ $# -le 1 ] && {
-          echo "${0##*/}: option '$1' requires an argument" 1>&2
-          echo "$usage" 1>&2; exit 1
+        [ $# -le 1 ] && { # if next arg not exists
+          die_usage "option '$1' requires an argument"
         }
         case $2 in
           classic) rotate_piece_func=rotate_piece_classic ;;
           super)   rotate_piece_func=rotate_piece_super   ;;
-          *)
-            echo "${0##*/}: unrecognized rotation mode '$2'" 1>&2
-            echo "$usage" 1>&2; exit 1
-            ;;
+          *)       die_usage "unrecognized rotation mode '$2'" ;;
         esac
         shift 2; continue
         ;;
       --lockdown)
-        [ $# -le 1 ] && {
-          echo "${0##*/}: option '$1' requires an argument" 1>&2
-          echo "$usage" 1>&2; exit 1
+        [ $# -le 1 ] && { # if next arg not exists
+          die_usage "option '$1' requires an argument"
         }
         case $2 in
           extended) lockdown_rule=$LOCKDOWN_RULE_EXTENDED ;;
           infinite) lockdown_rule=$LOCKDOWN_RULE_INFINITE ;;
           classic)  lockdown_rule=$LOCKDOWN_RULE_CLASSIC  ;;
-          *)
-            echo "${0##*/}: unrecognized lockdown rule '$2'" 1>&2
-            echo "$usage" 1>&2; exit 1
-            ;;
+          *)        die_usage "unrecognized lockdown rule '$2'" ;;
         esac
         shift 2; continue
         ;;
@@ -1741,16 +1777,14 @@ main() {
         help_on=false
         shift; continue
         ;;
-      --help|-h)    echo "$usage";   exit ;;
+      --help|-h)    echo "$USAGE";   exit ;;
       --version|-V) echo "$VERSION"; exit ;;
-      *)
-        echo "${0##*/}: unrecognized option '$1'" 1>&2
-        echo "$usage" 1>&2; exit 1
-        ;;
+      *)            die_usage "unrecognized option '$1'" ;;
     esac
   done
 
   if $debug; then
+    echo "=== Debug mode enabled ===" >> $LOG
     game
   else
     game 2> /dev/null # discard stderr of kill command saying 'User defined signal ...'
