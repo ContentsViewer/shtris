@@ -1592,7 +1592,10 @@ reader() {
     # read one key
     key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null)
     cmd=''
-    # echo "$a$b$key" # For debugging to check the input sequence.
+
+    # echo "$key" >> $LOG # For debug to check input char.
+    # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
+
     case "$a$b$key" in
       *"$esc_ch""$esc_ch") # 2 escapes
         cmd="$QUIT"
