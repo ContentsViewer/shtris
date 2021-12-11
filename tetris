@@ -1554,59 +1554,58 @@ reader() {
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
 
-  local key a='' b='' esc_ch='1b' cmd
+  local key a='' b='' esc_ch="$(printf '\033')" cmd
 
   get_pid my_pid
   echo "$(now) $PROCESS_READER $MY_PID $my_pid"
 
   stty -echo # disable terminal local echo (echoback)
   while true ;do
-    # read one key, and convert to hex value
-    key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null | od -An -tx1)
-    key=$(echo $key) # Strip whitespace from the beginning and end of a string
+    # read one key
+    key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null)
     cmd=''
     # echo "$a$b$key" # For debugging to check the input sequence.
     case "$a$b$key" in
       *"$esc_ch""$esc_ch") # 2 escapes
         cmd="$QUIT"
         ;;
-      *"$esc_ch"'5b41')    # 'up-cursor'
+      *"$esc_ch"'[A')      # 'up-cursor'
         cmd="$ROTATE_CW"
         ;;
-      *"$esc_ch"'5b42')    # 'down-cursor'
+      *"$esc_ch"'[B')      # 'down-cursor'
         cmd="$SOFT_DROP"
         ;;
-      *"$esc_ch"'5b43')    # 'right-cursor'
+      *"$esc_ch"'[C')      # 'right-cursor'
         cmd="$RIGHT"
         ;;
-      *"$esc_ch"'5b44')    # 'left-cursor'
+      *"$esc_ch"'[D')      # 'left-cursor'
         cmd="$LEFT"
         ;;
-      *'20')               # ' '
+      *' ')                # ' '
         cmd="$HARD_DROP"
         ;;
-      *'63')               # 'c'
+      *'c')                # 'c'
         cmd="$HOLD"
         ;;
-      *'78')               # 'x'
+      *'x')                # 'x'
         cmd="$ROTATE_CW"
         ;;
-      *'7a')               # 'z'
+      *'z')                # 'z'
         cmd="$ROTATE_CCW"
         ;;
-      *'42')               # 'B'
+      *'B')                # 'B'
         cmd="$TOGGLE_BEEP"
         ;;
-      *'43')               # 'C'
+      *'C')                # 'C'
         cmd="$TOGGLE_COLOR"
         ;;
-      *'52')               # 'R'
+      *'R')                # 'R'
         cmd="$REFRESH_SCREEN"
         ;;
-      *'48')               # 'H'
+      *'H')                # 'H'
         cmd="$TOGGLE_HELP"
         ;;
-      *'51')               # 'Q'
+      *'Q')                # 'Q'
         cmd="$QUIT"
         ;;
     esac
