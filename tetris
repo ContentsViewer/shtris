@@ -1,15 +1,15 @@
 #!/bin/sh
 
 # Tetris game written in pure sh
-# 
-# I tried to follow the Tetris Guideline(2009). 
+#
+# I tried to follow the Tetris Guideline(2009).
 # URL: [Tetris Guideline. Tetris Wiki. accessed at 2020-05-23](https://tetris.fandom.com/wiki/Tetris_Guideline)
 #
 # This script is based on bash-tetris (Author: Kirill Timofeev <kt97679@gmail.com>)
 # Thank you!
 #
 # I implemented
-# 
+#
 # * Hold Queue
 # * Next Queue
 # * Random Generation with Bag System
@@ -19,12 +19,12 @@
 # * Back-to-Back Bonus
 # * Extended Placement / Infinite Placement / Classic Lock Down
 # * Super / Classic Rotation System
-# * Changing the Starting Level 
-# 
+# * Changing the Starting Level
+#
 # not implemented
-# 
+#
 # * Ghost Piece
-# 
+#
 # Enjoy :-)
 #
 # Supported Environments:
@@ -35,10 +35,10 @@
 #
 # Github Page:
 #   <https://github.com/ContentsViewer/sh-tetris>
-# 
+#
 # Author:
 #   IOE <Github: ContentsViewer>
-# 
+#
 # Scripting NOTE:
 #   * We cannot use `read -s -n 1`
 #   * Any process cannot send signals to control(main) process
@@ -48,7 +48,7 @@
 set -u # non initialized variable is an error
 
 # game versioin
-# should follow "Semantic Versioning 2.0.0" <https://semver.org/> 
+# should follow "Semantic Versioning 2.0.0" <https://semver.org/>
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
 VERSION='2.2.0-alpha'
 
@@ -92,7 +92,7 @@ BEHAVIOUR_FALL=4
 BEHAVIOUR_SOFT_DROP=5
 BEHAVIOUR_HARD_DROP=6
 
-# The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line. 
+# The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line.
 # The current level of the game determines the normal Fall Speed using the following equation:
 # (0.8 - ((level - 1) * 0.007))^(level-1)
 FALL_SPEED_LEVEL_1=1
@@ -182,7 +182,7 @@ eval SCORE_FACTOR_"$ACTION_HARD_DROP"=2
 # or Soft Drops onto a Surface, it is given 0.5 seconds on a Lock Down Timer before it actually
 # Locks Down. Three rulesets —Infinite Placement, Extended, and Classic— dictate the conditions
 # for Lock Down. The default is Extended Placement.
-# 
+#
 # Extended Placement Lock Down
 #   This is the default Lock Down setting.
 #   Once the Tetrimino in play lands on a Surface in the Matrix, the Lock Down Timer starts counting
@@ -243,7 +243,7 @@ START_Y=21
 # Format:
 #   piece_<TETRIMINO>_minos_<FACING>='<mino_0_x> <mino_1_y> ...'
 #     (0, 0) is top left
-#   
+#
 #   piece_<TETRIMINO>_rchifts_<FACING>='<POINT_1> <POINT_2> ...'
 #     <POINT_<NO>>: <ROTATION_LEFT_shifts> <ROTATION_RIGHT_shifts>
 #     <ROTATION_<DIR>_shifts>: <shift_x> <shift_y>
@@ -353,7 +353,7 @@ Options:
  -l, --level <LEVEL>  game level (default=1). range from 1 to $LEVEL_MAX
  --rotation <MODE>    use 'Super' or 'Classic' rotation system
                       MODE can be 'super'(default) or 'classic'
- --lockdown <RULE>    Three rulesets —Infinite Placement, Extended, and Classic— 
+ --lockdown <RULE>    Three rulesets —Infinite Placement, Extended, and Classic—
                       dictate the conditions for Lock Down.
                       RULE can be 'extended'(default), 'infinite', 'classic'
  --no-color           don't display colors
@@ -376,7 +376,7 @@ hold_queue=''
 
 # Tetris uses a “bag” system to determine the sequence of Tetriminos that appear during game
 # play. This system allows for equal distribution among the seven Tetriminos.
-# 
+#
 # The seven different Tetriminos are placed into a virtual bag, then shuffled into a random order.
 # This order is the sequence that the bag “feeds” the Next Queue. Every time a new Tetrimino is
 # generated and starts its fall within the Matrix, the Tetrimino at the front of the line in the bag is
@@ -387,8 +387,8 @@ bag=''
 # the Variable Goal System requires that the player clears 5 lines at level 1, 10 lines at
 # level 2, 15 at level 3 and so on, adding an additional five lines to the Goal each level through 15.
 # with the Variable Goal System of adding 5 lines per level, the player is required to clear 600 lines
-# by level 15. 
-# 
+# by level 15.
+#
 # This system also includes line bonuses to help speed up the game.
 # To speed up the process of “clearing” 600 lines, in the Variable Goal System the number of Line
 # Clears awarded for any action is directly based off the score of the action performed (score
@@ -396,9 +396,9 @@ bag=''
 goal=5
 
 # There is a special bonus for Back-to-Backs, which is when two actions
-# such as a Tetris and T-Spin Double take place without a Single, Double, or Triple Line Clear 
-# occurring between them. 
-# 
+# such as a Tetris and T-Spin Double take place without a Single, Double, or Triple Line Clear
+# occurring between them.
+#
 # Back-to-Back Bonus
 #   Bonus for Tetrises, T-Spin Line Clears, and Mini T-Spin Line Clears
 #   performed consecutively in a B2B sequence.
@@ -481,18 +481,18 @@ now() {
 }
 
 # Get pid of current process regardless of subshell
-# 
-# $$: 
-#   Expands to the process ID of the shell. 
+#
+# $$:
+#   Expands to the process ID of the shell.
 #   In a () subshell, it expands to the process ID of the current shell, not the subshell.
-# 
-# Notice that some shells (eg. zsh or ksh93) do NOT start a subprocess 
-# for each subshell created with (...); in that case, $pid may be end up 
-# being the same as $$, which is just right, because that's the PID of 
+#
+# Notice that some shells (eg. zsh or ksh93) do NOT start a subprocess
+# for each subshell created with (...); in that case, $pid may be end up
+# being the same as $$, which is just right, because that's the PID of
 # the process getpid was called from.
-# 
+#
 # ref: <https://unix.stackexchange.com/questions/484442/how-can-i-get-the-pid-of-a-subshell>
-# 
+#
 # usage getpid [varname]
 get_pid(){
   pid=$(exec sh -c 'echo "$PPID"')
@@ -536,8 +536,8 @@ $(rand) $L_TETRIMINO
 $(rand) $J_TETRIMINO
 $(rand) $S_TETRIMINO
 $(rand) $Z_TETRIMINO" |
-    sort -k1 | 
-    cut -d' ' -f2 | 
+    sort -k1 |
+    cut -d' ' -f2 |
     (
       while read piece; do
         printf "$piece"' '
@@ -565,7 +565,7 @@ get_next() {
   # next piece becomes current
   # place current at the top of play field.
   generate_tetrimino "$next_piece"
-  
+
   # check if piece can be placed at this location, if not - game over
   new_piece_location_ok $current_piece_x $current_piece_y || quit
   show_current
@@ -628,7 +628,7 @@ what_type_tspin() {
     side_x=$1; side_y=$2
     side_x=$((pos_x + side_x)); side_y=$((pos_y - side_y))
 
-    [ $side_x -lt 0 ]            || 
+    [ $side_x -lt 0 ]            ||
     [ $side_x -ge $PLAYFIELD_W ] ||
     [ $side_y -lt 0 ]            && {
       # touching wall
@@ -637,7 +637,7 @@ what_type_tspin() {
     }
 
     field_cell=$(eval echo \"\$playfield_"$side_y"_"$side_x"\")
-    [ $field_cell -ne -1 ]       && 
+    [ $field_cell -ne -1 ]       &&
     eval is_touched_${side}=true || eval is_touched_${side}=false
 
     shift 2
@@ -673,20 +673,20 @@ new_piece_location_ok() {
   # set minos coordinates into parameters
   # $1 - x, $2 - y
   eval set \$piece_"$current_piece"_minos_"$current_piece_rotation"
-  
+
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     lx="$1"; ly="$2"
     x=$((x_test + lx)) # new x coordinate of piece cell
     y=$((y_test - ly)) # new y coordinate of piece cell
 
-    [ "$y" -lt 0 ]              || 
-    [ "$x" -lt 0 ]              || 
+    [ "$y" -lt 0 ]              ||
+    [ "$x" -lt 0 ]              ||
     [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
 
     field_cell=$(eval echo \"\$playfield_"$y"_"$x"\")
     [ "$field_cell" != -1 ] && return 1    # false; check if location is already occupied
-  
+
     shift 2 # shift to next minos coordinates
   done
   return 0
@@ -701,7 +701,7 @@ flatten_playfield() {
   # set minos coordinates into parameters
   # $1 - x, $2 - y
   eval set \$piece_"$current_piece"_minos_"$current_piece_rotation"
-  
+
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     lx="$1"; ly="$2"
@@ -928,7 +928,7 @@ update_score() {
   xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES   $lines_completed"
   xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   $level"
   xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    $goal"
-  
+
   [ -z "$actions_to_show" ] || {
     IFS_SAVE=$IFS; IFS=:
     shift $#; set $actions_to_show
@@ -1007,7 +1007,7 @@ move_piece() {
   fi                                                  # if we could not move piece to new location
 
   [ "$2" -eq "$current_piece_y" ] && return 1         # and this was horizontal move
-  
+
   if "$immediately_lockdown"; then
     lockdown
   else
@@ -1024,7 +1024,7 @@ move_piece() {
 lockdown() {
   # if can fall, dont lock down
   new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && return
-  
+
   process_fallen_piece # let's finalize this piece
   get_next             # and start the new one
   already_hold=false   # player can hold the falling tetrimino.
@@ -1033,7 +1033,7 @@ lockdown() {
 rotate_piece_classic() {
   # arguments: 1 - rotation direction; 1: clockwise; -1: counter-clockwise
   local direction="$1" old_rotation new_rotation
-  
+
   old_rotation=$current_piece_rotation                             # preserve current orientation
   new_rotation=$((old_rotation + direction + 4))
   new_rotation=$((new_rotation % 4))                               # calculate new orientation
@@ -1043,7 +1043,7 @@ rotate_piece_classic() {
       current_tspin=$(what_type_tspin $current_piece_x $current_piece_y $new_rotation)
     }
     current_piece_rotation=$old_rotation                           # if yes - restore old rotation ...
-    clear_current                                                  # ... clear piece image 
+    clear_current                                                  # ... clear piece image
     current_piece_rotation=$new_rotation                           # ... set new orientation
     show_current                                                   # ... draw piece with new orientation
     return 0
@@ -1056,7 +1056,7 @@ rotate_piece_classic() {
 rotate_piece_super() {
   # arguments: 1 - rotation direction. 1: clockwise; -1: counter-clockwise
   local direction="$1" old_rotation new_rotation shift_x shift_y new_x new_y point
-  
+
   old_rotation=$current_piece_rotation # preserve current orientation
 
   new_rotation=$((old_rotation + direction + 4)) #
@@ -1064,7 +1064,7 @@ rotate_piece_super() {
 
   current_piece_rotation=$new_rotation
 
-  # test each rotation point. Each Tetrimino has five possible rotation points. 
+  # test each rotation point. Each Tetrimino has five possible rotation points.
   shift $#
   eval set \$piece_${current_piece}_rshifts_${old_rotation}
   # now parameters setted like below
@@ -1074,7 +1074,7 @@ rotate_piece_super() {
   while [ $# -gt 0 ]; do
     [ $1 = 'n' ] && {        # if 'not used' appears, skip this point
       [ $# -lt 4 ] && break;
-      shift 4; continue; 
+      shift 4; continue;
     }
 
     shift_x=$1; shift_y=$2
@@ -1092,7 +1092,7 @@ rotate_piece_super() {
       show_current                               # ... draw piece with new pose
       return 0                                   # nothing to do more here
     fi
-    
+
     [ $# -lt 4 ] && break;
     shift 4 # test next rotation point
   done
@@ -1117,7 +1117,7 @@ move_left() {
     # if successfuly move
     current_piece_behaviour=$BEHAVIOUR_LEFT
     on_manipulation
-  } 
+  }
 }
 
 rotate_cw() {
@@ -1159,7 +1159,7 @@ hard_drop() {
     # if successfuly move
     update_score "$ACTION_HARD_DROP"
   done
-  
+
   current_piece_behaviour=$BEHAVIOUR_HARD_DROP
 }
 
@@ -1182,7 +1182,7 @@ redraw_playfield() {
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
       field_cell=$(eval echo \"\$playfield_"$y"_"$x"\")
-      
+
       if [ "$field_cell" -eq -1 ]; then
         puts "$empty_cell"
       else
@@ -1319,7 +1319,7 @@ draw_border() {
     xyprint $x2 $y "│"
     i=$((i + 1))
   done
-  
+
   i=0
   while [ "$i" -lt "$PLAYFIELD_W" ]; do
     x=$((i * 2 + PLAYFIELD_X)) # 2 here is because each cell on play field is 2 characters width
@@ -1327,7 +1327,7 @@ draw_border() {
     xyprint $x $y2 '──'
     i=$((i + 1))
   done
-  
+
   xyprint $x1 $y1 "┌"; xyprint $x2 $y1 "┐" # draw the corners
   xyprint $x1 $y2 "└"; xyprint $x2 $y2 "┘"
 
@@ -1345,7 +1345,7 @@ draw_help() {
 
   additional_buffer=$(
     echo "$help" | {
-      # in this process, the change of screen_buffer is ignored out of this process. 
+      # in this process, the change of screen_buffer is ignored out of this process.
       # should return the buffer.
       screen_buffer=''
       while read line; do
@@ -1391,7 +1391,7 @@ toggle_beep() {
 
 toggle_color() {
   $no_color && no_color=false || no_color=true
-  redraw_screen 
+  redraw_screen
 }
 
 quit() {
@@ -1424,7 +1424,7 @@ init() {
     y=$((y + 1))
   done
 
-  # prepare next queue filled with NEXT_MAX tetrimino 
+  # prepare next queue filled with NEXT_MAX tetrimino
   i=0
   while [ "$i" -lt "$NEXT_MAX" ]; do
     feed_next_queue
@@ -1510,7 +1510,7 @@ lockdown_timer() {
 
   trigger_counter=-1  # -1 - already triggerd; 0 - triggered; greater than 0 - count to trigger
   while true; do
-    
+
     [ "$trigger_counter" -eq 0 ] && {
       timestamp=''
       while [ -z "$timestamp" ]; do # in some case, timestamp suddenly becomes empty string. I dont know why ;-)
@@ -1523,7 +1523,7 @@ lockdown_timer() {
     }
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
 
-    sleep 0.1 & # wait in background for receiving the signal 
+    sleep 0.1 & # wait in background for receiving the signal
     wait
   done
 }
@@ -1639,7 +1639,7 @@ controller() {
 
   init
   discard_cmds
-  
+
   while $showtime; do # run while showtime variable is true, it is changed to false in quit function
     # read next command from stdout
     # skip cmds issued before discard_cmds_timepoint
@@ -1651,10 +1651,10 @@ controller() {
     done
     case $cmd in
       "$ACK"|"$MY_PID")              ;; # ignore
-      *) 
+      *)
         eval eval \"\$commands_"$cmd"\" # run command
         flush_screen
-        ;; 
+        ;;
     esac
   done
 }
