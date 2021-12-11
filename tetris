@@ -1690,7 +1690,7 @@ controller() {
 }
 
 game() {
-  stty_g=`stty -g`                        # let's save terminal state
+  stty_g=$(stty -g) # let's save terminal state
 
   # output of ticker, timer and reader is joined and piped into controller
   (
@@ -1706,6 +1706,14 @@ game() {
   stty "$stty_g" # let's restore terminal state
 }
 
+# Exit with error message and usage
+# Arguments:
+#   Error message
+die_usage() {
+  echo "${0##*/}: $1" 1>&2
+  echo "$USAGE" 1>&2; exit 1
+}
+
 main() {
   rotate_piece_func=rotate_piece_super
   starting_level=1
@@ -1717,46 +1725,40 @@ main() {
         shift; continue
         ;;
       -l|--level)
-        [ $# -le 1 ]                                    || # if next parameter not exists...
-        { expr $2 + 1 > /dev/null 2>&1; [ $? -gt 1 ]; } || # ...not number
-        [ $2 -lt 1 ]                                    || # ...less than 1
-        [ $2 -gt $LEVEL_MAX ]                           && # ...greater than LEVEL_MAX, then exit
+        [ $# -le 1 ] && { # if next arg not exists
+          die_usage "option '$1' requires an argument"
+        }
+        
+        { expr "$2" + 1 > /dev/null 2>&1; [ $? -gt 1 ]; } || # if not number
+        [ "$2" -lt 1 ]                                    || # ...less than 1
+        [ "$2" -gt $LEVEL_MAX ]                           && # ...greater than LEVEL_MAX, then
         {
-          echo "${0##*/}: invalid level '$2'" 1>&2
-          echo "$USAGE" 1>&2; exit 1
+          die_usage "invalid level '$2'"
         }
 
         starting_level=$2
         shift 2; continue
         ;;
       --rotation)
-        [ $# -le 1 ] && {
-          echo "${0##*/}: option '$1' requires an argument" 1>&2
-          echo "$USAGE" 1>&2; exit 1
+        [ $# -le 1 ] && { # if next arg not exists
+          die_usage "option '$1' requires an argument"
         }
         case $2 in
           classic) rotate_piece_func=rotate_piece_classic ;;
           super)   rotate_piece_func=rotate_piece_super   ;;
-          *)
-            echo "${0##*/}: unrecognized rotation mode '$2'" 1>&2
-            echo "$USAGE" 1>&2; exit 1
-            ;;
+          *)       die_usage "unrecognized rotation mode '$2'" ;;
         esac
         shift 2; continue
         ;;
       --lockdown)
-        [ $# -le 1 ] && {
-          echo "${0##*/}: option '$1' requires an argument" 1>&2
-          echo "$USAGE" 1>&2; exit 1
+        [ $# -le 1 ] && { # if next arg not exists
+          die_usage "option '$1' requires an argument"
         }
         case $2 in
           extended) lockdown_rule=$LOCKDOWN_RULE_EXTENDED ;;
           infinite) lockdown_rule=$LOCKDOWN_RULE_INFINITE ;;
           classic)  lockdown_rule=$LOCKDOWN_RULE_CLASSIC  ;;
-          *)
-            echo "${0##*/}: unrecognized lockdown rule '$2'" 1>&2
-            echo "$USAGE" 1>&2; exit 1
-            ;;
+          *)        die_usage "unrecognized lockdown rule '$2'" ;;
         esac
         shift 2; continue
         ;;
@@ -1774,10 +1776,7 @@ main() {
         ;;
       --help|-h)    echo "$USAGE";   exit ;;
       --version|-V) echo "$VERSION"; exit ;;
-      *)
-        echo "${0##*/}: unrecognized option '$1'" 1>&2
-        echo "$USAGE" 1>&2; exit 1
-        ;;
+      *)            die_usage "unrecognized option '$1'" ;;
     esac
   done
 
