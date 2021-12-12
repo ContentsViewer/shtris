@@ -52,6 +52,16 @@ set -u # non initialized variable is an error
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
 VERSION='2.2.0-alpha'
 
+# Explicitly reset to the default value to prevent the import of IFS
+# from the environment. The following shells will work more safely.
+#   dash <= 0.5.10.2, FreeBSD sh <= 10.4, etc.
+IFS=$(printf ' \t\n_') && IFS=${IFS%_}
+
+if [ "${ZSH_VERSION:-}" ]; then
+  IFS="$IFS"$'\0'    # Default IFS value for zsh.
+  setopt shwordsplit # Required for zsh support.
+fi
+
 # Log file to be written for debug.
 # the contents in the file will not be deleted,
 # but always written in appending.
