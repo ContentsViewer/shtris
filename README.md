@@ -28,14 +28,15 @@ Thank you!
 ## Usage
 
 ```sh
-# Download Version 2.1.0
-wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/2.1.0/tetris
+# Download (v2.1.0)
+wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/v2.1.0/tetris
+chmod +x tetris
 
 # Local
 ./tetris
 
 # Global
-sudo install ./tetris /usr/local/bin
+sudo install tetris /usr/local/bin
 tetris
 ```
 
