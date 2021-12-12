@@ -546,17 +546,33 @@ discard_cmds() {
   discard_cmds_timepoint=$(now)
 }
 
-rand() {
-  LF=$(printf '\\\n_');LF=${LF%_}       # define LF for sed.
-  (ps -Ao pid,etime,pcpu,vsz; date)   | # the source of randamize(process info + date)
-  od -t d4 -A n -v                    | # Quantified(-A n: hide address on left side.; -v: disable Omission)
-  sed 's/[^0-9]\{1,\}/'"$LF"'/g'      | # replace strings starting with no number with LF.
-  grep '[0-9]'                        | # get only numbers
-  tail -n 42                          | # get tail 42 before eof
-  sed 's/.*\(.\{8\}\)$/\1/g'          | # the number less than 100000000(2^32)
-  awk 'BEGIN{a=-2147483648;}
-      {a+=$1;}
-      END{srand(a); print rand();}'
+# random number generator (xorshift32)
+randgen() {
+  # RAND_VALUE: 32-bit (possibly signed) integer excluding 0.
+  #   the sign is implementation-dependent (e.g. mksh is signed 32-bit integer).
+  RAND_VALUE=$(( RAND_VALUE ^ ((RAND_VALUE << 13) & 4294967295) ))
+  RAND_VALUE=$(( RAND_VALUE ^ ((RAND_VALUE >> 17) & 32767) ))
+  RAND_VALUE=$(( RAND_VALUE ^ ((RAND_VALUE  << 5) & 4294967295) ))
+}
+RAND_VALUE=$(now) # seed value > 0
+
+shuffle() {
+  local varname=$1 shuffled='' len=$(($# - 1)) pos arg
+  shift
+  while [ $# -gt 1 ]; do
+    randgen
+    pos=$((${RAND_VALUE#-} % len))
+    for arg in "$@"; do
+      if [ $# -eq $((len + pos)) ]; then
+          shuffled="${shuffled}${arg} "
+          len=$((len - 1))
+      else
+        set -- "$@" "$arg"
+      fi
+    done
+    shift $((len + 1))
+  done
+  eval "$varname=\$shuffled\$1"
 }
 
 level_up() {
@@ -566,23 +582,7 @@ level_up() {
 }
 
 fill_bag() {
-  bag=$(
-    echo \
-"$(rand) $O_TETRIMINO
-$(rand) $I_TETRIMINO
-$(rand) $T_TETRIMINO
-$(rand) $L_TETRIMINO
-$(rand) $J_TETRIMINO
-$(rand) $S_TETRIMINO
-$(rand) $Z_TETRIMINO" |
-    sort -k1 |
-    cut -d' ' -f2 |
-    (
-      while read piece; do
-        printf "$piece"' '
-      done
-    )
-  )
+  shuffle bag $O_TETRIMINO $I_TETRIMINO $T_TETRIMINO $L_TETRIMINO $J_TETRIMINO $S_TETRIMINO $Z_TETRIMINO
 }
 
 #  the Tetrimino at the front of the line in the bag is placed at the end of the Next Queue
