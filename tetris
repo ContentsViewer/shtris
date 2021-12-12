@@ -72,7 +72,7 @@ LOG='.log'
 # Note:
 #   in shell enviroment, should Drop the SIG prefix, just input the signal name.
 SIGNAL_TERM=TERM
-SIGNAL_EXIT=EXIT
+SIGNAL_INT=INT
 SIGNAL_LEVEL_UP=USR1
 SIGNAL_CANCEL_LOCKDOWN_TIMER=USR1
 SIGNAL_RESTART_LOCKDOWN_TIMER=USR2
@@ -1759,7 +1759,7 @@ controller() {
 
 game() {
   stty_g=$(stty -g) # let's save terminal state
-  trap 'game_cleanup false' $SIGNAL_EXIT
+  trap 'game_cleanup false' $SIGNAL_INT
 
   # output of ticker, timer and reader is joined and piped into controller
   (
@@ -1770,7 +1770,7 @@ game() {
     controller
   )
 
-  trap "" $SIGNAL_EXIT
+  trap "" $SIGNAL_INT
   game_cleanup true
 }
 
