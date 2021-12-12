@@ -56,6 +56,7 @@ VERSION='2.2.0-alpha'
 # from the environment. The following shells will work more safely.
 #   dash <= 0.5.10.2, FreeBSD sh <= 10.4, etc.
 IFS=$(printf ' \t\n_') && IFS=${IFS%_}
+LF=${IFS#??}
 
 if [ "${ZSH_VERSION:-}" ]; then
   IFS="$IFS"$'\0'    # Default IFS value for zsh.
@@ -444,6 +445,14 @@ manipulation_counter=0     #
 lowest_line=$START_X       #
 current_tspin=$ACTION_NONE #
 
+
+str_repeat() {
+  set -- "$1" "${2:-}" "${3:-0}" ""
+  while [ "$3" -gt 1 ]; do
+    set -- "$1" "$2" $(($3 - 1)) "$4$2"
+  done
+  eval "$1=\$4\$2"
+}
 
 # screen_buffer is variable, that accumulates all screen changes
 # this variable is printed in controller once per game cycle
@@ -1378,24 +1387,15 @@ draw_help() {
   set_bold
   set_fg "$HELP_COLOR"
 
-  additional_buffer=$(
-    echo "$HELP" | {
-      # in this process, the change of screen_buffer is ignored out of this process.
-      # should return the buffer.
-      screen_buffer=''
-      while read line; do
-        "$visible" || {
-          empty_line=''; i=0
-          while [ "$i" -lt ${#line} ]; do empty_line="$empty_line "; i=$((i + 1)); done
-          line="$empty_line"
-        }
-        eval xyprint \"$x\" \"$y\" \'"$line"\'
-        y=$((y + 1))
-      done
-      echo "$screen_buffer"
-    }
-  )
-  puts "$additional_buffer"
+  IFS_SAVE=$IFS; IFS=$LF
+  set -- $HELP
+  IFS=$IFS_SAVE
+
+  for line in "$@"; do
+    "$visible" || str_repeat line " " ${#line}
+    xyprint "$x" "$y" "$line"
+    y=$((y + 1))
+  done
   reset_colors
 }
 
