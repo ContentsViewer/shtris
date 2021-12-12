@@ -28,9 +28,15 @@ Thank you!
 ## Usage
 
 ```sh
-git clone --depth 1 -b v2.1.0 https://github.com/ContentsViewer/sh-tetris
-cd sh-tetris
-./sh-tetris
+# Download Version 2.1.0
+wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/2.1.0/tetris
+
+# Local
+./tetris
+
+# Global
+sudo install ./tetris /usr/local/bin
+tetris
 ```
 
 ![Tetris](https://contentsviewer.work/Master/ShellScript/Apps/Tetris/Images/tetris.jpg)
