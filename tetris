@@ -379,6 +379,8 @@ Options:
  --lockdown <RULE>    Three rulesets —Infinite Placement, Extended, and Classic—
                       dictate the conditions for Lock Down.
                       RULE can be 'extended'(default), 'infinite', 'classic'
+ --seed <SEED>        random seed to determine the order of Tetriminos.
+                      range from 1 to 4294967295.
  --no-color           don't display colors
  --no-beep            disable beep
  --hide-help          don't show help on start
@@ -407,6 +409,14 @@ hold_queue=''
 # placed at the end of the Next Queue, pushing all Tetriminos in the Next Queue forward by one.
 # The bag is refilled and reshuffled once it is empty.
 bag=''
+
+# Note: In most competitive multiplayer variants, all players should receive the same order of 
+# Tetriminos (random for each game played), unless the variant is specifically designed not to 
+# do this.
+#
+# Tetriminoes will appear in the same order in games started with the same number.
+# 0 means not set, and the range is from 1 to 4294967295.
+bag_random=0
 
 # the Variable Goal System requires that the player clears 5 lines at level 1, 10 lines at
 # level 2, 15 at level 3 and so on, adding an additional five lines to the Goal each level through 15.
@@ -551,8 +561,16 @@ discard_cmds() {
   discard_cmds_timepoint=$(now)
 }
 
-# Initizlize random generator.
-# Call this function before using RAND_VALUE and randgen
+# return random value (0 ~ 4294967295)
+# using /dev/urandom as random seed.
+# Although /dev/urandom is not defined in POSIX, 
+# it is enough for almost shell environment (maybe).
+# (if not, considering to use `ps` as seed)
+rand() {
+  od -A n -t u4 -N 4 /dev/urandom | sed 's/[^0-9]//g'
+}
+
+# Generate next random value
 #
 # Using xorshift32 to generate random number.
 # xorshit32 are a class of pseudorandom number generators.
@@ -567,29 +585,15 @@ discard_cmds() {
 # about xorshift32:
 #   * <https://en.wikipedia.org/wiki/Xorshift>
 #
-# Globals:
-#   RAND_VALUE
-randinit() {
-  # use /dev/urandom as random seed.
-  # Although /dev/urandom is not defined in POSIX, 
-  # it is enough for almost shell environment.
-  #
-  # Following code gets 0~4294967295 random value.
-  RAND_VALUE=$(od -A n -t u4 -N 4 /dev/urandom | sed 's/[^0-9]//g')
-}
-
-# Generate next random value
-#
-# Globals:
-#   RAND_VALUE
-randgen() {
+# Arguments:
+#   1 - varname
+randnext() {
   # RAND_VALUE: 32-bit (possibly signed) integer excluding 0.
   #   the sign is implementation-dependent (e.g. mksh is signed 32-bit integer).
-  RAND_VALUE=$(( RAND_VALUE ^ ((RAND_VALUE << 13) & 4294967295) )) # 4294967295 (0x FFFF FFFF)
-  RAND_VALUE=$(( RAND_VALUE ^ ((RAND_VALUE >> 17) & 131071) ))     # 131071     (0x 0001 FFFF)
-  RAND_VALUE=$(( RAND_VALUE ^ ((RAND_VALUE  << 5) & 4294967295) )) # 4294967295 (0x FFFF FFFF)
+  eval "$1=$(( $1 ^ (($1 << 13) & 4294967295) ))" # 4294967295 (0x FFFF FFFF)
+  eval "$1=$(( $1 ^ (($1 >> 17) & 131071) ))"     # 131071     (0x 0001 FFFF)
+  eval "$1=$(( $1 ^ (($1  << 5) & 4294967295) ))" # 4294967295 (0x FFFF FFFF)
 }
-
 
 # Shuffle args
 #
@@ -598,21 +602,23 @@ randgen() {
 #   * <https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle>
 #
 # Arguments:
-#   Output
-#   Args... to shuffled.
+#   1    - varname to be written shuffled args
+#   2    - current random value
+#   3... - args to be shuffled.
 shuffle() {
-  local varname=$1 shuffled='' len random_shift
+  local varname=$1 random_value=$2 shuffled='' len random_shift
 
-  shift; len=$# # shift to target args, and save length of args.
-  
+  shift 2; len=$# # shift to target args, and save length of args.
+
   # pick up one arg randomly and push it into 'shuffled'.
   while [ $# -gt 0 ]; do
     # get random shift (0 ~ len-1) to select arg randomly.
-    random_shift=$(( ${RAND_VALUE#-} % len ))
+    randnext "$random_value"
+    random_shift=$(( ${random_value#-} % len ))
 
     len=$random_shift
     while [ $len -gt 0 ]; do    # rotate args until selected arg comes up at head.
-      set -- "$@" $1            # push first arg
+      set -- "$@" "$1"          # push first arg
       shift; len=$(( len - 1 )) # pop first arg
     done
 
@@ -620,7 +626,7 @@ shuffle() {
 
     shift; len=$# # next selection
   done
-  
+
   eval "$varname=\$shuffled" # set result
 }
 
@@ -631,7 +637,7 @@ level_up() {
 }
 
 fill_bag() {
-  shuffle bag $O_TETRIMINO $I_TETRIMINO $T_TETRIMINO $L_TETRIMINO $J_TETRIMINO $S_TETRIMINO $Z_TETRIMINO
+  shuffle bag bag_random $O_TETRIMINO $I_TETRIMINO $T_TETRIMINO $L_TETRIMINO $J_TETRIMINO $S_TETRIMINO $Z_TETRIMINO
 }
 
 #  the Tetrimino at the front of the line in the bag is placed at the end of the Next Queue
@@ -1498,7 +1504,11 @@ init() {
   echo 'Loading...'
 
   # Initialize random generator.
-  randinit
+  [ $bag_random -eq 0 ] && {
+    # if not set
+    bag_random=$(rand)
+    [ $bag_random -eq 0 ] && bag_random=$(( bag_random + 1 ))
+  }
 
   # playfield is initialized with -1s (empty cells)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
@@ -1806,7 +1816,7 @@ main() {
         [ $# -le 1 ] && { # if next arg not exists
           die_usage "option '$1' requires an argument"
         }
-        
+
         { expr "$2" + 1 > /dev/null 2>&1; [ $? -gt 1 ]; } || # if not number
         [ "$2" -lt 1 ]                                    || # ...less than 1
         [ "$2" -gt $LEVEL_MAX ]                           && # ...greater than LEVEL_MAX, then
@@ -1838,6 +1848,20 @@ main() {
           classic)  lockdown_rule=$LOCKDOWN_RULE_CLASSIC  ;;
           *)        die_usage "unrecognized lockdown rule '$2'" ;;
         esac
+        shift 2; continue
+        ;;
+      --seed)
+        [ $# -le 1 ] && { # if next arg not exists
+          die_usage "option '$1' requires an argument"
+        }
+
+        { expr "$2" + 1 > /dev/null 2>&1; [ $? -gt 1 ]; } || # if not number
+        [ "$2" -lt 1 ]                                    || # ...less than 1
+        [ "$2" -gt 4294967295 ]                           && # ...greater than LEVEL_MAX, then
+        {
+          die_usage "invalid seed '$2'"
+        }
+        bag_random=$2
         shift 2; continue
         ;;
       --no-beep)
