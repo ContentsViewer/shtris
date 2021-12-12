@@ -72,6 +72,7 @@ LOG='.log'
 # Note:
 #   in shell enviroment, should Drop the SIG prefix, just input the signal name.
 SIGNAL_TERM=TERM
+SIGNAL_EXIT=EXIT
 SIGNAL_LEVEL_UP=USR1
 SIGNAL_CANCEL_LOCKDOWN_TIMER=USR1
 SIGNAL_RESTART_LOCKDOWN_TIMER=USR2
@@ -540,6 +541,10 @@ get_pid(){
 
 send_signal() {
   kill -$1 $2
+}
+
+exist_process() {
+  send_signal 0 "$1" 2>/dev/null
 }
 
 discard_cmds() {
@@ -1435,9 +1440,11 @@ quit() {
   send_signal $SIGNAL_TERM $reader_pid         #
   send_signal $SIGNAL_TERM $ticker_pid         #
   xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
-  xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H)) '
-> Quit
-> Press any key to continue ...'               # put message at bottom of playfield so that game screen will keep its shape.
+
+  # put message at bottom of playfield so that game screen will keep its shape.
+  xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H + 1)) '> Quit'
+  xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H + 2)) '> Press any key to continue ...'
+
   flush_screen
 }
 
@@ -1546,12 +1553,12 @@ lockdown_timer() {
 
   local trigger_counter timestamp
 
+  ppid=$1
   get_pid my_pid
   echo "$(now) $PROCESS_TIMER $MY_PID $my_pid"
 
   trigger_counter=-1  # -1 - already triggerd; 0 - triggered; greater than 0 - count to trigger
-  while true; do
-
+  while exist_process "$ppid"; do
     [ "$trigger_counter" -eq 0 ] && {
       timestamp=''
       while [ -z "$timestamp" ]; do # in some case, timestamp suddenly becomes empty string. I dont know why ;-)
@@ -1577,12 +1584,13 @@ ticker() {
   # on this signal fall speed should be increased, this happens during level ups
   trap 'level=$((level + 1)); echo "$(now) $PROCESS_TICKER $ACK"' $SIGNAL_LEVEL_UP
 
+  ppid=$1
   get_pid my_pid
   echo "$(now) $PROCESS_TICKER $MY_PID $my_pid"
 
   # the game level, which levelup-signal counts up.
   level=1
-  while true ; do
+  while exist_process "$ppid"; do
     eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
     wait
     echo "$(now) $PROCESS_TICKER $FALL" # <timestamp> <cmd>
@@ -1704,17 +1712,27 @@ controller() {
 
 game() {
   stty_g=$(stty -g) # let's save terminal state
+  trap 'game_cleanup false' $SIGNAL_EXIT
 
   # output of ticker, timer and reader is joined and piped into controller
   (
-    ticker         & # runs as separate process
-    lockdown_timer &
+    ticker "$$"         & # runs as separate process
+    lockdown_timer "$$" &
     reader
   ) | (
     controller
   )
 
-  echo ''        # add new line
+  trap "" $SIGNAL_EXIT
+  game_cleanup true
+}
+
+game_cleanup() {
+  "$1" || {
+    xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H + 1)) '> Abort'
+    flush_screen
+  }
+  echo '' # add new lines
   show_cursor
   stty "$stty_g" # let's restore terminal state
 }
