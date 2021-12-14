@@ -614,9 +614,9 @@ shuffle() {
   while [ $# -gt 0 ]; do
     # get random shift (0 ~ len-1) to select arg randomly.
     randnext "$random_value"
-    random_shift=$(( ${random_value#-} % len ))
+    random_shift=$(( $random_value % len ))
 
-    len=$random_shift
+    len=${random_shift#-}       # take the absolute value
     while [ $len -gt 0 ]; do    # rotate args until selected arg comes up at head.
       set -- "$@" "$1"          # push first arg
       shift; len=$(( len - 1 )) # pop first arg
