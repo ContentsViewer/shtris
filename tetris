@@ -1665,10 +1665,12 @@ reader() {
   get_pid my_pid
   echo "$(now) $PROCESS_READER $MY_PID $my_pid"
 
-  stty -echo # disable terminal local echo (echoback)
+  # disable terminal local echo (echoback) and canonical input mode
+  stty -echo -icanon
+
   while true ;do
     # read one key
-    key=$(stty -icanon; dd ibs=1 count=1 2>/dev/null)
+    key=$(dd ibs=1 count=1 2>/dev/null)
     cmd=''
 
     # echo "$key" >> $LOG # For debug to check input char.
