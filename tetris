@@ -611,7 +611,7 @@ shuffle() {
   shift 2 # shift to target args.
 
   # pick up one arg randomly and push it into 'shuffled'.
-  while [ $# -gt 0 ]; do
+  while [ $# -gt 1 ]; do
     # get random shift (0 ~ len-1) to select arg randomly.
     randnext "$random_value"
     random_shift=$(( $random_value % $# ))
@@ -627,7 +627,7 @@ shuffle() {
     shift # next selection
   done
 
-  eval "$varname=\$shuffled" # set result
+  eval "$varname=\${shuffled}\${1}" # set result
 }
 
 level_up() {
