@@ -1673,7 +1673,7 @@ _reader() {
   echo "$(now) $PROCESS_READER $MY_PID $my_pid"
 
   # disable terminal local echo (echoback) and canonical input mode
-  stty -echo -icanon
+  stty -echo -icanon time 0 min 1
 
   while true ;do
     # read one key
