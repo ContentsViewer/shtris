@@ -52,6 +52,23 @@ set -u # non initialized variable is an error
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
 VERSION='2.2.0-alpha'
 
+# the year the game was created.
+# displayed in COPYRIGHT.
+CREATED_YEAR='2021'
+
+# Game must have this notice when the game starts.
+COPYRIGHT="
+────────────────────────────────────────────────────────────────────────────────
+Tetris © 1985~2021 Tetris Holding.
+Tetris logos, Tetris theme song and Tetriminos are trademarks of Tetris Holding.
+The Tetris trade dress is owned by Tetris Holding.
+Licensed to The Tetris Company.
+Tetris Game Design by Alexey Pajitnov.
+Tetris Logo Design by Roger Dean.
+All Rights Reserved.
+────────────────────────────────────────────────────────────────────────────────
+"
+
 # Explicitly reset to the default value to prevent the import of IFS
 # from the environment. The following shells will work more safely.
 #   dash <= 0.5.10.2, FreeBSD sh <= 10.4, etc.
@@ -1508,7 +1525,16 @@ quit() {
 
 localvar init x y i from cmd pid statement
 _init() {
+  echo "$COPYRIGHT"
   echo 'Loading...'
+
+  i=30
+  while [ "$i" -gt 0 ]; do
+    printf '\r'; print_loading_spin
+
+    sleep 0.1
+    i=$(( i - 1 ))
+  done
 
   # Initialize random generator.
   [ $bag_random -eq 0 ] && {
