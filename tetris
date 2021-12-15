@@ -427,8 +427,8 @@ hold_queue=''
 # The bag is refilled and reshuffled once it is empty.
 bag=''
 
-# Note: In most competitive multiplayer variants, all players should receive the same order of 
-# Tetriminos (random for each game played), unless the variant is specifically designed not to 
+# Note: In most competitive multiplayer variants, all players should receive the same order of
+# Tetriminos (random for each game played), unless the variant is specifically designed not to
 # do this.
 #
 # Tetriminoes will appear in the same order in games started with the same number.
@@ -592,7 +592,7 @@ discard_cmds() {
 
 # return random value (0 ~ 4294967295)
 # using /dev/urandom as random seed.
-# Although /dev/urandom is not defined in POSIX, 
+# Although /dev/urandom is not defined in POSIX,
 # it is enough for almost shell environment (maybe).
 # (if not, considering to use `ps` as seed)
 rand() {
@@ -604,11 +604,11 @@ rand() {
 # Using xorshift32 to generate random number.
 # xorshit32 are a class of pseudorandom number generators.
 #
-# It is the recommendation of the authors of the xoshiro 
-# paper to initialize the state of the generators using 
-# a generator which is radically different from the initialized 
-# generators, as well as one which will never give the 
-# "all-zero" state; for shift-register generators, 
+# It is the recommendation of the authors of the xoshiro
+# paper to initialize the state of the generators using
+# a generator which is radically different from the initialized
+# generators, as well as one which will never give the
+# "all-zero" state; for shift-register generators,
 # this state is impossible to escape from.
 #
 # about xorshift32:
@@ -930,7 +930,7 @@ process_fallen_piece() {
           *)
             # For Debugging. cannot be reached.
             echo "invalid mini-tspin action: $action" >> $LOG
-            ;; 
+            ;;
         esac
         ;;
     esac
@@ -1604,7 +1604,7 @@ _init() {
         break
       }
     done
-    
+
     printf '\r'; print_loading_spin; printf ' %s' "$level/$starting_level"
     sleep 0.1
   done
