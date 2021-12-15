@@ -59,7 +59,7 @@ CREATED_YEAR='2021'
 # Game must have this notice when the game starts.
 COPYRIGHT="
 ────────────────────────────────────────────────────────────────────────────────
-Tetris (c) 1985~2021 Tetris Holding.
+Tetris (c) 1985~${CREATED_YEAR} Tetris Holding.
 Tetris logos, Tetris theme song and Tetriminos are trademarks of Tetris Holding.
 The Tetris trade dress is owned by Tetris Holding.
 Licensed to The Tetris Company.
