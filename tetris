@@ -52,6 +52,23 @@ set -u # non initialized variable is an error
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
 VERSION='2.2.0-alpha'
 
+# the year the game was created.
+# displayed in COPYRIGHT.
+CREATED_YEAR='2021'
+
+# Game must have this notice when the game starts.
+COPYRIGHT="
+────────────────────────────────────────────────────────────────────────────────
+Tetris (c) 1985~2021 Tetris Holding.
+Tetris logos, Tetris theme song and Tetriminos are trademarks of Tetris Holding.
+The Tetris trade dress is owned by Tetris Holding.
+Licensed to The Tetris Company.
+Tetris Game Design by Alexey Pajitnov.
+Tetris Logo Design by Roger Dean.
+All Rights Reserved.
+────────────────────────────────────────────────────────────────────────────────
+"
+
 # Explicitly reset to the default value to prevent the import of IFS
 # from the environment. The following shells will work more safely.
 #   dash <= 0.5.10.2, FreeBSD sh <= 10.4, etc.
@@ -410,8 +427,8 @@ hold_queue=''
 # The bag is refilled and reshuffled once it is empty.
 bag=''
 
-# Note: In most competitive multiplayer variants, all players should receive the same order of 
-# Tetriminos (random for each game played), unless the variant is specifically designed not to 
+# Note: In most competitive multiplayer variants, all players should receive the same order of
+# Tetriminos (random for each game played), unless the variant is specifically designed not to
 # do this.
 #
 # Tetriminoes will appear in the same order in games started with the same number.
@@ -575,7 +592,7 @@ discard_cmds() {
 
 # return random value (0 ~ 4294967295)
 # using /dev/urandom as random seed.
-# Although /dev/urandom is not defined in POSIX, 
+# Although /dev/urandom is not defined in POSIX,
 # it is enough for almost shell environment (maybe).
 # (if not, considering to use `ps` as seed)
 rand() {
@@ -587,11 +604,11 @@ rand() {
 # Using xorshift32 to generate random number.
 # xorshit32 are a class of pseudorandom number generators.
 #
-# It is the recommendation of the authors of the xoshiro 
-# paper to initialize the state of the generators using 
-# a generator which is radically different from the initialized 
-# generators, as well as one which will never give the 
-# "all-zero" state; for shift-register generators, 
+# It is the recommendation of the authors of the xoshiro
+# paper to initialize the state of the generators using
+# a generator which is radically different from the initialized
+# generators, as well as one which will never give the
+# "all-zero" state; for shift-register generators,
 # this state is impossible to escape from.
 #
 # about xorshift32:
@@ -913,7 +930,7 @@ process_fallen_piece() {
           *)
             # For Debugging. cannot be reached.
             echo "invalid mini-tspin action: $action" >> $LOG
-            ;; 
+            ;;
         esac
         ;;
     esac
@@ -1508,7 +1525,16 @@ quit() {
 
 localvar init x y i from cmd pid statement
 _init() {
+  echo "$COPYRIGHT"
   echo 'Loading...'
+
+  i=30
+  while [ "$i" -gt 0 ]; do
+    printf '\r'; print_loading_spin
+
+    sleep 0.1
+    i=$(( i - 1 ))
+  done
 
   # Initialize random generator.
   [ $bag_random -eq 0 ] && {
@@ -1578,7 +1604,7 @@ _init() {
         break
       }
     done
-    
+
     printf '\r'; print_loading_spin; printf ' %s' "$level/$starting_level"
     sleep 0.1
   done
