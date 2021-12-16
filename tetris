@@ -531,7 +531,11 @@ beep() {
 }
 
 now() {
-  echo $(date +%s)
+  date +"${1:-%s}"
+}
+
+state() {
+  now "%s $1"
 }
 
 current_loading_spin_shift=0
@@ -1608,7 +1612,7 @@ _init() {
   flush_screen
 }
 
-localvar lockdown_timer trigger_counter timestamp
+localvar lockdown_timer trigger_counter
 _lockdown_timer() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
@@ -1618,19 +1622,14 @@ _lockdown_timer() {
 
   ppid=$1
   get_pid my_pid
-  echo "$(now) $PROCESS_TIMER $MY_PID $my_pid"
+  state "$PROCESS_TIMER $MY_PID $my_pid"
 
   trigger_counter=-1  # -1 - already triggerd; 0 - triggered; greater than 0 - count to trigger
   while exist_process "$ppid"; do
     [ "$trigger_counter" -eq 0 ] && {
-      timestamp=''
-      while [ -z "$timestamp" ]; do # in some case, timestamp suddenly becomes empty string. I dont know why ;-)
-        timestamp=$(now)            # so get time again...
-      done
-      [ "$trigger_counter" -gt 0 ] && continue # final check
       trigger_counter=-1
       # echo 'Fire Lock' >> $LOG # for debugging to check when signal fired.
-      echo "$timestamp $PROCESS_TIMER $LOCKDOWN"
+      state "$PROCESS_TIMER $LOCKDOWN"
     }
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
 
@@ -1645,18 +1644,18 @@ ticker() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
   # on this signal fall speed should be increased, this happens during level ups
-  trap 'level=$((level + 1)); echo "$(now) $PROCESS_TICKER $ACK"' $SIGNAL_LEVEL_UP
+  trap 'level=$((level + 1)); state "$PROCESS_TICKER $ACK"' $SIGNAL_LEVEL_UP
 
   ppid=$1
   get_pid my_pid
-  echo "$(now) $PROCESS_TICKER $MY_PID $my_pid"
+  state "$PROCESS_TICKER $MY_PID $my_pid"
 
   # the game level, which levelup-signal counts up.
   level=1
   while exist_process "$ppid"; do
     eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
     wait
-    echo "$(now) $PROCESS_TICKER $FALL" # <timestamp> <cmd>
+    state "$PROCESS_TICKER $FALL" # <timestamp> <cmd>
     # echo "$level" >> $LOG # For debuging. check level variable
   done
 }
@@ -1670,7 +1669,7 @@ _reader() {
   a='' b=''
 
   get_pid my_pid
-  echo "$(now) $PROCESS_READER $MY_PID $my_pid"
+  state "$PROCESS_READER $MY_PID $my_pid"
 
   # disable terminal local echo (echoback) and canonical input mode
   stty -echo -icanon time 0 min 1
@@ -1729,7 +1728,7 @@ _reader() {
     esac
     a=$b   # preserve previous keys
     b=$key
-    [ -n "$cmd" ] && echo "$(now) $PROCESS_READER $cmd" # if not empty string
+    [ -n "$cmd" ] && state "$PROCESS_READER $cmd" # if not empty string
   done
 }
 
