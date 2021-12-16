@@ -1891,12 +1891,8 @@ main() {
     esac
   done
 
-  if $debug; then
-    echo "=== Debug mode enabled ===" >> $LOG
-    game
-  else
-    game 2> /dev/null # discard stderr of kill command saying 'User defined signal ...'
-  fi
+  $debug && echo "=== Debug mode enabled ===" >> $LOG
+  game
 }
 
 main "$@"
