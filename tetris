@@ -284,9 +284,13 @@ ESC_CH="$(printf '\033')"
 #   piece_<TETRIMINO>_minos_<FACING>='<mino_0_x> <mino_1_y> ...'
 #     (0, 0) is top left
 #
+# rotation shifts
 #   piece_<TETRIMINO>_rchifts_<FACING>='<POINT_1> <POINT_2> ...'
 #     <POINT_<NO>>: <ROTATION_LEFT_shifts> <ROTATION_RIGHT_shifts>
 #     <ROTATION_<DIR>_shifts>: <shift_x> <shift_y>
+#
+# column edges
+#
 
 # O-Tetrimino
 eval piece_"$O_TETRIMINO"_color=\"$YELLOW\"
@@ -298,6 +302,10 @@ eval piece_"$O_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   0  0  0  0   0  0  0  
 eval piece_"$O_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 eval piece_"$O_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 eval piece_"$O_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
+eval piece_"$O_TETRIMINO"_cedges_"$NORTH"=\'1 0 1  2 0 1\'
+eval piece_"$O_TETRIMINO"_cedges_"$EAST"=\' 1 0 1  2 0 1\'
+eval piece_"$O_TETRIMINO"_cedges_"$SOUTH"=\'1 0 1  2 0 1\'
+eval piece_"$O_TETRIMINO"_cedges_"$WEST"=\' 1 0 1  2 0 1\'
 
 # I-Tetrimino
 eval piece_"$I_TETRIMINO"_color=\"$CYAN\"
@@ -309,6 +317,10 @@ eval piece_"$I_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0  -1  0 -2  0   2  0  1  
 eval piece_"$I_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   2  0 -1  0  -1  0  2  0   2  1 -1  2  -1 -2  2 -1\"
 eval piece_"$I_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   1  0  2  0  -2  0 -1  0   1 -2  2  1  -2  1 -1 -2\"
 eval piece_"$I_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -2  0  1  0   1  0 -2  0  -2 -1  1 -2   1  2 -2  1\"
+eval piece_"$I_TETRIMINO"_cedges_"$NORTH"=\'0 1 1  1 1 1  2 1 1  3 1 1\'
+eval piece_"$I_TETRIMINO"_cedges_"$EAST"=\' 2 0 3\'
+eval piece_"$I_TETRIMINO"_cedges_"$SOUTH"=\'0 2 2  1 2 2  2 2 2  3 2 2\'
+eval piece_"$I_TETRIMINO"_cedges_"$WEST"=\' 1 0 3\'
 
 # T-Tetrimino
 eval piece_"$T_TETRIMINO"_color=\"$MAGENTA\"
@@ -320,6 +332,10 @@ eval piece_"$T_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$T_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$T_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0   n  n  n  n   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$T_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$T_TETRIMINO"_cedges_"$NORTH"=\'0 1 1  1 0 1  2 1 1\'
+eval piece_"$T_TETRIMINO"_cedges_"$EAST"=\' 1 0 2  2 1 1\'
+eval piece_"$T_TETRIMINO"_cedges_"$SOUTH"=\'0 1 1  1 1 2  2 1 1\'
+eval piece_"$T_TETRIMINO"_cedges_"$WEST"=\' 0 1 1  1 0 2\'
 
 # L-Tetrimino
 eval piece_"$L_TETRIMINO"_color=\"$ORANGE\"
@@ -331,6 +347,10 @@ eval piece_"$L_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$L_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$L_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$L_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$L_TETRIMINO"_cedges_"$NORTH"=\'0 1 1  1 1 1  2 0 1\'
+eval piece_"$L_TETRIMINO"_cedges_"$EAST"=\' 1 0 2  2 2 2\'
+eval piece_"$L_TETRIMINO"_cedges_"$SOUTH"=\'0 1 2  1 1 1  2 1 1\'
+eval piece_"$L_TETRIMINO"_cedges_"$WEST"=\' 0 0 0  1 0 2\'
 
 # J-Tetrimino
 eval piece_"$J_TETRIMINO"_color=\"$BLUE\"
@@ -342,6 +362,10 @@ eval piece_"$J_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$J_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$J_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$J_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$J_TETRIMINO"_cedges_"$NORTH"=\'0 0 1  1 1 1  2 1 1\'
+eval piece_"$J_TETRIMINO"_cedges_"$EAST"=\' 1 0 2  2 0 0\'
+eval piece_"$J_TETRIMINO"_cedges_"$SOUTH"=\'0 1 1  1 1 1  2 1 2\'
+eval piece_"$J_TETRIMINO"_cedges_"$WEST"=\' 0 2 2  1 0 2\'
 
 # S-Tetrimino
 eval piece_"$S_TETRIMINO"_color=\"$GREEN\"
@@ -353,6 +377,10 @@ eval piece_"$S_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$S_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$S_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$S_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$S_TETRIMINO"_cedges_"$NORTH"=\'0 1 1  1 0 1  2 0 0\'
+eval piece_"$S_TETRIMINO"_cedges_"$EAST"=\' 1 0 1  2 1 2\'
+eval piece_"$S_TETRIMINO"_cedges_"$SOUTH"=\'0 2 2  1 1 2  2 1 1\'
+eval piece_"$S_TETRIMINO"_cedges_"$WEST"=\' 0 0 1  1 1 2\'
 
 # Z-Tetrimino
 eval piece_"$Z_TETRIMINO"_color=\"$RED\"
@@ -364,6 +392,10 @@ eval piece_"$Z_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$Z_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$Z_TETRIMINO"_cedges_"$NORTH"=\'0 0 0  1 0 1  2 1 1\'
+eval piece_"$Z_TETRIMINO"_cedges_"$EAST"=\' 1 1 2  2 0 1\'
+eval piece_"$Z_TETRIMINO"_cedges_"$SOUTH"=\'0 1 1  1 1 2  2 2 2\'
+eval piece_"$Z_TETRIMINO"_cedges_"$WEST"=\' 0 1 2  1 0 1\'
 
 eval T_TETRIMINO_"$NORTH"_SIDES=\"0 0  2 0  0 2  2 2\"
 eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  0 2  0 0  0 2\"
@@ -373,8 +405,8 @@ eval T_TETRIMINO_"$WEST"_SIDES=\" 0 2  0 0  2 2  2 0\"
 HELP='
 ←         Move Left or Right
 →         Move Right
-↑, x      Rotate Clockwise
-z         Rotate Counter-Clockwise
+↑, x      Rotate Right
+z         Rotate Left
 c         Hold
 ↓         Soft Drop
 Space     Hard Drop
@@ -468,10 +500,12 @@ showtime=true              # controller runs while this flag is true
 discard_cmds_timepoint=0   # cmds issued before this time is discarded
 empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
+ghost_cell='░░'
 lands_on=false             #
 manipulation_counter=0     #
 lowest_line=$START_X       #
 current_tspin=$ACTION_NONE #
+
 
 # Function for defining local variables for cross-shells support.
 if (PATH=/dev/null; f() { local v; }; f) 2>/dev/null; then
@@ -728,9 +762,9 @@ hold_tetrimino() {
 }
 
 # generate tetrimino in play field
+# Arguments:
+#   1 - tetrimino to generate
 generate_tetrimino() {
-  # Arguments:
-  #   1 - tetrimino to generate
   current_piece="$1"
 
   # beginning from its generation position and North Facing orientation.
@@ -788,10 +822,13 @@ _what_type_tspin() {
   return
 }
 
+
+# test if piece can be moved to new location
+# Arguments:
+#   1 - new x coordinate of the piece
+#   2 - new y coordinate of the piece
 localvar new_piece_location_ok x_test y_test x y lx ly field_cell
 _new_piece_location_ok() {
-  # Arguments: 1 - new x coordinate of the piece, 2 - new y coordinate of the piece
-  # test if piece can be moved to new location
   x_test="$1"; y_test="$2" # at first, we should preserve the parameters ...
   shift $#                 # .. and we shift all.
 
@@ -817,6 +854,29 @@ _new_piece_location_ok() {
   return 0
 }
 
+# localvar merge_grounds x y1 y2 ceil floor
+# _merge_grounds() {
+#   x=$1; y1=$(( $2 + 1 )); y2=$(( $3 - 1 ))
+
+#   eval set -- \$playfield_grounds_$x
+  
+#   eval ceil="\$playfield_${y1}_${x}"
+#   floor=0
+#   [ $y2 -ge 0 ] && eval floor="\$playfield_${y2}_${x}"
+  
+
+#   [ $floor -ne '-1' ] && {
+#     shift 1
+#   }
+
+#   [ $ceil -eq '-1' ] && {
+#     set -- "$@" "$y1"
+#   }
+
+#   # echo "$@"
+#   echo "$*" >> $LOG
+# }
+
 # this function updated occupied cells in playfield array after piece is dropped
 localvar flatten_playfield color lx ly x y
 _flatten_playfield() {
@@ -829,11 +889,17 @@ _flatten_playfield() {
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     lx="$1"; ly="$2"
-    x=$((current_piece_x + lx))
-    y=$((current_piece_y - ly))
+    x=$(( current_piece_x + lx ))
+    y=$(( current_piece_y - ly ))
     eval playfield_"$y"_"$x"="$color"
     shift 2 # shift to next minos coordinates
   done
+
+  # eval set -- \$piece_"$current_piece"_cedges_"$current_piece_rotation"
+  # while [ $# -gt 0 ]; do
+  #   merge_grounds $1 $(( current_piece_y - $2 )) $(( current_piece_y - $3 ))
+  #   shift 3
+  # done
 }
 
 localvar is_line_completed x line_y
@@ -950,9 +1016,11 @@ process_fallen_piece() {
   discard_cmds
 }
 
+# Arguments:
+#   1 - ACTION name. ex: ACTION_SINGLE
+#   2 - (ACTION_HARD_DROP) lines
 localvar update_score factor score_to_add lines_to_add actions_to_show i
 _update_score() {
-  # Arguments: 1 - ACTION name. ex: ACTION_SINGLE
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
   score_to_add=0
@@ -1020,7 +1088,7 @@ _update_score() {
       score_to_add=$factor
       ;;
     "$ACTION_HARD_DROP")
-      score_to_add=$factor
+      score_to_add=$(( factor * $2 ))
       ;;
   esac
 
@@ -1122,9 +1190,11 @@ can_maniqulate() {
   return 0
 }
 
+# moves the piece to the new location if possible
+# Arguments:
+#   1 - new x coordinate
+#   2 - new y coordinate
 move_piece() {
-  # arguments: 1 - new x coordinate, 2 - new y coordinate
-  # moves the piece to the new location if possible
   immediately_lockdown=${3:-false}
 
   if new_piece_location_ok "$1" "$2"; then            # if new location is ok
@@ -1236,6 +1306,7 @@ move_right() {
   can_maniqulate || return
   move_piece $((current_piece_x + 1)) "$current_piece_y" && {
     # if successfuly move
+    update_ghost
     current_piece_behaviour=$BEHAVIOUR_RIGHT
     on_manipulation
   }
@@ -1245,6 +1316,7 @@ move_left() {
   can_maniqulate || return
   move_piece $((current_piece_x - 1)) "$current_piece_y" && {
     # if successfuly move
+    update_ghost
     current_piece_behaviour=$BEHAVIOUR_LEFT
     on_manipulation
   }
@@ -1254,6 +1326,7 @@ rotate_cw() {
   can_maniqulate || return
   $rotate_piece_func 1 && {
     # if successfuly rotate
+    update_ghost
     current_piece_behaviour=$BEHAVIOUR_ROTATE
     on_manipulation
   }
@@ -1283,18 +1356,59 @@ soft_drop() {
   }
 }
 
-hard_drop() {
-  # move piece all way down
-  while move_piece $current_piece_x $((current_piece_y - 1)) true; do
-    # if successfuly move
-    update_score "$ACTION_HARD_DROP"
+test_hard_drop() {
+  # no need local attribute.
+  # this function will called as "Command Substitution" `$()`
+  x=$1; y=$(( $2 - 1 ))
+  while new_piece_location_ok $x $y; do
+    y=$(( y - 1 ))
   done
+  echo $(( y + 1 ))
+}
+
+localvar hard_drop new_y
+_hard_drop() {
+  # move piece all way down
+  new_y=$(test_hard_drop $current_piece_x $current_piece_y)
+  
+  update_score "$ACTION_HARD_DROP" $(( current_piece_y - new_y ))
+  move_piece $current_piece_x $new_y true
+
+  # while move_piece $current_piece_x $((current_piece_y - 1)) true; do
+  #   # if successfuly move
+  #   update_score "$ACTION_HARD_DROP"
+  # done
 
   current_piece_behaviour=$BEHAVIOUR_HARD_DROP
 }
 
 hold() {
   hold_tetrimino
+}
+
+# Update ghost piece with new location according to current piece.
+#
+# Arguments:
+#   1 - (optional) true(default) or false. clear previous ghost piece
+localvar update_ghost new_y color
+_update_ghost() {
+  new_y=$(test_hard_drop $current_piece_x $current_piece_y)
+  [ $new_y -eq $current_piece_y ] && return
+
+  eval color=\"\$piece_"$current_piece"_color\"
+
+  ${1:-true} && [ ${ghost_piece-''} ] && {
+    draw_playfield_piece $ghost_piece_x $ghost_piece_y  $ghost_piece $ghost_piece_rotation "$empty_cell"
+  }
+
+  set_fg "$color"
+  draw_playfield_piece $current_piece_x $new_y $current_piece $current_piece_rotation "$ghost_cell"
+  
+  reset_colors
+
+  ghost_piece=$current_piece
+  ghost_piece_x=$current_piece_x; ghost_piece_y=$new_y
+  ghost_piece_rotation=$current_piece_rotation
 }
 
 # playfield is 2-dimensional array, data is stored as follows:
@@ -1326,23 +1440,27 @@ _redraw_playfield() {
   done
 }
 
-localvar draw_piece posx posy type rotation content lx ly x y mask
+
+# Arguments:
+#   1 - x
+#   2 - y
+#   3 - type
+#   4 - rotation
+#   5 - cell content
+#   6 - mask with playfield
+localvar draw_piece posx posy type rotation content x y mask
 _draw_piece() {
-  # Arguments:
-  #   1 - x, 2 - y, 3 - type, 4 - rotation, 5 - cell content, 6 - mask with playfield
   # at first, we should save arguments.
   posx="$1"; posy="$2"; type="$3"; rotation="$4"; content="$5"; mask="${6:-false}"
-  shift $#
 
   # set minos coordinates.
-  eval set \$piece_"$type"_minos_"$rotation"
+  eval set -- \$piece_"$type"_minos_"$rotation"
 
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     # relative coordinates are retrieved bassed on orientation and added to absolute coordinates
-    lx=$1; ly=$2
-    x=$((posx + lx * 2)) # the width of cell is 2 characters thick
-    y=$((posy + ly))
+    x=$((posx + $1 * 2)) # the width of cell is 2 characters thick
+    y=$((posy + $2))
 
     "$mask"                                         &&
     [ "$y" -ge "$PLAYFIELD_Y" ]                     &&
@@ -1355,10 +1473,15 @@ _draw_piece() {
   done
 }
 
-draw_current() {
-  # Arguments: 1 - string to draw single cell
+draw_playfield_piece() {
   # factor 2 for x because each cell is 2 characters wide
-  draw_piece $((PLAYFIELD_X + current_piece_x * 2)) $((PLAYFIELD_Y + PLAYFIELD_H - 1 - current_piece_y)) $current_piece $current_piece_rotation "$1" true
+  draw_piece $((PLAYFIELD_X + $1 * 2)) $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $2)) "$3" "$4" "$5" true
+}
+
+# Arguments:
+#   1 - string to draw single cell
+draw_current() {
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$1"
 }
 
 localvar show_current color
@@ -1404,9 +1527,10 @@ clear_next() {
   draw_next false
 }
 
+# Arguments:
+#   1 - visibility ( false - no, true - yes)
 localvar draw_hold visible color
 _draw_hold() {
-  # Arguments: 1 - visibility ( false - no, true - yes)
   visible="$1"
 
   [ -z "$hold_queue" ] && return
@@ -1461,9 +1585,10 @@ _draw_border() {
   reset_colors
 }
 
+# Arguments:
+#   1 - visibility ( false(1) - no, true(0) - yes), if this argument is skipped $help_on is used
 localvar draw_help visible x y line
 _draw_help() {
-  # Arguments: 1 - visibility ( false - no, true - yes), if this argument is skipped $help_on is used
   visible=${1:-$help_on}
 
   x="$HELP_X"; y="$HELP_Y"
@@ -1529,16 +1654,18 @@ quit() {
 
 localvar init x y i from cmd pid statement
 _init() {
-  echo "$COPYRIGHT"
+  $debug || echo "$COPYRIGHT"
   echo 'Loading...'
 
-  i=30
-  while [ "$i" -gt 0 ]; do
-    printf '\r'; print_loading_spin
+  $debug || {
+    i=30
+    while [ "$i" -gt 0 ]; do
+      printf '\r'; print_loading_spin
 
-    sleep 0.1
-    i=$(( i - 1 ))
-  done
+      sleep 0.1
+      i=$(( i - 1 ))
+    done
+  }
 
   # Initialize random generator.
   [ $bag_random -eq 0 ] && {
@@ -1560,6 +1687,12 @@ _init() {
     done
     y=$((y + 1))
   done
+
+  # x=0
+  # while [ "$x" -lt "$PLAYFIELD_W" ]; do
+  #   eval playfield_grounds_"$x"=\'0 -1\'
+  #   x=$((x + 1))
+  # done
 
   # prepare next queue filled with NEXT_MAX tetrimino
   i=0
