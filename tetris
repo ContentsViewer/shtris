@@ -172,18 +172,6 @@ EAST=1
 SOUTH=2
 WEST=3
 
-# Location and size of playfield, color and border
-PLAYFIELD_W=10
-PLAYFIELD_H=20
-PLAYFIELD_X=19
-PLAYFIELD_Y=2
-BORDER_COLOR=$WHITE
-
-# Location and color of score information
-SCORE_X=5
-SCORE_Y=7
-SCORE_COLOR=$GREEN
-
 ACTION_NONE=0
 ACTION_SINGLE=1
 ACTION_DOUBLE=2
@@ -245,18 +233,30 @@ LOCKDOWN_RULE_INFINITE=1
 LOCKDOWN_RULE_CLASSIC=2
 LOCKDOWN_ALLOWED_MANIPULATIONS=15
 
+# Location and size of playfield, color and border
+PLAYFIELD_W=10
+PLAYFIELD_H=20
+PLAYFIELD_X=18
+PLAYFIELD_Y=2
+BORDER_COLOR=$WHITE
+
+# Location and color of score information
+SCORE_X=4
+SCORE_Y=6
+SCORE_COLOR=$GREEN
+
 # Location and color of help information
-HELP_X=56
-HELP_Y=9
+HELP_X=52
+HELP_Y=10
 HELP_COLOR=$YELLOW
 
 # Next piece location
-NEXT_X=42
+NEXT_X=41
 NEXT_Y=2
 NEXT_MAX=7
 
 # Hold piece location
-HOLD_X=9
+HOLD_X=7
 HOLD_Y=2
 
 # Location of 'Game Over!' at end of the game
@@ -1064,21 +1064,21 @@ _update_score() {
   xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE: "
   xyprint "$SCORE_X" $((SCORE_Y + 1)) "│$score"
   xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
-  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES   $lines_completed"
-  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL   $level"
-  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL    $goal"
+  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES  $(printf %3d $lines_completed)"
+  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL  $(printf %3d $level)"
+  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL   $(printf %3d $goal)"
 
   [ -z "$actions_to_show" ] || {
     IFS_SAVE=$IFS; IFS=:
     set -- $actions_to_show
     IFS=$IFS_SAVE
 
-    xyprint "$SCORE_X" $((SCORE_Y + 7)) "             " # clear 3 rows
-    xyprint "$SCORE_X" $((SCORE_Y + 8)) "             " #
-    xyprint "$SCORE_X" $((SCORE_Y + 9)) "             " #
+    xyprint "$SCORE_X" $((SCORE_Y + 7)) "           " # clear 3 rows
+    xyprint "$SCORE_X" $((SCORE_Y + 8)) "           " #
+    xyprint "$SCORE_X" $((SCORE_Y + 9)) "           " #
     i=7
     while [ $# -gt 0 ]; do
-      xyprint "$SCORE_X" $((SCORE_Y + i)) "$1"
+      xyprint "$SCORE_X" $((SCORE_Y + i)) " $1"
       i=$((i + 1)); shift
     done
   }
