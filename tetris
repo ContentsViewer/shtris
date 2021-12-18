@@ -476,6 +476,14 @@ manipulation_counter=0     #
 lowest_line=$START_X       #
 current_tspin=$ACTION_NONE #
 
+# Game Over Conditions
+#
+# Lock Out
+#   This Game Over Condition occurs when a whole Tetrimino Locks Down above the Skyline.
+#
+# Block Out
+#   This Game Over Condition occurs when part of a newly-generated Tetrimino is blocked due to 
+#   an existing Block in the Matrix
 
 # Function for defining local variables for cross-shells support.
 if (PATH=/dev/null; f() { local v; }; f) 2>/dev/null; then
@@ -795,7 +803,6 @@ _what_type_tspin() {
   return
 }
 
-
 # test if piece can be moved to new location
 # Arguments:
 #   1 - new x coordinate of the piece
@@ -826,19 +833,18 @@ _new_piece_location_ok() {
 }
 
 # this function updated occupied cells in playfield array after piece is dropped
-localvar flatten_playfield color lx ly x y
+localvar flatten_playfield color x y
 _flatten_playfield() {
   eval color=\"\$piece_"$current_piece"_color\"
 
   # set minos coordinates into parameters
   # $1 - x, $2 - y
-  eval set \$piece_"$current_piece"_minos_"$current_piece_rotation"
+  eval set -- \$piece_"$current_piece"_minos_"$current_piece_rotation"
 
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
-    lx="$1"; ly="$2"
-    x=$(( current_piece_x + lx ))
-    y=$(( current_piece_y - ly ))
+    x=$((current_piece_x + $1))
+    y=$((current_piece_y - $2))
     eval playfield_"$y"_"$x"="$color"
     shift 2 # shift to next minos coordinates
   done
@@ -1157,9 +1163,27 @@ move_piece() {
   return 1
 }
 
+# Returns:
+#   0 - lockout
+#   1 - not lockout
+test_lockout() {
+  eval set -- \$piece_"$current_piece"_minos_"$current_piece_rotation"
+
+  while [ $# -gt 0 ]; do
+    [ $((current_piece_y - $2)) -lt $PLAYFIELD_H ] && return 1
+    shift 2 # shift to next minos coordinates
+  done
+  return 0
+}
+
 lockdown() {
   # if can fall, dont lock down
   new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && return
+
+  test_lockout && {
+    quit
+    return
+  }
 
   process_fallen_piece # let's finalize this piece
   get_next             # and start the new one
@@ -1327,6 +1351,11 @@ update_ghost() {
 localvar show_ghost new_y color
 _show_ghost() {
   new_y=$(test_hard_drop $current_piece_x $current_piece_y)
+
+  ghost_piece=$current_piece
+  ghost_piece_x=$current_piece_x; ghost_piece_y=$new_y
+  ghost_piece_rotation=$current_piece_rotation
+
   [ $new_y -eq $current_piece_y ] && return
 
   eval color=\"\$piece_"$current_piece"_color\"
@@ -1335,10 +1364,6 @@ _show_ghost() {
   draw_playfield_piece $current_piece_x $new_y $current_piece $current_piece_rotation "$ghost_cell"
   
   reset_colors
-
-  ghost_piece=$current_piece
-  ghost_piece_x=$current_piece_x; ghost_piece_y=$new_y
-  ghost_piece_rotation=$current_piece_rotation
 }
 
 clear_ghost() {
