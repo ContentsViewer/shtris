@@ -1079,9 +1079,9 @@ _update_score() {
     set -- $actions_to_show
     IFS=$IFS_SAVE
 
-    xyprint "$SCORE_X" $((SCORE_Y + 7)) "           " # clear 3 rows
-    xyprint "$SCORE_X" $((SCORE_Y + 8)) "           " #
-    xyprint "$SCORE_X" $((SCORE_Y + 9)) "           " #
+    xyprint "$SCORE_X" $((SCORE_Y + 7)) "            " # clear 3 rows
+    xyprint "$SCORE_X" $((SCORE_Y + 8)) "            " # max width 12 ' Mini T-Spin'
+    xyprint "$SCORE_X" $((SCORE_Y + 9)) "            " #
     i=7
     while [ $# -gt 0 ]; do
       xyprint "$SCORE_X" $((SCORE_Y + i)) " $1"
