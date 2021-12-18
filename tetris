@@ -289,8 +289,6 @@ ESC_CH="$(printf '\033')"
 #     <POINT_<NO>>: <ROTATION_LEFT_shifts> <ROTATION_RIGHT_shifts>
 #     <ROTATION_<DIR>_shifts>: <shift_x> <shift_y>
 #
-# column edges
-#
 
 # O-Tetrimino
 eval piece_"$O_TETRIMINO"_color=\"$YELLOW\"
@@ -302,10 +300,6 @@ eval piece_"$O_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   0  0  0  0   0  0  0  
 eval piece_"$O_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 eval piece_"$O_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 eval piece_"$O_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
-eval piece_"$O_TETRIMINO"_cedges_"$NORTH"=\'1 0 1  2 0 1\'
-eval piece_"$O_TETRIMINO"_cedges_"$EAST"=\' 1 0 1  2 0 1\'
-eval piece_"$O_TETRIMINO"_cedges_"$SOUTH"=\'1 0 1  2 0 1\'
-eval piece_"$O_TETRIMINO"_cedges_"$WEST"=\' 1 0 1  2 0 1\'
 
 # I-Tetrimino
 eval piece_"$I_TETRIMINO"_color=\"$CYAN\"
@@ -317,10 +311,6 @@ eval piece_"$I_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0  -1  0 -2  0   2  0  1  
 eval piece_"$I_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   2  0 -1  0  -1  0  2  0   2  1 -1  2  -1 -2  2 -1\"
 eval piece_"$I_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   1  0  2  0  -2  0 -1  0   1 -2  2  1  -2  1 -1 -2\"
 eval piece_"$I_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -2  0  1  0   1  0 -2  0  -2 -1  1 -2   1  2 -2  1\"
-eval piece_"$I_TETRIMINO"_cedges_"$NORTH"=\'0 1 1  1 1 1  2 1 1  3 1 1\'
-eval piece_"$I_TETRIMINO"_cedges_"$EAST"=\' 2 0 3\'
-eval piece_"$I_TETRIMINO"_cedges_"$SOUTH"=\'0 2 2  1 2 2  2 2 2  3 2 2\'
-eval piece_"$I_TETRIMINO"_cedges_"$WEST"=\' 1 0 3\'
 
 # T-Tetrimino
 eval piece_"$T_TETRIMINO"_color=\"$MAGENTA\"
@@ -332,10 +322,6 @@ eval piece_"$T_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$T_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$T_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0   n  n  n  n   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$T_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
-eval piece_"$T_TETRIMINO"_cedges_"$NORTH"=\'0 1 1  1 0 1  2 1 1\'
-eval piece_"$T_TETRIMINO"_cedges_"$EAST"=\' 1 0 2  2 1 1\'
-eval piece_"$T_TETRIMINO"_cedges_"$SOUTH"=\'0 1 1  1 1 2  2 1 1\'
-eval piece_"$T_TETRIMINO"_cedges_"$WEST"=\' 0 1 1  1 0 2\'
 
 # L-Tetrimino
 eval piece_"$L_TETRIMINO"_color=\"$ORANGE\"
@@ -347,10 +333,6 @@ eval piece_"$L_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$L_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$L_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$L_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
-eval piece_"$L_TETRIMINO"_cedges_"$NORTH"=\'0 1 1  1 1 1  2 0 1\'
-eval piece_"$L_TETRIMINO"_cedges_"$EAST"=\' 1 0 2  2 2 2\'
-eval piece_"$L_TETRIMINO"_cedges_"$SOUTH"=\'0 1 2  1 1 1  2 1 1\'
-eval piece_"$L_TETRIMINO"_cedges_"$WEST"=\' 0 0 0  1 0 2\'
 
 # J-Tetrimino
 eval piece_"$J_TETRIMINO"_color=\"$BLUE\"
@@ -362,10 +344,6 @@ eval piece_"$J_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$J_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$J_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$J_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
-eval piece_"$J_TETRIMINO"_cedges_"$NORTH"=\'0 0 1  1 1 1  2 1 1\'
-eval piece_"$J_TETRIMINO"_cedges_"$EAST"=\' 1 0 2  2 0 0\'
-eval piece_"$J_TETRIMINO"_cedges_"$SOUTH"=\'0 1 1  1 1 1  2 1 2\'
-eval piece_"$J_TETRIMINO"_cedges_"$WEST"=\' 0 2 2  1 0 2\'
 
 # S-Tetrimino
 eval piece_"$S_TETRIMINO"_color=\"$GREEN\"
@@ -377,10 +355,6 @@ eval piece_"$S_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$S_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$S_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$S_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
-eval piece_"$S_TETRIMINO"_cedges_"$NORTH"=\'0 1 1  1 0 1  2 0 0\'
-eval piece_"$S_TETRIMINO"_cedges_"$EAST"=\' 1 0 1  2 1 2\'
-eval piece_"$S_TETRIMINO"_cedges_"$SOUTH"=\'0 2 2  1 1 2  2 1 1\'
-eval piece_"$S_TETRIMINO"_cedges_"$WEST"=\' 0 0 1  1 1 2\'
 
 # Z-Tetrimino
 eval piece_"$Z_TETRIMINO"_color=\"$RED\"
@@ -392,10 +366,6 @@ eval piece_"$Z_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$Z_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
-eval piece_"$Z_TETRIMINO"_cedges_"$NORTH"=\'0 0 0  1 0 1  2 1 1\'
-eval piece_"$Z_TETRIMINO"_cedges_"$EAST"=\' 1 1 2  2 0 1\'
-eval piece_"$Z_TETRIMINO"_cedges_"$SOUTH"=\'0 1 1  1 1 2  2 2 2\'
-eval piece_"$Z_TETRIMINO"_cedges_"$WEST"=\' 0 1 2  1 0 1\'
 
 eval T_TETRIMINO_"$NORTH"_SIDES=\"0 0  2 0  0 2  2 2\"
 eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  0 2  0 0  0 2\"
@@ -496,7 +466,7 @@ already_hold=false         #
 help_on=true               # if this flag is true help is shown, if false, hide
 beep_on=true               #
 no_color=false             # do we use color or not
-showtime=true              # controller runs while this flag is true
+running=true               # controller runs while this flag is true
 discard_cmds_timepoint=0   # cmds issued before this time is discarded
 empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
@@ -741,6 +711,8 @@ hold_tetrimino() {
   #  Between Holds, A Lock Down must take place. reset this flag in move_piece().
   "$already_hold" && return
   already_hold=true
+  
+  clear_ghost
 
   # if hold queue is empty,
   [ -z "$hold_queue" ] && {
@@ -773,6 +745,8 @@ generate_tetrimino() {
 
   current_piece_behaviour=$BEHAVIOUR_NON
 
+  update_ghost false
+
   lowest_line=$START_Y
   lands_on=false
 }
@@ -781,8 +755,7 @@ localvar what_type_tspin pos_x pos_y rotation side_x side_y side
 _what_type_tspin() {
   varname=$1 pos_x=$2 pos_y=$3 rotation=$4
 
-  shift $#
-  eval set \$T_TETRIMINO_"$rotation"_SIDES
+  eval set -- \$T_TETRIMINO_"$rotation"_SIDES
   side=0 # 1: A; 2: B; 3: C; 4: D
   while [ $# -gt 0 ]; do
     side=$((side + 1))
@@ -827,20 +800,18 @@ _what_type_tspin() {
 # Arguments:
 #   1 - new x coordinate of the piece
 #   2 - new y coordinate of the piece
-localvar new_piece_location_ok x_test y_test x y lx ly field_cell
+localvar new_piece_location_ok x_test y_test x y field_cell
 _new_piece_location_ok() {
-  x_test="$1"; y_test="$2" # at first, we should preserve the parameters ...
-  shift $#                 # .. and we shift all.
+  x_test="$1"; y_test="$2" # at first, we should preserve the parameters
 
   # set minos coordinates into parameters
   # $1 - x, $2 - y
-  eval set \$piece_"$current_piece"_minos_"$current_piece_rotation"
+  eval set -- \$piece_"$current_piece"_minos_"$current_piece_rotation"
 
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
-    lx="$1"; ly="$2"
-    x=$((x_test + lx)) # new x coordinate of piece cell
-    y=$((y_test - ly)) # new y coordinate of piece cell
+    x=$((x_test + $1)) # new x coordinate of piece cell
+    y=$((y_test - $2)) # new y coordinate of piece cell
 
     [ "$y" -lt 0 ]              ||
     [ "$x" -lt 0 ]              ||
@@ -853,29 +824,6 @@ _new_piece_location_ok() {
   done
   return 0
 }
-
-# localvar merge_grounds x y1 y2 ceil floor
-# _merge_grounds() {
-#   x=$1; y1=$(( $2 + 1 )); y2=$(( $3 - 1 ))
-
-#   eval set -- \$playfield_grounds_$x
-  
-#   eval ceil="\$playfield_${y1}_${x}"
-#   floor=0
-#   [ $y2 -ge 0 ] && eval floor="\$playfield_${y2}_${x}"
-  
-
-#   [ $floor -ne '-1' ] && {
-#     shift 1
-#   }
-
-#   [ $ceil -eq '-1' ] && {
-#     set -- "$@" "$y1"
-#   }
-
-#   # echo "$@"
-#   echo "$*" >> $LOG
-# }
 
 # this function updated occupied cells in playfield array after piece is dropped
 localvar flatten_playfield color lx ly x y
@@ -894,12 +842,6 @@ _flatten_playfield() {
     eval playfield_"$y"_"$x"="$color"
     shift 2 # shift to next minos coordinates
   done
-
-  # eval set -- \$piece_"$current_piece"_cedges_"$current_piece_rotation"
-  # while [ $# -gt 0 ]; do
-  #   merge_grounds $1 $(( current_piece_y - $2 )) $(( current_piece_y - $3 ))
-  #   shift 3
-  # done
 }
 
 localvar is_line_completed x line_y
@@ -1128,7 +1070,7 @@ _update_score() {
 
   [ -z "$actions_to_show" ] || {
     IFS_SAVE=$IFS; IFS=:
-    shift $#; set $actions_to_show
+    set -- $actions_to_show
     IFS=$IFS_SAVE
 
     xyprint "$SCORE_X" $((SCORE_Y + 7)) "             " # clear 3 rows
@@ -1201,6 +1143,7 @@ move_piece() {
     [ "$2" -lt "$current_piece_y" ] && lands_on=false # can move down means not lands on
     clear_current                                     # let's wipe out piece current location
     update_location $1 $2                             # update location
+    update_ghost
     show_current                                      # and draw piece in new location
     return 0                                          # nothing more to do here
   fi                                                  # if we could not move piece to new location
@@ -1229,9 +1172,10 @@ lockdown() {
   already_hold=false   # player can hold the falling tetrimino.
 }
 
+# Arguments:
+#   1 - rotation direction; 1: clockwise; -1: counter-clockwise
 localvar rotate_piece_classic direction old_rotation new_rotation
 _rotate_piece_classic() {
-  # arguments: 1 - rotation direction; 1: clockwise; -1: counter-clockwise
   direction="$1"
 
   old_rotation=$current_piece_rotation                             # preserve current orientation
@@ -1245,6 +1189,7 @@ _rotate_piece_classic() {
     current_piece_rotation=$old_rotation                           # if yes - restore old rotation ...
     clear_current                                                  # ... clear piece image
     current_piece_rotation=$new_rotation                           # ... set new orientation
+    update_ghost
     show_current                                                   # ... draw piece with new orientation
     return 0
   fi
@@ -1253,9 +1198,10 @@ _rotate_piece_classic() {
   return 1
 }
 
+# Arguments:
+#   1 - rotation direction; 1: clockwise; -1: counter-clockwise
 localvar rotate_piece_super direction old_rotation new_rotation shift_x shift_y new_x new_y point
 _rotate_piece_super() {
-  # arguments: 1 - rotation direction. 1: clockwise; -1: counter-clockwise
   direction="$1"
 
   old_rotation=$current_piece_rotation # preserve current orientation
@@ -1266,8 +1212,7 @@ _rotate_piece_super() {
   current_piece_rotation=$new_rotation
 
   # test each rotation point. Each Tetrimino has five possible rotation points.
-  shift $#
-  eval set \$piece_${current_piece}_rshifts_${old_rotation}
+  eval set -- \$piece_${current_piece}_rshifts_${old_rotation}
   # now parameters setted like below
   # '<POINT1> <POINT2> <POINT3> <POINT4> <POINT5>'
   #   <POINT<NO>>: '<LEFT_SHIFT_X> <LEFT_SHIFT_Y> <RIGHT_SHIFT_X> <RIGHT_SHIFT_Y>'
@@ -1289,6 +1234,7 @@ _rotate_piece_super() {
       clear_current                              # ... clear piece image
       current_piece_rotation=$new_rotation       # ... set new orientation
       update_location $new_x $new_y              # ... set new location
+      update_ghost
       show_current                               # ... draw piece with new pose
       return 0                                   # nothing to do more here
     fi
@@ -1306,7 +1252,6 @@ move_right() {
   can_maniqulate || return
   move_piece $((current_piece_x + 1)) "$current_piece_y" && {
     # if successfuly move
-    update_ghost
     current_piece_behaviour=$BEHAVIOUR_RIGHT
     on_manipulation
   }
@@ -1316,7 +1261,6 @@ move_left() {
   can_maniqulate || return
   move_piece $((current_piece_x - 1)) "$current_piece_y" && {
     # if successfuly move
-    update_ghost
     current_piece_behaviour=$BEHAVIOUR_LEFT
     on_manipulation
   }
@@ -1326,7 +1270,6 @@ rotate_cw() {
   can_maniqulate || return
   $rotate_piece_func 1 && {
     # if successfuly rotate
-    update_ghost
     current_piece_behaviour=$BEHAVIOUR_ROTATE
     on_manipulation
   }
@@ -1397,9 +1340,9 @@ _update_ghost() {
 
   eval color=\"\$piece_"$current_piece"_color\"
 
-  ${1:-true} && [ ${ghost_piece-''} ] && {
-    draw_playfield_piece $ghost_piece_x $ghost_piece_y  $ghost_piece $ghost_piece_rotation "$empty_cell"
-  }
+  ${1:-true} && clear_ghost
+
+  echo $current_piece_x $new_y $current_piece $current_piece_rotation >> $LOG
 
   set_fg "$color"
   draw_playfield_piece $current_piece_x $new_y $current_piece $current_piece_rotation "$ghost_cell"
@@ -1409,6 +1352,12 @@ _update_ghost() {
   ghost_piece=$current_piece
   ghost_piece_x=$current_piece_x; ghost_piece_y=$new_y
   ghost_piece_rotation=$current_piece_rotation
+}
+
+clear_ghost() {
+  ${ghost_piece+:} return
+
+  draw_playfield_piece $ghost_piece_x $ghost_piece_y  $ghost_piece $ghost_piece_rotation "$empty_cell"
 }
 
 # playfield is 2-dimensional array, data is stored as follows:
@@ -1439,7 +1388,6 @@ _redraw_playfield() {
     y=$((y + 1))
   done
 }
-
 
 # Arguments:
 #   1 - x
@@ -1502,8 +1450,8 @@ localvar draw_next color visible x y content
 _draw_next() {
   # Arguments: 1 - visibility ( false - no, true - yes)
   x="$NEXT_X"; y="$NEXT_Y"; visible="$1"
-  shift $#
-  set $next_queue
+
+  set -- $next_queue
   while [ $# -gt 0 ]; do
     content='  '
     "$visible" && {
@@ -1620,7 +1568,11 @@ redraw_screen() {
   update_score "$ACTION_NONE"
   draw_border
   redraw_playfield
-  show_current
+
+  [ ${current_piece:-''} ] && {
+    update_ghost
+    show_current
+  }
 }
 
 toggle_help() {
@@ -1639,7 +1591,7 @@ toggle_color() {
 }
 
 quit() {
-  showtime=false                               # let's stop controller ...
+  running=false                               # let's stop controller ...
   send_signal $SIGNAL_TERM $timer_pid          # let's kill ticker process ...
   send_signal $SIGNAL_TERM $reader_pid         #
   send_signal $SIGNAL_TERM $ticker_pid         #
@@ -1688,12 +1640,6 @@ _init() {
     y=$((y + 1))
   done
 
-  # x=0
-  # while [ "$x" -lt "$PLAYFIELD_W" ]; do
-  #   eval playfield_grounds_"$x"=\'0 -1\'
-  #   x=$((x + 1))
-  # done
-
   # prepare next queue filled with NEXT_MAX tetrimino
   i=0
   while [ "$i" -lt "$NEXT_MAX" ]; do
@@ -1705,7 +1651,7 @@ _init() {
   ticker_pid=''; timer_pid=''; reader_pid=''
   while [ -z $ticker_pid ] || [ -z $timer_pid ] || [ -z $reader_pid ]; do
     read statement
-    shift $#; set $statement
+    set -- $statement
     [ $# -lt 4 ] && continue
     from=$2; cmd=$3; pid=$4
 
@@ -1734,7 +1680,7 @@ _init() {
     level_up
     $debug && printf "$level " >> $LOG
     while read statement; do
-      shift $#; set $statement
+      set -- $statement
       [ $# -eq 3 ]               &&
       [ $2 -eq $PROCESS_TICKER ] &&
       [ $3 -eq $ACK ]            && {
@@ -1915,11 +1861,11 @@ _controller() {
   init
   discard_cmds
 
-  while $showtime; do # run while showtime variable is true, it is changed to false in quit function
+  while $running; do # run while this variable is true, it is changed to false in quit function
     # read next command from stdout
     # skip cmds issued before discard_cmds_timepoint
     while read statement; do
-      shift $#; set $statement
+      set -- $statement
       [ $# -lt 3 ] && continue   # validate param counts is 3 or more
       issued_time="$1"; from="$2" cmd="$3"
       [ "$issued_time" -gt "$discard_cmds_timepoint" ] && break
