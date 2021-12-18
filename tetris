@@ -1137,8 +1137,6 @@ can_maniqulate() {
 #   1 - new x coordinate
 #   2 - new y coordinate
 move_piece() {
-  immediately_lockdown=${3:-false}
-
   if new_piece_location_ok "$1" "$2"; then            # if new location is ok
     [ "$2" -lt "$current_piece_y" ] && lands_on=false # can move down means not lands on
     clear_current                                     # let's wipe out piece current location
@@ -1150,14 +1148,10 @@ move_piece() {
 
   [ "$2" -eq "$current_piece_y" ] && return 1         # and this was horizontal move
 
-  if "$immediately_lockdown"; then
-    lockdown
-  else
-    "$lands_on" || {
-      # echo 'Send Lock' >> $LOG # for debugging to check when signal fired.
-      send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-    }
-  fi
+  "$lands_on" || {
+    # echo 'Send Lock' >> $LOG # for debugging to check when signal fired.
+    send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+  }
   lands_on=true
 
   return 1
@@ -1315,12 +1309,8 @@ _hard_drop() {
   new_y=$(test_hard_drop $current_piece_x $current_piece_y)
   
   update_score "$ACTION_HARD_DROP" $(( current_piece_y - new_y ))
-  move_piece $current_piece_x $new_y true
-
-  # while move_piece $current_piece_x $((current_piece_y - 1)) true; do
-  #   # if successfuly move
-  #   update_score "$ACTION_HARD_DROP"
-  # done
+  move_piece $current_piece_x $new_y
+  lockdown # A Tetrimino that is Hard Dropped Locks Down immediately
 
   current_piece_behaviour=$BEHAVIOUR_HARD_DROP
 }
