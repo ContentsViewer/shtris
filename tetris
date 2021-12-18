@@ -268,6 +268,13 @@ CENTER_X=$((PLAYFIELD_X + PLAYFIELD_W))
 CENTER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
 
 # piece starting location
+# Tetriminos are all generated North Facing (just as they appear in the Next Queue) on the 21st
+# and 22nd rows, just above the Skyline. There are 10 cells across the Matrix, and every Tetrimino
+# that is three Minos wide is generated on the 4th cell across and stretches to the 6th. This
+# includes the T-Tetrimino, L-Tetrimino, J-Tetrimino, S-Tetrimino and Z-Tetrimino. The I-Tetrimino and
+# O-Tetrimino are exactly centered at generation. The I-Tetrimino is generated on the 21st row
+# (not 22nd), stretching from the 4th to 7th cells. The O-Tetrimino is generated on the 5th and
+# 6th cell.
 START_X=3
 START_Y=21
 
@@ -482,7 +489,7 @@ current_tspin=$ACTION_NONE #
 #   This Game Over Condition occurs when a whole Tetrimino Locks Down above the Skyline.
 #
 # Block Out
-#   This Game Over Condition occurs when part of a newly-generated Tetrimino is blocked due to 
+#   This Game Over Condition occurs when part of a newly-generated Tetrimino is blocked due to
 #   an existing Block in the Matrix
 
 # Function for defining local variables for cross-shells support.
@@ -719,7 +726,7 @@ hold_tetrimino() {
   #  Between Holds, A Lock Down must take place. reset this flag in move_piece().
   "$already_hold" && return
   already_hold=true
-  
+
   clear_ghost
 
   # if hold queue is empty,
@@ -1331,7 +1338,7 @@ localvar hard_drop new_y
 _hard_drop() {
   # move piece all way down
   new_y=$(test_hard_drop $current_piece_x $current_piece_y)
-  
+
   update_score "$ACTION_HARD_DROP" $(( current_piece_y - new_y ))
   move_piece $current_piece_x $new_y
   lockdown # A Tetrimino that is Hard Dropped Locks Down immediately
@@ -1362,7 +1369,7 @@ _show_ghost() {
 
   set_fg "$color"
   draw_playfield_piece $current_piece_x $new_y $current_piece $current_piece_rotation "$ghost_cell"
-  
+
   reset_colors
 }
 
@@ -1636,15 +1643,15 @@ _init() {
   [ $bag_random -eq 0 ] && {
     # if not set
     bag_random=$(rand)
-    [ $bag_random -eq 0 ] && bag_random=$(( bag_random + 1 ))
+    [ $bag_random -eq 0 ] && bag_random=$((bag_random + 1))
   }
 
   # playfield is initialized with -1s (empty cells)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
-  # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y)
+  # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y), ...addtional buffer
   # (0, 0) is bottom left
   y=0
-  while [ "$y" -le "$START_Y" ]; do
+  while [ "$y" -le $((START_Y + 4)) ]; do
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
       eval playfield_"$y"_"$x"=-1
