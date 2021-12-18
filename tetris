@@ -1759,7 +1759,7 @@ _lockdown_timer() {
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
 
     sleep 0.1 & # wait in background for receiving the signal
-    wait
+    wait $!
   done
 }
 
@@ -1779,7 +1779,7 @@ ticker() {
   level=1
   while exist_process "$ppid"; do
     eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
-    wait
+    wait $!
     state "$PROCESS_TICKER $FALL" # <timestamp> <cmd>
     # echo "$level" >> $LOG # For debuging. check level variable
   done
