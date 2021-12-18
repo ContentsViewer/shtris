@@ -689,7 +689,7 @@ _feed_next_queue() {
 
 localvar get_next next_piece
 _get_next() {
-  set $next_queue
+  set -- $next_queue
   next_piece="$1"; # peek the next piece
 
   # next piece becomes current
@@ -745,7 +745,7 @@ generate_tetrimino() {
 
   current_piece_behaviour=$BEHAVIOUR_NON
 
-  update_ghost false
+  show_ghost
 
   lowest_line=$START_Y
   lands_on=false
@@ -1143,7 +1143,7 @@ move_piece() {
     [ "$2" -lt "$current_piece_y" ] && lands_on=false # can move down means not lands on
     clear_current                                     # let's wipe out piece current location
     update_location $1 $2                             # update location
-    update_ghost
+    update_ghost                                      # update ghost with new pose of current piece
     show_current                                      # and draw piece in new location
     return 0                                          # nothing more to do here
   fi                                                  # if we could not move piece to new location
@@ -1329,20 +1329,17 @@ hold() {
   hold_tetrimino
 }
 
+update_ghost() {
+  clear_ghost; show_ghost
+}
+
 # Update ghost piece with new location according to current piece.
-#
-# Arguments:
-#   1 - (optional) true(default) or false. clear previous ghost piece
-localvar update_ghost new_y color
-_update_ghost() {
+localvar show_ghost new_y color
+_show_ghost() {
   new_y=$(test_hard_drop $current_piece_x $current_piece_y)
   [ $new_y -eq $current_piece_y ] && return
 
   eval color=\"\$piece_"$current_piece"_color\"
-
-  ${1:-true} && clear_ghost
-
-  echo $current_piece_x $new_y $current_piece $current_piece_rotation >> $LOG
 
   set_fg "$color"
   draw_playfield_piece $current_piece_x $new_y $current_piece $current_piece_rotation "$ghost_cell"
@@ -1446,9 +1443,10 @@ clear_current() {
   draw_current "$empty_cell"
 }
 
+# Arguments:
+#   1 - visibility ( false - no, true - yes)
 localvar draw_next color visible x y content
 _draw_next() {
-  # Arguments: 1 - visibility ( false - no, true - yes)
   x="$NEXT_X"; y="$NEXT_Y"; visible="$1"
 
   set -- $next_queue
@@ -1570,7 +1568,7 @@ redraw_screen() {
   redraw_playfield
 
   [ ${current_piece:-''} ] && {
-    update_ghost
+    show_ghost
     show_current
   }
 }
