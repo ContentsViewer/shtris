@@ -241,7 +241,7 @@ PLAYFIELD_Y=2
 BORDER_COLOR=$WHITE
 
 # Location and color of score information
-SCORE_X=4
+SCORE_X=3
 SCORE_Y=6
 SCORE_COLOR=$GREEN
 
@@ -1070,9 +1070,9 @@ _update_score() {
   xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE: "
   xyprint "$SCORE_X" $((SCORE_Y + 1)) "│$score"
   xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
-  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES  $(printf %3d $lines_completed)"
-  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL  $(printf %3d $level)"
-  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL   $(printf %3d $goal)"
+  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES  $(printf %4d $lines_completed)"
+  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL  $(printf %4d $level)"
+  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL   $(printf %4d $goal)"
 
   [ -z "$actions_to_show" ] || {
     IFS_SAVE=$IFS; IFS=:
