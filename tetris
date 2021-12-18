@@ -1808,46 +1808,51 @@ _reader() {
     # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
     case "$a$b$key" in
-      *"$ESC_CH""$ESC_CH") # 2 escapes
+      # 2 escapes
+      *"$ESC_CH""$ESC_CH")
         cmd="$QUIT"
         ;;
-      *"$ESC_CH"'[A')      # 'up-cursor'
-        cmd="$ROTATE_CW"
-        ;;
-      *"$ESC_CH"'[B')      # 'down-cursor'
-        cmd="$SOFT_DROP"
-        ;;
-      *"$ESC_CH"'[C')      # 'right-cursor'
-        cmd="$RIGHT"
-        ;;
-      *"$ESC_CH"'[D')      # 'left-cursor'
+      # LEFT Arrow, Numpad 4
+      *"$ESC_CH"'[D'|*4)
         cmd="$LEFT"
         ;;
-      *' ')                # ' '
+      # RIGHT Arrow, Numpad 6
+      *"$ESC_CH"'[C'|*6)
+        cmd="$RIGHT"
+        ;;
+      # Space Bar, Numpad 8
+      *' '|*8)
         cmd="$HARD_DROP"
         ;;
-      *'c')                # 'c'
-        cmd="$HOLD"
+      # DOWN Arrow, Numpad 2
+      *"$ESC_CH"'[B'|*2)
+        cmd="$SOFT_DROP"
         ;;
-      *'x')                # 'x'
+      # UP Arrow, x, Numpad 1 5 9
+      *"$ESC_CH"'[A'|*x|*1|*5|*9)
         cmd="$ROTATE_CW"
         ;;
-      *'z')                # 'z'
+      # z, Numpad 3, 7
+      *z|*3|*7)
         cmd="$ROTATE_CCW"
         ;;
-      *'B')                # 'B'
+      # c, Numpad 0
+      *c|*0)
+        cmd="$HOLD"
+        ;;
+      *B)
         cmd="$TOGGLE_BEEP"
         ;;
-      *'C')                # 'C'
+      *C)
         cmd="$TOGGLE_COLOR"
         ;;
-      *'R')                # 'R'
+      *R)
         cmd="$REFRESH_SCREEN"
         ;;
-      *'H')                # 'H'
+      *H)
         cmd="$TOGGLE_HELP"
         ;;
-      *'Q')                # 'Q'
+      *Q)
         cmd="$QUIT"
         ;;
     esac
