@@ -1745,12 +1745,12 @@ _lockdown_timer() {
   trap 'trigger_counter=5'  $SIGNAL_RESTART_LOCKDOWN_TIMER
   trap 'trigger_counter=-1' $SIGNAL_CANCEL_LOCKDOWN_TIMER
 
-  ppid=$1
+  game_pid=$1
   get_pid my_pid
   state "$PROCESS_TIMER $MY_PID $my_pid"
 
   trigger_counter=-1  # -1 - already triggerd; 0 - triggered; greater than 0 - count to trigger
-  while exist_process "$ppid"; do
+  while exist_process "$game_pid"; do
     [ "$trigger_counter" -eq 0 ] && {
       trigger_counter=-1
       # echo 'Fire Lock' >> $LOG # for debugging to check when signal fired.
@@ -1771,13 +1771,13 @@ ticker() {
   # on this signal fall speed should be increased, this happens during level ups
   trap 'level=$((level + 1)); state "$PROCESS_TICKER $ACK"' $SIGNAL_LEVEL_UP
 
-  ppid=$1
+  game_pid=$1
   get_pid my_pid
   state "$PROCESS_TICKER $MY_PID $my_pid"
 
   # the game level, which levelup-signal counts up.
   level=1
-  while exist_process "$ppid"; do
+  while exist_process "$game_pid"; do
     eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
     wait $!
     state "$PROCESS_TICKER $FALL" # <timestamp> <cmd>
@@ -1793,13 +1793,14 @@ _reader() {
 
   a='' b=''
 
+  game_pid=$1
   get_pid my_pid
   state "$PROCESS_READER $MY_PID $my_pid"
 
   # disable terminal local echo (echoback) and canonical input mode
   stty -echo -icanon time 0 min 1
 
-  while true ;do
+  while exist_process "$game_pid"; do
     # read one key
     key=$(dd ibs=1 count=1 2>/dev/null)
     cmd=''
@@ -1913,7 +1914,7 @@ game() {
   (
     ticker "$$"         & # runs as separate process
     lockdown_timer "$$" &
-    reader
+    reader "$$"
   ) | (
     controller
   )
