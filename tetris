@@ -52,6 +52,8 @@ set -u # non initialized variable is an error
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
 VERSION='2.2.0-alpha'
 
+PROG=${0##*/}
+
 # the year the game was created.
 # displayed in COPYRIGHT.
 CREATED_YEAR='2021'
@@ -395,7 +397,7 @@ Q, ESCx2  Quit
 '
 
 USAGE="
-Usage: ${0##*/} [options]
+Usage: $PROG [options]
 
 Options:
  -d, --debug          debug mode
@@ -1937,7 +1939,7 @@ game_cleanup() {
 # Arguments:
 #   Error message
 die_usage() {
-  echo "${0##*/}: $1" 1>&2
+  echo "$PROG: $1" 1>&2
   echo "$USAGE" 1>&2; exit 1
 }
 
