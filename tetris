@@ -474,6 +474,7 @@ lockdown_rule=$LOCKDOWN_RULE_EXTENDED
 score=0                    # score variable initialization
 level=1                    # level variable initialization
 lines_completed=0          # completed lines counter initialization
+actions_to_show=''         #
 already_hold=false         #
 help_on=true               # if this flag is true help is shown, if false, hide
 beep_on=true               #
@@ -516,6 +517,23 @@ str_repeat() {
     set -- "$1" "$2" $(($3 - 1)) "$4$2"
   done
   eval "$1=\$4\$2"
+}
+
+
+str_lpad() {
+  set -- "$1" "$2" "$3" "${4:- }"
+  while [ "${#2}" -lt "$3" ]; do
+    set -- "$1" "${4}${2}" "$3" "$4"
+  done
+  eval "$1=\$2"
+}
+
+str_rpad() {
+  set -- "$1" "$2" "$3" "${4:- }"
+  while [ "${#2}" -lt "$3" ]; do
+    set -- "$1" "${2}${4}" "$3" "$4"
+  done
+  eval "$1=\$2"
 }
 
 # screen_buffer is variable, that accumulates all screen changes
@@ -988,16 +1006,27 @@ process_fallen_piece() {
   discard_cmds
 }
 
+draw_scoreboard() {
+  set_bold
+  set_fg "$SCORE_COLOR"
+  xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE:"
+  xyprint "$SCORE_X" $((SCORE_Y + 1)) "│"
+  xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
+  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES"
+  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL"
+  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL"
+  reset_colors
+}
+
 # Arguments:
 #   1 - ACTION name. ex: ACTION_SINGLE
 #   2 - (ACTION_HARD_DROP) lines
-localvar update_score factor score_to_add lines_to_add actions_to_show i
+localvar update_score factor score_to_add lines_to_add i text
 _update_score() {
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
   score_to_add=0
   lines_to_add=0
-  actions_to_show=''
 
   # A Back-to-Back sequence is only broken by a Single, Double, or Triple Line Clear.
   # Locking down a Tetrimino without clearing a line or holding a Tetrimino does not
@@ -1084,34 +1113,31 @@ _update_score() {
   score=$((score + score_to_add))
   lines_completed=$((lines_completed + lines_to_add))
 
-  [ "$level" -le "$LEVEL_MAX" ]      &&
+  [ "$level" -lt "$LEVEL_MAX" ]      &&
   [ "$lines_completed" -ge "$goal" ] && {
     level_up
   }
 
   set_bold
   set_fg "$SCORE_COLOR"
-  xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE: "
-  xyprint "$SCORE_X" $((SCORE_Y + 1)) "│$score"
-  xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
-  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES  $(printf %4d $lines_completed)"
-  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL  $(printf %4d $level)"
-  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL   $(printf %4d $goal)"
+  xyprint $((SCORE_X + 1)) $((SCORE_Y + 1)) "$score"
+  str_lpad text "$lines_completed" 4
+  xyprint $((SCORE_X + 8)) $((SCORE_Y + 3)) "$text"
+  str_lpad text "$level" 4
+  xyprint $((SCORE_X + 8)) $((SCORE_Y + 4)) "$text"
+  str_lpad text "$goal" 4
+  xyprint $((SCORE_X + 8)) $((SCORE_Y + 5)) "$text"
 
-  [ -z "$actions_to_show" ] || {
-    IFS_SAVE=$IFS; IFS=:
-    set -- $actions_to_show
-    IFS=$IFS_SAVE
+  IFS_SAVE=$IFS; IFS=:
+  set -- $actions_to_show
+  IFS=$IFS_SAVE
 
-    xyprint "$SCORE_X" $((SCORE_Y + 7)) "            " # clear 3 rows
-    xyprint "$SCORE_X" $((SCORE_Y + 8)) "            " # max width 12 ' Mini T-Spin'
-    xyprint "$SCORE_X" $((SCORE_Y + 9)) "            " #
-    i=7
-    while [ $# -gt 0 ]; do
-      xyprint "$SCORE_X" $((SCORE_Y + i)) " $1"
-      i=$((i + 1)); shift
-    done
-  }
+  i=7
+  while [ $# -gt 0 ]; do
+    str_rpad text " $1" 12 # max width 12 ' Mini T-Spin'
+    xyprint "$SCORE_X" $((SCORE_Y + i)) "$text"
+    i=$((i + 1)); shift
+  done
 
   reset_colors
 }
@@ -1341,20 +1367,19 @@ soft_drop() {
   }
 }
 
-test_hard_drop() {
-  # no need local attribute.
-  # this function will called as "Command Substitution" `$()`
-  x=$1; y=$(( $2 - 1 ))
+localvar test_hard_drop x y
+_test_hard_drop() {
+  x=$2; y=$(( $3 - 1 ))
   while new_piece_location_ok $x $y; do
     y=$(( y - 1 ))
   done
-  echo $(( y + 1 ))
+  eval "$1=\$(( y + 1 ))"
 }
 
 localvar hard_drop new_y
 _hard_drop() {
   # move piece all way down
-  new_y=$(test_hard_drop $current_piece_x $current_piece_y)
+  test_hard_drop new_y $current_piece_x $current_piece_y
 
   update_score "$ACTION_HARD_DROP" $(( current_piece_y - new_y ))
   move_piece $current_piece_x $new_y
@@ -1374,7 +1399,7 @@ update_ghost() {
 # Update ghost piece with new location according to current piece.
 localvar show_ghost new_y color
 _show_ghost() {
-  new_y=$(test_hard_drop $current_piece_x $current_piece_y)
+  test_hard_drop new_y $current_piece_x $current_piece_y
 
   ghost_piece=$current_piece
   ghost_piece_x=$current_piece_x; ghost_piece_y=$new_y
@@ -1602,6 +1627,7 @@ redraw_screen() {
   draw_help                   # should first. draw help on the lowest layer
   show_next
   show_hold
+  draw_scoreboard
   update_score "$ACTION_NONE"
   draw_border
   redraw_playfield
