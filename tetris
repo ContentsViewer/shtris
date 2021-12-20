@@ -471,6 +471,7 @@ lockdown_rule=$LOCKDOWN_RULE_EXTENDED
 score=0                    # score variable initialization
 level=1                    # level variable initialization
 lines_completed=0          # completed lines counter initialization
+actions_to_show=''         #
 already_hold=false         #
 help_on=true               # if this flag is true help is shown, if false, hide
 beep_on=true               #
@@ -976,13 +977,12 @@ process_fallen_piece() {
 # Arguments:
 #   1 - ACTION name. ex: ACTION_SINGLE
 #   2 - (ACTION_HARD_DROP) lines
-localvar update_score factor score_to_add lines_to_add actions_to_show i
+localvar update_score factor score_to_add lines_to_add i
 _update_score() {
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
   score_to_add=0
   lines_to_add=0
-  actions_to_show=''
 
   # A Back-to-Back sequence is only broken by a Single, Double, or Triple Line Clear.
   # Locking down a Tetrimino without clearing a line or holding a Tetrimino does not
