@@ -516,6 +516,23 @@ str_repeat() {
   eval "$1=\$4\$2"
 }
 
+
+str_lpad() {
+  set -- "$1" "$2" "$3" "${4:- }"
+  while [ "${#2}" -lt "$3" ]; do
+    set -- "$1" "${4}${2}" "$3" "$4"
+  done
+  eval "$1=\$2"
+}
+
+str_rpad() {
+  set -- "$1" "$2" "$3" "${4:- }"
+  while [ "${#2}" -lt "$3" ]; do
+    set -- "$1" "${2}${4}" "$3" "$4"
+  done
+  eval "$1=\$2"
+}
+
 # screen_buffer is variable, that accumulates all screen changes
 # this variable is printed in controller once per game cycle
 screen_buffer=''
@@ -974,10 +991,22 @@ process_fallen_piece() {
   discard_cmds
 }
 
+draw_scoreboard() {
+  set_bold
+  set_fg "$SCORE_COLOR"
+  xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE:"
+  xyprint "$SCORE_X" $((SCORE_Y + 1)) "│"
+  xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
+  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES"
+  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL"
+  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL"
+  reset_colors
+}
+
 # Arguments:
 #   1 - ACTION name. ex: ACTION_SINGLE
 #   2 - (ACTION_HARD_DROP) lines
-localvar update_score factor score_to_add lines_to_add i
+localvar update_score factor score_to_add lines_to_add i text
 _update_score() {
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
@@ -1076,27 +1105,24 @@ _update_score() {
 
   set_bold
   set_fg "$SCORE_COLOR"
-  xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE: "
-  xyprint "$SCORE_X" $((SCORE_Y + 1)) "│$score"
-  xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
-  xyprint "$SCORE_X" $((SCORE_Y + 3)) "│LINES  $(printf %4d $lines_completed)"
-  xyprint "$SCORE_X" $((SCORE_Y + 4)) "│LEVEL  $(printf %4d $level)"
-  xyprint "$SCORE_X" $((SCORE_Y + 5)) "│GOAL   $(printf %4d $goal)"
+  xyprint $((SCORE_X + 1)) $((SCORE_Y + 1)) "$score"
+  str_lpad text "$lines_completed" 4
+  xyprint $((SCORE_X + 8)) $((SCORE_Y + 3)) "$text"
+  str_lpad text "$level" 4
+  xyprint $((SCORE_X + 8)) $((SCORE_Y + 4)) "$text"
+  str_lpad text "$goal" 4
+  xyprint $((SCORE_X + 8)) $((SCORE_Y + 5)) "$text"
 
-  [ -z "$actions_to_show" ] || {
-    IFS_SAVE=$IFS; IFS=:
-    set -- $actions_to_show
-    IFS=$IFS_SAVE
+  IFS_SAVE=$IFS; IFS=:
+  set -- $actions_to_show
+  IFS=$IFS_SAVE
 
-    xyprint "$SCORE_X" $((SCORE_Y + 7)) "            " # clear 3 rows
-    xyprint "$SCORE_X" $((SCORE_Y + 8)) "            " # max width 12 ' Mini T-Spin'
-    xyprint "$SCORE_X" $((SCORE_Y + 9)) "            " #
-    i=7
-    while [ $# -gt 0 ]; do
-      xyprint "$SCORE_X" $((SCORE_Y + i)) " $1"
-      i=$((i + 1)); shift
-    done
-  }
+  i=7
+  while [ $# -gt 0 ]; do
+    str_rpad text " $1" 12 # max width 12 ' Mini T-Spin'
+    xyprint "$SCORE_X" $((SCORE_Y + i)) "$text"
+    i=$((i + 1)); shift
+  done
 
   reset_colors
 }
@@ -1586,6 +1612,7 @@ redraw_screen() {
   draw_help                   # should first. draw help on the lowest layer
   show_next
   show_hold
+  draw_scoreboard
   update_score "$ACTION_NONE"
   draw_border
   redraw_playfield
