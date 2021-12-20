@@ -1326,20 +1326,19 @@ soft_drop() {
   }
 }
 
-test_hard_drop() {
-  # no need local attribute.
-  # this function will called as "Command Substitution" `$()`
-  x=$1; y=$(( $2 - 1 ))
+localvar test_hard_drop x y
+_test_hard_drop() {
+  x=$2; y=$(( $3 - 1 ))
   while new_piece_location_ok $x $y; do
     y=$(( y - 1 ))
   done
-  echo $(( y + 1 ))
+  eval "$1=\$(( y + 1 ))"
 }
 
 localvar hard_drop new_y
 _hard_drop() {
   # move piece all way down
-  new_y=$(test_hard_drop $current_piece_x $current_piece_y)
+  test_hard_drop new_y $current_piece_x $current_piece_y
 
   update_score "$ACTION_HARD_DROP" $(( current_piece_y - new_y ))
   move_piece $current_piece_x $new_y
@@ -1359,7 +1358,7 @@ update_ghost() {
 # Update ghost piece with new location according to current piece.
 localvar show_ghost new_y color
 _show_ghost() {
-  new_y=$(test_hard_drop $current_piece_x $current_piece_y)
+  test_hard_drop new_y $current_piece_x $current_piece_y
 
   ghost_piece=$current_piece
   ghost_piece_x=$current_piece_x; ghost_piece_y=$new_y
