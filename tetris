@@ -20,9 +20,6 @@
 # * Extended Placement / Infinite Placement / Classic Lock Down
 # * Super / Classic Rotation System
 # * Changing the Starting Level
-#
-# not implemented
-#
 # * Ghost Piece
 #
 # Enjoy :-)
@@ -31,7 +28,7 @@
 #   Linux   sh | o
 #   FreeBSD sh | o
 #   BusyBox sh | o
-#   Solaris sh | x
+#   Solaris sh | o (Almost work)
 #
 # Github Page:
 #   <https://github.com/ContentsViewer/sh-tetris>
@@ -43,6 +40,16 @@
 #   * We cannot use `read -s -n 1`
 #   * Any process cannot send signals to control(main) process
 #     * stty issues error -> cannot read keyboard inputs
+#   * Avoid using `trap` and background `sleep` together.
+#     ```
+#       trap 'printf .' USR1
+#       
+#       while true; do
+#         sleep 0.01 & wait $!
+#       done 
+#     ```
+#
+#     Under macOS (bash 3.2.57), "Illegal instruction: 4" error occured.
 #
 
 set -u # non initialized variable is an error
@@ -1801,8 +1808,10 @@ _lockdown_timer() {
     }
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
 
-    sleep 0.1 & # wait in background for receiving the signal
-    wait $!
+    sleep 0.1
+    
+    # sleep 0.1 & # wait in background for receiving the signal
+    # wait $!
   done
 }
 
@@ -1821,8 +1830,8 @@ ticker() {
   # the game level, which levelup-signal counts up.
   level=1
   while exist_process "$game_pid"; do
-    eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
-    wait $!
+    eval sleep \"\$FALL_SPEED_LEVEL_$level\"
+    # wait $!
     state "$PROCESS_TICKER $FALL" # <timestamp> <cmd>
     # echo "$level" >> $LOG # For debuging. check level variable
   done
