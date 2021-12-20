@@ -1378,17 +1378,18 @@ soft_drop() {
 
 localvar test_hard_drop x y
 _test_hard_drop() {
-  x=$2; y=$(( $3 - 1 ))
+  x=$1; y=$(( $2 - 1 ))
   while new_piece_location_ok $x $y; do
     y=$(( y - 1 ))
   done
-  eval "$1=\$(( y + 1 ))"
+  return $(( y + 1 )) # return value must be within 0 ~ 255
 }
 
 localvar hard_drop new_y
 _hard_drop() {
   # move piece all way down
-  test_hard_drop new_y $current_piece_x $current_piece_y
+  test_hard_drop $current_piece_x $current_piece_y
+  new_y=$?
 
   update_score "$ACTION_HARD_DROP" $(( current_piece_y - new_y ))
   move_piece $current_piece_x $new_y
@@ -1408,8 +1409,9 @@ update_ghost() {
 # Update ghost piece with new location according to current piece.
 localvar show_ghost new_y color
 _show_ghost() {
-  test_hard_drop new_y $current_piece_x $current_piece_y
-
+  test_hard_drop $current_piece_x $current_piece_y
+  new_y=$?
+  
   ghost_piece=$current_piece
   ghost_piece_x=$current_piece_x; ghost_piece_y=$new_y
   ghost_piece_rotation=$current_piece_rotation
