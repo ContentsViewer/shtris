@@ -280,6 +280,9 @@ CENTER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
 START_X=3
 START_Y=21
 
+# assured over 3 blocks above START_Y
+BUFFER_ZONE_Y=24
+
 # loading spin sequence
 LOADING_SPIN='/ - \ |'
 
@@ -859,10 +862,11 @@ _flatten_playfield() {
   done
 }
 
+# check the line is completed
+# Arguments:
+#   1 - line y of playfield you want to check
 localvar is_line_completed x line_y
 _is_line_completed() {
-  # Arguments: 1 - line y of playfield you want to check
-  # check the line is completed
   line_y="$1"
 
   x=$((PLAYFIELD_W - 1))
@@ -875,34 +879,48 @@ _is_line_completed() {
   return 0 # true
 }
 
-# this function goes through playfield array and eliminates lines without empty cells
-localvar process_complete_lines x y yi completed_lines field_cell completed_lines_count action
+# This function checks if the lines in the hot zone are complete
+# and fall the upper blocks down.
+# 
+# Arguments:
+#   1 - hot zone y min
+#   2 - hot zone y max (inclusive)
+localvar process_complete_lines x y yi completed_lines field_cell action
 _process_complete_lines() {
   completed_lines=''
-  y=0
-  while [ "$y" -lt "$PLAYFIELD_H" ]; do
+  y=$1; yi=$2
+  [ $y -lt 0 ] && y=0
+
+  while [ "$y" -le "$yi" ]; do
     is_line_completed "$y" && completed_lines="$completed_lines $y"
     y=$((y + 1))
   done
 
-  [ -z "$completed_lines" ] && return "$ACTION_NONE"
-  set $completed_lines
-  completed_lines_count=$#
+  set -- $completed_lines
+  [ $# -eq 0 ] && return "$ACTION_NONE"
+
+  action="$ACTION_NONE"
+  case $# in
+    1) action="$ACTION_SINGLE" ;;
+    2) action="$ACTION_DOUBLE" ;;
+    3) action="$ACTION_TRIPLE" ;;
+    4) action="$ACTION_TETRIS" ;;
+    *) echo "invalid line clear" >> $LOG
+  esac
 
   # move lines down. move cells from y to yi
-  y=-1; yi=0
-  while [ "$y" -lt "$START_Y" ]; do
+  y=$1; shift
+  yi=$y
+  while [ "$y" -lt "$BUFFER_ZONE_Y" ]; do
+
     y=$((y + 1))
     [ $# -gt 0 ]      &&
     [ "$1" -eq "$y" ] && {
-      shift
-      continue
-    }
-    [ "$y" -eq "$yi" ] && { # dont need to swap if y equals yi.
-      yi=$((yi + 1))
+      shift # line y is completed. 
       continue
     }
 
+    # move line y to y1
     x=$((PLAYFIELD_W - 1))
     while [ "$x" -ge 0 ]; do
       eval field_cell="\$playfield_${y}_${x}"
@@ -910,10 +928,11 @@ _process_complete_lines() {
       x=$((x - 1))
     done
     yi=$((yi + 1))
+    
   done
 
   # now let's mark lines from line yi to top line of the playfield as free.
-  while [ "$yi" -le "$START_Y" ]; do
+  while [ "$yi" -le "$BUFFER_ZONE_Y" ]; do
     x=$((PLAYFIELD_W - 1))
     while [ "$x" -ge 0 ]; do
       eval playfield_"$yi"_"$x"=-1
@@ -922,19 +941,15 @@ _process_complete_lines() {
     yi=$((yi + 1))
   done
 
-  action="$ACTION_NONE"
-  case "$completed_lines_count" in
-    1) action="$ACTION_SINGLE" ;;
-    2) action="$ACTION_DOUBLE" ;;
-    3) action="$ACTION_TRIPLE" ;;
-    4) action="$ACTION_TETRIS" ;;
-  esac
   return "$action"
 }
 
 process_fallen_piece() {
   flatten_playfield
-  process_complete_lines; action="$?"
+  
+  # There should be a line clear between current_y - 4 ~ current_y
+  process_complete_lines $((current_piece_y - 4)) $current_piece_y; action="$?"
+
   [ $current_piece -eq $T_TETRIMINO ]                &&
   [ $current_piece_behaviour -eq $BEHAVIOUR_ROTATE ] && {
     case $current_tspin in
@@ -1650,10 +1665,10 @@ _init() {
 
   # playfield is initialized with -1s (empty cells)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
-  # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y), ...addtional buffer
+  # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y), ..., (BUFFER_ZONE_Y)
   # (0, 0) is bottom left
   y=0
-  while [ "$y" -le $((START_Y + 4)) ]; do
+  while [ "$y" -le "$BUFFER_ZONE_Y" ]; do
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
       eval playfield_"$y"_"$x"=-1
