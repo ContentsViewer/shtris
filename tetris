@@ -1069,7 +1069,7 @@ _update_score() {
   score=$((score + score_to_add))
   lines_completed=$((lines_completed + lines_to_add))
 
-  [ "$level" -le "$LEVEL_MAX" ]      &&
+  [ "$level" -lt "$LEVEL_MAX" ]      &&
   [ "$lines_completed" -ge "$goal" ] && {
     level_up
   }
