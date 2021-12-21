@@ -1133,10 +1133,10 @@ _update_score() {
   IFS=$IFS_SAVE
 
   i=7
-  while [ $# -gt 0 ]; do
-    str_rpad text " $1" 12 # max width 12 ' Mini T-Spin'
+  for text in "${1:-}" "${2:-}" "${3:-}"; do
+    str_rpad text " $text" 12 # max width 12 ' Mini T-Spin'
     xyprint "$SCORE_X" $((SCORE_Y + i)) "$text"
-    i=$((i + 1)); shift
+    i=$((i + 1))
   done
 
   reset_colors
