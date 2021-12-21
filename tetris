@@ -520,6 +520,10 @@ else
   }
 fi
 
+# Arguments:
+#   1 - varname
+#   2 - str to repeat
+#   3 - count
 str_repeat() {
   set -- "$1" "${2:-}" "${3:-0}" ""
   while [ "$3" -gt 1 ]; do
@@ -527,7 +531,6 @@ str_repeat() {
   done
   eval "$1=\$4\$2"
 }
-
 
 str_lpad() {
   set -- "$1" "$2" "$3" "${4:- }"
@@ -1098,7 +1101,7 @@ _update_score() {
       score_to_add=$factor
       ;;
     "$ACTION_HARD_DROP")
-      score_to_add=$(( factor * $2 ))
+      score_to_add=$((factor * $2))
       ;;
   esac
 
@@ -1141,6 +1144,7 @@ _update_score() {
   set -- $actions_to_show
   IFS=$IFS_SAVE
 
+  # We should clear at least 3 lines (e.g., 'T-Spin; Double; B2B')
   i=7
   while [ $# -gt 0 ]; do
     str_rpad text " $1" 12 # max width 12 ' Mini T-Spin'
@@ -1222,9 +1226,11 @@ move_piece() {
   return 1
 }
 
+
+# Check a whole Tetrimino is above the Skyline. if yes - Game Over
 # Returns:
-#   0 - lockout
-#   1 - not lockout
+#   0 - yes
+#   1 - no
 test_lockout() {
   eval set -- \$piece_"$current_piece"_minos_"$current_piece_rotation"
 
@@ -1376,20 +1382,25 @@ soft_drop() {
   }
 }
 
-localvar test_hard_drop x y
+# Arguments:
+#   1 - x
+#   2 - y
+# Returns:
+#   steps. 0 - no space to fall.
+localvar test_hard_drop steps
 _test_hard_drop() {
-  x=$1; y=$(( $2 - 1 ))
-  while new_piece_location_ok $x $y; do
-    y=$(( y - 1 ))
+  steps=1
+  while new_piece_location_ok $1 $(($2 - steps)); do
+    steps=$((steps + 1))
   done
-  return $(( y + 1 )) # return value must be within 0 ~ 255
+  return $((steps - 1)) # return value must be within 0 ~ 255
 }
 
 localvar hard_drop new_y
 _hard_drop() {
   # move piece all way down
   test_hard_drop $current_piece_x $current_piece_y
-  new_y=$?
+  new_y=$((current_piece_y - $?))
 
   update_score "$ACTION_HARD_DROP" $(( current_piece_y - new_y ))
   move_piece $current_piece_x $new_y
@@ -1407,21 +1418,18 @@ update_ghost() {
 }
 
 # Update ghost piece with new location according to current piece.
-localvar show_ghost new_y color
+localvar show_ghost color
 _show_ghost() {
   test_hard_drop $current_piece_x $current_piece_y
-  new_y=$?
-  
+  ghost_piece_y=$((current_piece_y - $?))
   ghost_piece=$current_piece
-  ghost_piece_x=$current_piece_x; ghost_piece_y=$new_y
+  ghost_piece_x=$current_piece_x
   ghost_piece_rotation=$current_piece_rotation
-
-  [ $new_y -eq $current_piece_y ] && return
 
   eval color=\"\$piece_"$current_piece"_color\"
 
   set_fg "$color"
-  draw_playfield_piece $current_piece_x $new_y $current_piece $current_piece_rotation "$ghost_cell"
+  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$ghost_cell"
 
   reset_colors
 }
