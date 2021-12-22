@@ -44,13 +44,13 @@
 #   * Avoid using `trap` and background `sleep` together.
 #     ```
 #       trap 'printf .' USR1
-#       
+#
 #       while true; do
 #         sleep 0.01 & wait $!
-#       done 
+#       done
 #     ```
 #
-#     On macOS (bash 3.2.57), an "Illegal instruction: 4" error occured 
+#     On macOS (bash 3.2.57), an "Illegal instruction: 4" error occured
 #     and program stopped.
 #
 
@@ -61,6 +61,7 @@ set -u # non initialized variable is an error
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
 VERSION='2.2.0-alpha'
 
+# program name
 PROG=${0##*/}
 
 # the year the game was created.
@@ -431,7 +432,6 @@ Options:
 Version:
  $VERSION
 "
-
 
 # the queue of the next tetriminos to be placed.
 # the reference says the next six tetrimonos should be shown.
@@ -911,7 +911,7 @@ _is_line_completed() {
 
 # This function checks if the lines in the hot zone are complete
 # and fall the upper blocks down.
-# 
+#
 # Arguments:
 #   1 - hot zone y min
 #   2 - hot zone y max (inclusive)
@@ -946,7 +946,7 @@ _process_complete_lines() {
     y=$((y + 1))
     [ $# -gt 0 ]      &&
     [ "$1" -eq "$y" ] && {
-      shift # line y is completed. 
+      shift # line y is completed.
       continue
     }
 
@@ -958,7 +958,7 @@ _process_complete_lines() {
       x=$((x - 1))
     done
     yi=$((yi + 1))
-    
+
   done
 
   # now let's mark lines from line yi to top line of the playfield as free.
@@ -976,7 +976,7 @@ _process_complete_lines() {
 
 process_fallen_piece() {
   flatten_playfield
-  
+
   # There should be a line clear between current_y - 4 ~ current_y
   process_complete_lines $((current_piece_y - 4)) $current_piece_y; action="$?"
 
@@ -1245,9 +1245,8 @@ lockdown() {
   # if can fall, dont lock down
   new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && return
 
-  test_lockout && {
-    quit
-    return
+  test_lockout && { # a whole Tetrimino Locks Down above the Skyline - Game Over
+    quit; return    # ... Quit
   }
 
   process_fallen_piece # let's finalize this piece
@@ -1396,14 +1395,13 @@ _test_hard_drop() {
   return $((steps - 1)) # return value must be within 0 ~ 255
 }
 
-localvar hard_drop new_y
+localvar hard_drop steps
 _hard_drop() {
   # move piece all way down
-  test_hard_drop $current_piece_x $current_piece_y
-  new_y=$((current_piece_y - $?))
+  test_hard_drop $current_piece_x $current_piece_y; steps=$?
 
-  update_score "$ACTION_HARD_DROP" $(( current_piece_y - new_y ))
-  move_piece $current_piece_x $new_y
+  update_score "$ACTION_HARD_DROP" $steps
+  move_piece $current_piece_x $((current_piece_y - steps))
   lockdown # A Tetrimino that is Hard Dropped Locks Down immediately
 
   current_piece_behaviour=$BEHAVIOUR_HARD_DROP
@@ -1514,7 +1512,6 @@ draw_current() {
 
 localvar show_current color
 _show_current() {
-  ${current_piece+:} return
   eval color=\"\$piece_"$current_piece"_color\"
   set_fg "$color"
   set_bg "$color"
@@ -1542,10 +1539,10 @@ _draw_next() {
       content="$filled_cell"
     }
     draw_piece "$x" "$y" "$1" "$NORTH" "$content"
-    "$visible" && reset_colors
     shift
     y=$((y + 3))
   done
+  "$visible" && reset_colors
 }
 
 show_next() {
@@ -1673,7 +1670,7 @@ toggle_color() {
 }
 
 quit() {
-  running=false                               # let's stop controller ...
+  running=false                                # let's stop controller ...
   send_signal $SIGNAL_TERM $timer_pid          # let's kill ticker process ...
   send_signal $SIGNAL_TERM $reader_pid         #
   send_signal $SIGNAL_TERM $ticker_pid         #
@@ -1688,6 +1685,7 @@ quit() {
 
 localvar init x y i from cmd pid statement
 _init() {
+  clear
   $debug || echo "$COPYRIGHT"
   echo 'Loading...'
 
@@ -1823,7 +1821,7 @@ _lockdown_timer() {
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
 
     sleep 0.1
-    
+
     # The following code will cause an error ("Illegal instruction: 4") on macOS(bash 3.2.57).
     #   sleep 0.1 & # wait in background for receiving the signal
     #   wait $!
