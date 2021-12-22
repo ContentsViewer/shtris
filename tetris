@@ -103,6 +103,7 @@ LOG='.log'
 SIGNAL_TERM=TERM
 SIGNAL_INT=INT
 SIGNAL_LEVEL_UP=USR1
+SIGNAL_RESET_LEVEL=USR2
 SIGNAL_CANCEL_LOCKDOWN_TIMER=USR1
 SIGNAL_RESTART_LOCKDOWN_TIMER=USR2
 
@@ -122,8 +123,7 @@ TOGGLE_COLOR=10
 TOGGLE_HELP=11
 REFRESH_SCREEN=12
 LOCKDOWN=13
-ACK=14
-MY_PID=15
+MY_PID=14
 
 PROCESS_CONTROLLER=0
 PROCESS_TICKER=1
@@ -467,7 +467,7 @@ bag_random=0
 # To speed up the process of “clearing” 600 lines, in the Variable Goal System the number of Line
 # Clears awarded for any action is directly based off the score of the action performed (score
 # at level 1 / 100 = Total Line Clears
-goal=5
+adding_lines_per_level=5
 
 # There is a special bonus for Back-to-Backs, which is when two actions
 # such as a Tetris and T-Spin Double take place without a Single, Double, or Triple Line Clear
@@ -481,7 +481,8 @@ b2b_sequence_continues=false
 lockdown_rule=$LOCKDOWN_RULE_EXTENDED
 
 score=0                    # score variable initialization
-level=1                    # level variable initialization
+level=0                    # level variable initialization
+goal=0                     # goal variable initialization
 lines_completed=0          # completed lines counter initialization
 actions_to_show=''         #
 already_hold=false         #
@@ -718,10 +719,24 @@ _shuffle() {
   eval "$varname=\${shuffled}\${1}" # set result
 }
 
+reset_level() {
+  level=0 goal=0 lines_completed=0
+  while [ "$level" -lt "$starting_level" ]; do
+    increment_level
+  done
+  # send reset level signal to ticker (please see ticker for more details)
+  send_signal "$SIGNAL_RESET_LEVEL" "$ticker_pid"
+}
+
 level_up() {
-  level=$((level + 1))                     # increment level
-  goal=$((goal + level * 5))               # adding an additional five lines to the Goal
-  send_signal $SIGNAL_LEVEL_UP $ticker_pid # and send level-up signal to all instances of this script (please see ticker for more details)
+  increment_level
+  # send level-up signal to ticker (please see ticker for more details)
+  send_signal "$SIGNAL_LEVEL_UP" "$ticker_pid"
+}
+
+increment_level() {
+  level=$((level + 1))                            # increment level
+  goal=$((goal + level * adding_lines_per_level)) # adding an additional lines to the Goal
 }
 
 fill_bag() {
@@ -1753,27 +1768,8 @@ _init() {
     }
   done
 
-  $debug && echo "Leveling up to $starting_level" >> $LOG
-  $debug && printf "> $level " >> $LOG
-  # level up until reach starting level
-  while [ $level -lt $starting_level ]; do
-    level_up
-    $debug && printf "$level " >> $LOG
-
-    # Wait until ticker ACKnowledgement response
-    while read statement; do
-      set -- $statement
-      [ $# -eq 3 ]               &&
-      [ $2 -eq $PROCESS_TICKER ] &&
-      [ $3 -eq $ACK ]            && {
-        break
-      }
-    done
-
-    printf '\r'; print_loading_spin; printf ' %s' "$level/$starting_level"
-    sleep 0.1
-  done
-  $debug && echo ' ...OK' >> $LOG
+  # reset to starting level
+  reset_level
 
   # now setup play screen
   clear
@@ -1829,19 +1825,20 @@ _lockdown_timer() {
 }
 
 # this function runs in separate process
-# it sends DOWN commands to controller with appropriate delay
+# it sends FALL commands to controller with appropriate delay
 ticker() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
   # on this signal fall speed should be increased, this happens during level ups
-  trap 'level=$((level + 1)); state "$PROCESS_TICKER $ACK"' $SIGNAL_LEVEL_UP
+  trap 'level=$((level + 1))' $SIGNAL_LEVEL_UP
+  trap 'level=$starting_level' $SIGNAL_RESET_LEVEL
 
   game_pid=$1
   get_pid my_pid
   state "$PROCESS_TICKER $MY_PID $my_pid"
 
   # the game level, which levelup-signal counts up.
-  level=1
+  level=$starting_level
   while exist_process "$game_pid"; do
     eval sleep \"\$FALL_SPEED_LEVEL_$level\"
 
@@ -1967,7 +1964,7 @@ _controller() {
       [ "$issued_time" -gt "$discard_cmds_timepoint" ] && break
     done
     case $cmd in
-      "$ACK"|"$MY_PID")              ;; # ignore
+      "$MY_PID")              ;; # ignore
       *)
         eval eval \"\$commands_"$cmd"\" # run command
         flush_screen
