@@ -102,10 +102,13 @@ LOG='.log'
 #   in shell enviroment, should Drop the SIG prefix, just input the signal name.
 SIGNAL_TERM=TERM
 SIGNAL_INT=INT
+SIGNAL_STOP=STOP
+SIGNAL_CONT=CONT
 SIGNAL_LEVEL_UP=USR1
 SIGNAL_RESET_LEVEL=USR2
 SIGNAL_CANCEL_LOCKDOWN_TIMER=USR1
 SIGNAL_RESTART_LOCKDOWN_TIMER=USR2
+SIGNAL_UNPAUSE=USR1
 
 # Those are commands sent to controller by key press processing code
 # In controller they are used as index to retrieve actual function from array
@@ -490,7 +493,6 @@ help_on=true               # if this flag is true help is shown, if false, hide
 beep_on=true               #
 no_color=false             # do we use color or not
 running=true               # controller runs while this flag is true
-discard_cmds_timepoint=0   # cmds issued before this time is discarded
 empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
 ghost_cell='░░'            # how we draw ghost cell
@@ -602,12 +604,8 @@ beep() {
   printf '\007'
 }
 
-now() {
-  date +"${1:-%s}"
-}
-
 state() {
-  now "%s $1"
+  echo "$1"
 }
 
 current_loading_spin_shift=0
@@ -638,15 +636,11 @@ get_pid(){
 }
 
 send_signal() {
-  kill -$1 $2
+  kill "-$@"
 }
 
 exist_process() {
   send_signal 0 "$1" 2>/dev/null
-}
-
-discard_cmds() {
-  discard_cmds_timepoint=$(now)
 }
 
 # return random value (0 ~ 4294967295)
@@ -1030,7 +1024,6 @@ process_fallen_piece() {
 
   beep
   redraw_playfield
-  discard_cmds
 }
 
 draw_scoreboard() {
@@ -1698,7 +1691,7 @@ quit() {
   flush_screen
 }
 
-localvar init x y i from cmd pid statement
+localvar init x y i from cmd pid
 _init() {
   clear
   $debug || echo "$COPYRIGHT"
@@ -1743,29 +1736,24 @@ _init() {
   done
 
   $debug && echo 'Checking subprocess pid' >> $LOG
-  ticker_pid=''; timer_pid=''; reader_pid=''
+  ticker_pid='' timer_pid='' reader_pid=''
   while [ -z $ticker_pid ] || [ -z $timer_pid ] || [ -z $reader_pid ]; do
-    read statement
-    set -- $statement
-    [ $# -lt 4 ] && continue
-    from=$2; cmd=$3; pid=$4
-
-    [ $cmd -eq $MY_PID ] && {
-      case $from in
-        $PROCESS_TICKER)
-          ticker_pid=$4
-          $debug &&  echo "> ticker $ticker_pid ...OK" >> $LOG
-          ;;
-        $PROCESS_READER)
-          reader_pid=$4
-          $debug &&  echo "> reader $reader_pid ...OK" >> $LOG
-          ;;
-        $PROCESS_TIMER)
-          timer_pid=$4
-          $debug &&  echo "> timer  $timer_pid ...OK" >> $LOG
-          ;;
-      esac
-    }
+    read from cmd pid
+    [ "$cmd" = "$MY_PID" ] || continue
+    case $from in
+      $PROCESS_TICKER)
+        ticker_pid=$pid
+        $debug && echo "> ticker $ticker_pid ...OK" >> $LOG
+        ;;
+      $PROCESS_READER)
+        reader_pid=$pid
+        $debug && echo "> reader $reader_pid ...OK" >> $LOG
+        ;;
+      $PROCESS_TIMER)
+        timer_pid=$pid
+        $debug && echo "> timer  $timer_pid ...OK" >> $LOG
+        ;;
+    esac
   done
 
   # reset to starting level
@@ -1790,6 +1778,9 @@ _init() {
     i=$((i - 1))
   done
 
+  send_signal "$SIGNAL_CONT" "$ticker_pid" "$timer_pid"
+  send_signal "$SIGNAL_UNPAUSE" "$reader_pid"
+
   get_next
   redraw_screen
   flush_screen
@@ -1806,6 +1797,7 @@ _lockdown_timer() {
   game_pid=$1
   get_pid my_pid
   state "$PROCESS_TIMER $MY_PID $my_pid"
+  send_signal "$SIGNAL_STOP" "$my_pid"
 
   trigger_counter=-1  # -1 - already triggerd; 0 - triggered; greater than 0 - count to trigger
   while exist_process "$game_pid"; do
@@ -1836,6 +1828,7 @@ ticker() {
   game_pid=$1
   get_pid my_pid
   state "$PROCESS_TICKER $MY_PID $my_pid"
+  send_signal "$SIGNAL_STOP" "$my_pid"
 
   # the game level, which levelup-signal counts up.
   level=$starting_level
@@ -1846,7 +1839,7 @@ ticker() {
     #   eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
     #   wait $!
 
-    state "$PROCESS_TICKER $FALL" # <timestamp> <cmd>
+    state "$PROCESS_TICKER $FALL"
 
     # echo "$level" >> $LOG # For debuging. check level variable
   done
@@ -1857,8 +1850,9 @@ localvar reader key a b cmd
 _reader() {
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
+  trap 'paused=false' $SIGNAL_UNPAUSE
 
-  a='' b=''
+  a='' b='' paused=true
 
   game_pid=$1
   get_pid my_pid
@@ -1870,11 +1864,11 @@ _reader() {
   while exist_process "$game_pid"; do
     # read one key
     key=$(dd ibs=1 count=1 2>/dev/null)
-    cmd=''
-
     # echo "$key" >> $LOG # For debug to check input char.
     # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
+    "$paused" && continue
+    cmd=''
     case "$a$b$key" in
       # 2 escapes
       *"$ESC_CH""$ESC_CH")
@@ -1930,7 +1924,7 @@ _reader() {
   done
 }
 
-localvar controller cmd statement issued_time from
+localvar controller from cmd 
 _controller() {
   # These signals are ignored
   trap '' $SIGNAL_TERM
@@ -1952,24 +1946,11 @@ _controller() {
   eval commands_"$LOCKDOWN"=lockdown
 
   init
-  discard_cmds
 
-  while $running; do # run while this variable is true, it is changed to false in quit function
-    # read next command from stdout
-    # skip cmds issued before discard_cmds_timepoint
-    while read statement; do
-      set -- $statement
-      [ $# -lt 3 ] && continue   # validate param counts is 3 or more
-      issued_time="$1"; from="$2" cmd="$3"
-      [ "$issued_time" -gt "$discard_cmds_timepoint" ] && break
-    done
-    case $cmd in
-      "$MY_PID")              ;; # ignore
-      *)
-        eval eval \"\$commands_"$cmd"\" # run command
-        flush_screen
-        ;;
-    esac
+  while $running; do           # run while this variable is true, it is changed to false in quit function
+    read from cmd              # read next command from stdout
+    eval "\"\$commands_$cmd\"" # run command
+    flush_screen
   done
 }
 
