@@ -253,7 +253,6 @@ PLAYFIELD_W=10
 PLAYFIELD_H=20
 PLAYFIELD_X=18
 PLAYFIELD_Y=2
-BORDER_COLOR=$WHITE
 
 # Location and color of score information
 SCORE_X=3
@@ -1591,7 +1590,6 @@ clear_hold() {
 localvar draw_border x1 x2 y1 y2 i x y
 _draw_border() {
   set_bold
-  set_fg $BORDER_COLOR
   x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
   x2=$((PLAYFIELD_X + PLAYFIELD_W * 2)) # 2 here is because each cell on play field is 2 characters wide
   y1=$((PLAYFIELD_Y - 1))
