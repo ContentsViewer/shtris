@@ -495,6 +495,7 @@ running=true               # controller runs while this flag is true
 empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
 ghost_cell='░░'            # how we draw ghost cell
+dry_cell='██'
 lands_on=false             #
 manipulation_counter=0     #
 lowest_line=$START_X       #
@@ -923,37 +924,30 @@ _is_line_completed() {
 # Arguments:
 #   1 - hot zone y min
 #   2 - hot zone y max (inclusive)
-localvar process_complete_lines x y yi completed_lines field_cell action
+# Globals:
+#   result - completed_lines
+localvar process_complete_lines x y yi field_cell completed_lines
 _process_complete_lines() {
-  completed_lines=''
   y=$1; yi=$2
   [ $y -lt 0 ] && y=0
 
+  completed_lines=''
   while [ "$y" -le "$yi" ]; do
     is_line_completed "$y" && completed_lines="$completed_lines $y"
     y=$((y + 1))
   done
 
-  set -- $completed_lines
-  [ $# -eq 0 ] && return "$ACTION_NONE"
+  result=$completed_lines
 
-  action="$ACTION_NONE"
-  case $# in
-    1) action="$ACTION_SINGLE" ;;
-    2) action="$ACTION_DOUBLE" ;;
-    3) action="$ACTION_TRIPLE" ;;
-    4) action="$ACTION_TETRIS" ;;
-    *) echo "invalid line clear" >> $LOG
-  esac
+  set -- $completed_lines
+
+  [ $# -eq 0 ] && return # no line clear
 
   # move lines down. move cells from y to yi
-  y=$1; shift
-  yi=$y
+  y=$1; shift; yi=$y
   while [ "$y" -lt "$BUFFER_ZONE_Y" ]; do
-
     y=$((y + 1))
-    [ $# -gt 0 ]      &&
-    [ "$1" -eq "$y" ] && {
+    [ "${1:-}" = "$y" ] && {
       shift # line y is completed.
       continue
     }
@@ -978,15 +972,20 @@ _process_complete_lines() {
     done
     yi=$((yi + 1))
   done
-
-  return "$action"
 }
 
-process_fallen_piece() {
-  flatten_playfield
-
-  # There should be a line clear between current_y - 4 ~ current_y
-  process_complete_lines $((current_piece_y - 4)) $current_piece_y; action="$?"
+# Arguments:
+#   1 - number of cleared lines
+localvar what_action action
+_what_action() {
+  action="$ACTION_NONE"
+  case $1 in
+    1) action="$ACTION_SINGLE" ;;
+    2) action="$ACTION_DOUBLE" ;;
+    3) action="$ACTION_TRIPLE" ;;
+    4) action="$ACTION_TETRIS" ;;
+    *) echo "invalid line clear" >> $LOG
+  esac
 
   [ $current_piece -eq $T_TETRIMINO ]                &&
   [ $current_piece_behaviour -eq $BEHAVIOUR_ROTATE ] && {
@@ -1015,6 +1014,21 @@ process_fallen_piece() {
         ;;
     esac
   }
+  return "$action"
+}
+
+localvar process_fallen_piece action y line completed_lines
+_process_fallen_piece() {
+
+  flatten_playfield
+
+  # There should be a line clear between current_y - 4 ~ current_y
+  process_complete_lines $((current_piece_y - 4)) $current_piece_y
+  completed_lines=$result
+
+  set -- $completed_lines
+  what_action $#; action=$?
+
   update_score "$action"
 
   [ "$action" -eq $ACTION_NONE ]       ||
@@ -1022,6 +1036,22 @@ process_fallen_piece() {
   [ "$action" -eq $ACTION_TSPIN ]      && return
 
   beep
+
+  # flash effect
+  for y in $completed_lines; do
+      str_repeat line $dry_cell $PLAYFIELD_W
+      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $y)) "$line"
+  done
+  flush_screen
+  sleep 0.045
+
+  for y in $completed_lines; do
+      str_repeat line "$empty_cell" $PLAYFIELD_W
+      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $y)) "$line"
+  done
+  flush_screen
+  sleep 0.025
+
   redraw_playfield
 }
 
@@ -1233,7 +1263,6 @@ move_piece() {
   return 1
 }
 
-
 # Check a whole Tetrimino is above the Skyline. if yes - Game Over
 # Returns:
 #   0 - yes
@@ -1251,6 +1280,13 @@ test_lockout() {
 lockdown() {
   # if can fall, dont lock down
   new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && return
+
+  # flush effect
+  draw_current "$dry_cell"
+  flush_screen
+  sleep 0.01
+  show_current
+  flush_screen
 
   test_lockout && { # a whole Tetrimino Locks Down above the Skyline - Game Over
     quit; return    # ... Quit
