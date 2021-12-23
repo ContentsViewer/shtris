@@ -108,6 +108,7 @@ SIGNAL_LEVEL_UP=USR1
 SIGNAL_RESET_LEVEL=USR2
 SIGNAL_CANCEL_LOCKDOWN_TIMER=USR1
 SIGNAL_RESTART_LOCKDOWN_TIMER=USR2
+SIGNAL_UNPAUSE=USR1
 
 # Those are commands sent to controller by key press processing code
 # In controller they are used as index to retrieve actual function from array
@@ -1778,6 +1779,7 @@ _init() {
   done
 
   send_signal "$SIGNAL_CONT" "$ticker_pid" "$timer_pid"
+  send_signal "$SIGNAL_UNPAUSE" "$reader_pid"
 
   get_next
   redraw_screen
@@ -1848,8 +1850,9 @@ localvar reader key a b cmd
 _reader() {
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
+  trap 'paused=false' $SIGNAL_UNPAUSE
 
-  a='' b=''
+  a='' b='' paused=true
 
   game_pid=$1
   get_pid my_pid
@@ -1861,11 +1864,11 @@ _reader() {
   while exist_process "$game_pid"; do
     # read one key
     key=$(dd ibs=1 count=1 2>/dev/null)
-    cmd=''
-
     # echo "$key" >> $LOG # For debug to check input char.
     # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
+    "$paused" && continue
+    cmd=''
     case "$a$b$key" in
       # 2 escapes
       *"$ESC_CH""$ESC_CH")
