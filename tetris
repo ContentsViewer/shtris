@@ -925,7 +925,7 @@ _is_line_completed() {
 #   1 - hot zone y min
 #   2 - hot zone y max (inclusive)
 # Globals:
-#   result - completed_lines
+#   lastout - completed_lines
 localvar process_complete_lines x y yi field_cell completed_lines
 _process_complete_lines() {
   y=$1; yi=$2
@@ -937,7 +937,7 @@ _process_complete_lines() {
     y=$((y + 1))
   done
 
-  result=$completed_lines
+  lastout=$completed_lines
 
   set -- $completed_lines
 
@@ -984,7 +984,6 @@ _what_action() {
     2) action="$ACTION_DOUBLE" ;;
     3) action="$ACTION_TRIPLE" ;;
     4) action="$ACTION_TETRIS" ;;
-    *) echo "invalid line clear" >> $LOG
   esac
 
   [ $current_piece -eq $T_TETRIMINO ]                &&
@@ -1024,7 +1023,7 @@ _process_fallen_piece() {
 
   # There should be a line clear between current_y - 4 ~ current_y
   process_complete_lines $((current_piece_y - 4)) $current_piece_y
-  completed_lines=$result
+  completed_lines=$lastout
 
   set -- $completed_lines
   what_action $#; action=$?
@@ -1050,7 +1049,7 @@ _process_fallen_piece() {
       xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $y)) "$line"
   done
   flush_screen
-  sleep 0.025
+  sleep 0.5
 
   redraw_playfield
 }
@@ -1281,10 +1280,13 @@ lockdown() {
   # if can fall, dont lock down
   new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && return
 
+  # stop sub process until next the Generation Phase of the Next Tetrimino.
+  send_signal "$SIGNAL_STOP" "$ticker_pid" "$timer_pid"
+
   # flush effect
   draw_current "$dry_cell"
   flush_screen
-  sleep 0.01
+  sleep 0.03
   show_current
   flush_screen
 
@@ -1295,6 +1297,9 @@ lockdown() {
   process_fallen_piece # let's finalize this piece
   get_next             # and start the new one
   already_hold=false   # player can hold the falling tetrimino.
+
+  # now lets sub process continue...
+  send_signal "$SIGNAL_CONT" "$ticker_pid" "$timer_pid"
 }
 
 # Arguments:
