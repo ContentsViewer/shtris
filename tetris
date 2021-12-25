@@ -70,6 +70,15 @@ PROG=${0##*/}
 # displayed in COPYRIGHT.
 CREATED_YEAR='2021'
 
+# Game logo
+LOGO="
+[][][][][] [][][][][] [][][][][] [][][][]     [][][]     [][][][]
+    []     []             []     []      []     []     []
+    []     [][][][][]     []     [][][][]       []       [][][]
+    []     []             []     []  []         []             []
+    []     [][][][][]     []     []    [][]   [][][]   [][][][]
+"
+
 # Game must have this notice when the game starts.
 COPYRIGHT="
 ────────────────────────────────────────────────────────────────────────────────
@@ -1787,7 +1796,7 @@ quit() {
 localvar init x y i from cmd pid
 _init() {
   clear
-  $debug || echo "$COPYRIGHT"
+  $debug || echo "$LOGO$COPYRIGHT"
   echo 'Loading...'
 
   $debug || {
