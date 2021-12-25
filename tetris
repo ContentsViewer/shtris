@@ -53,6 +53,8 @@
 #     On macOS (bash 3.2.57), an "Illegal instruction: 4" error occured
 #     and program stopped.
 #
+#   * Delete extra spaces
+#     `sed 's/ *$//' tetris >_ && mv _ tetris && chmod +x tetris`
 
 set -u # non initialized variable is an error
 
@@ -310,8 +312,8 @@ ESC_CH="$(printf '\033')"
 #       (0, 0) is top left
 #
 # Rotaion point:
-#   Each Tetrimino has five possible rotation points. If the Tetrimino cannot rotate on the first point, it 
-#   will try to rotate on the second. If it cannot rotate on the second, it will try the third and so on. If 
+#   Each Tetrimino has five possible rotation points. If the Tetrimino cannot rotate on the first point, it
+#   will try to rotate on the second. If it cannot rotate on the second, it will try the third and so on. If
 #   it cannot rotate on any of the points, then it cannot rotate.
 #   Format:
 #     piece_<TETRIMINO>_rchifts_<FACING>='<POINT_1> <POINT_2> ...'
@@ -405,13 +407,13 @@ eval piece_"$Z_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -
 #   A rotation is considered a T-Spin if any of the following conditions are met:
 #   * Sides A and B + (C or D) are touching a Surface when the Tetrimino Locks Down.
 #   * The T-Tetrimino fills a T-Slot completely with no holes.
-#   * Rotation Point 5 is used to rotate the Tetrimino into the T-Slot. 
+#   * Rotation Point 5 is used to rotate the Tetrimino into the T-Slot.
 #     Any further rotation will be considered a T-Spin, not a Mini T-Spin
 #
 # Mini T-Spin:
 #   A rotation is considered a Mini T-Spin if either of the following conditions are met:
 #   * Sides C and D + (A or B) are touching a Surface when the Tetrimino Locks Down.
-#   * The T-Tetrimino creates holes in a T-Slot. However, if Rotation Point 5 was used to rotate 
+#   * The T-Tetrimino creates holes in a T-Slot. However, if Rotation Point 5 was used to rotate
 #     the Tetrimino into the T-Slot, the rotation is considered a T-Spin.
 #
 eval T_TETRIMINO_"$NORTH"_SIDES=\"0 0  2 0  0 2  2 2\"
@@ -837,7 +839,7 @@ localvar what_type_tspin pos_x pos_y rotation side_x side_y side
 _what_type_tspin() {
   varname=$1 pos_x=$2 pos_y=$3 rotation=$4
 
-  # Rotation Point 5 is used to rotate the Tetrimino into the T-Slot. 
+  # Rotation Point 5 is used to rotate the Tetrimino into the T-Slot.
   # Any further rotation will be considered a T-Spin, not a Mini T-Spin
   [ ${5:-0} -ge 5 ] && {
     eval "$varname=\$ACTION_TSPIN"
@@ -1126,54 +1128,54 @@ _update_score() {
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      last_action='Single'; action_updated=0
+      last_action='Single:'; action_updated=0 # align 2 lines
       ;;
     "$ACTION_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      last_action='Double'; action_updated=0
+      last_action='Double:'; action_updated=0
       ;;
     "$ACTION_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      last_action='Triple'; action_updated=0
+      last_action='Triple:'; action_updated=0
       ;;
     "$ACTION_TETRIS")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='Tetris'; action_updated=0
+      last_action='Tetris:'; action_updated=0
       ;;
     "$ACTION_MINI_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='Mini T-Spin'; action_updated=0
+      last_action='Mini T-Spin:'; action_updated=0
       ;;
     "$ACTION_MINI_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='Mini T-Spin:Single'; action_updated=0
+      last_action='Mini T-Spin: Single'; action_updated=0
       ;;
     "$ACTION_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='T-Spin'; action_updated=0
+      last_action='T-Spin:'; action_updated=0
       ;;
     "$ACTION_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='T-Spin:Single'; action_updated=0
+      last_action='T-Spin: Single'; action_updated=0
       ;;
     "$ACTION_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='T-Spin:Double'; action_updated=0
+      last_action='T-Spin: Double'; action_updated=0
       ;;
     "$ACTION_TSPIN_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='T-Spin:Triple'; action_updated=0
+      last_action='T-Spin: Triple'; action_updated=0
       ;;
     "$ACTION_SOFT_DROP")
       score_to_add=$factor
@@ -1195,7 +1197,7 @@ _update_score() {
       $b2b_sequence_continues && {
         score_to_add=$((score_to_add + score_to_add / 2))
         lines_to_add=$((lines_to_add + lines_to_add / 2))
-        last_action="$last_action:Back-to-Back"; action_updated=0
+        last_action="$last_action::Back-to-Back"; action_updated=0
       }
       b2b_sequence_continues=true;;
   esac
@@ -1237,9 +1239,8 @@ _draw_action() {
 
   # We should clear at least 3 lines (e.g., 'T-Spin; Double; B2B')
   i=7
-  for text in "${1:-}" "${2:-}" "${3:-}"; do
+  for text in "${1:-}" "${2:-}" "${3:-}" "${4:-}"; do
     $flash && str_repeat text '█' ${#text}
-    
     str_rpad text " $text" 13 # max width 13 ' Back-to-Back'
     xyprint "$SCORE_X" $((SCORE_Y + i)) "$text"
     i=$((i + 1))
@@ -2016,7 +2017,7 @@ _reader() {
   done
 }
 
-localvar controller from cmd 
+localvar controller from cmd
 _controller() {
   # These signals are ignored
   trap '' $SIGNAL_TERM
