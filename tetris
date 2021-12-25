@@ -53,6 +53,8 @@
 #     On macOS (bash 3.2.57), an "Illegal instruction: 4" error occured
 #     and program stopped.
 #
+#   * Delete extra spaces
+#     `sed 's/ *$//' tetris >_ && mv _ tetris && chmod +x tetris`
 
 set -u # non initialized variable is an error
 
@@ -253,7 +255,6 @@ PLAYFIELD_W=10
 PLAYFIELD_H=20
 PLAYFIELD_X=18
 PLAYFIELD_Y=2
-BORDER_COLOR=$WHITE
 
 # Location and color of score information
 SCORE_X=3
@@ -302,18 +303,22 @@ LOADING_SPIN='/ - \ |'
 # constant chars
 ESC_CH="$(printf '\033')"
 
-# this array holds all possible pieces that can be used in the game
-# each piece consists of 4 cells(minos)
-# each string is sequence of relative xy coordinates
-# Format:
-#   piece_<TETRIMINO>_minos_<FACING>='<mino_0_x> <mino_1_y> ...'
-#     (0, 0) is top left
+# Minos:
+#   this array holds all possible pieces that can be used in the game
+#   each piece consists of 4 cells(minos)
+#   each string is sequence of relative xy coordinates
+#   Format:
+#     piece_<TETRIMINO>_minos_<FACING>='<mino_0_x> <mino_1_y> ...'
+#       (0, 0) is top left
 #
-# rotation shifts
-#   piece_<TETRIMINO>_rchifts_<FACING>='<POINT_1> <POINT_2> ...'
-#     <POINT_<NO>>: <ROTATION_LEFT_shifts> <ROTATION_RIGHT_shifts>
-#     <ROTATION_<DIR>_shifts>: <shift_x> <shift_y>
-#
+# Rotaion point:
+#   Each Tetrimino has five possible rotation points. If the Tetrimino cannot rotate on the first point, it
+#   will try to rotate on the second. If it cannot rotate on the second, it will try the third and so on. If
+#   it cannot rotate on any of the points, then it cannot rotate.
+#   Format:
+#     piece_<TETRIMINO>_rchifts_<FACING>='<POINT_1> <POINT_2> ...'
+#       <POINT_<NO>>: <ROTATION_LEFT_shifts> <ROTATION_RIGHT_shifts>
+#       <ROTATION_<DIR>_shifts>: <shift_x> <shift_y>
 
 # O-Tetrimino
 eval piece_"$O_TETRIMINO"_color=\"$YELLOW\"
@@ -392,8 +397,27 @@ eval piece_"$Z_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -
 eval piece_"$Z_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
 
+# the side of a Mino in the T-Tetrimino:
+# Format:
+#   T_TETRIMINO_<FACING>_SIDES='<SIDE_A> <SIDE_B> <SIDE_C> <SIDE_D>'
+#     <SIDE_<NO>>: <pos_x> <pos_y>
+#     (0, 0) is top left
+#
+# T-Spin:
+#   A rotation is considered a T-Spin if any of the following conditions are met:
+#   * Sides A and B + (C or D) are touching a Surface when the Tetrimino Locks Down.
+#   * The T-Tetrimino fills a T-Slot completely with no holes.
+#   * Rotation Point 5 is used to rotate the Tetrimino into the T-Slot.
+#     Any further rotation will be considered a T-Spin, not a Mini T-Spin
+#
+# Mini T-Spin:
+#   A rotation is considered a Mini T-Spin if either of the following conditions are met:
+#   * Sides C and D + (A or B) are touching a Surface when the Tetrimino Locks Down.
+#   * The T-Tetrimino creates holes in a T-Slot. However, if Rotation Point 5 was used to rotate
+#     the Tetrimino into the T-Slot, the rotation is considered a T-Spin.
+#
 eval T_TETRIMINO_"$NORTH"_SIDES=\"0 0  2 0  0 2  2 2\"
-eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  0 2  0 0  0 2\"
+eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  2 2  0 0  0 2\"
 eval T_TETRIMINO_"$SOUTH"_SIDES=\"2 2  0 2  2 0  0 0\"
 eval T_TETRIMINO_"$WEST"_SIDES=\" 0 2  0 0  2 2  2 0\"
 
@@ -487,7 +511,7 @@ score=0                    # score variable initialization
 level=0                    # level variable initialization
 goal=0                     # goal variable initialization
 lines_completed=0          # completed lines counter initialization
-actions_to_show=''         #
+last_action=''             #
 already_hold=false         #
 help_on=true               # if this flag is true help is shown, if false, hide
 beep_on=true               #
@@ -496,6 +520,7 @@ running=true               # controller runs while this flag is true
 empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
 ghost_cell='░░'            # how we draw ghost cell
+dry_cell='██'              #
 lands_on=false             #
 manipulation_counter=0     #
 lowest_line=$START_X       #
@@ -529,10 +554,10 @@ fi
 #   3 - count
 str_repeat() {
   set -- "$1" "${2:-}" "${3:-0}" ""
-  while [ "$3" -gt 1 ]; do
+  while [ "$3" -gt 0 ]; do
     set -- "$1" "$2" $(($3 - 1)) "$4$2"
   done
-  eval "$1=\$4\$2"
+  eval "$1=\$4"
 }
 
 str_lpad() {
@@ -814,6 +839,13 @@ localvar what_type_tspin pos_x pos_y rotation side_x side_y side
 _what_type_tspin() {
   varname=$1 pos_x=$2 pos_y=$3 rotation=$4
 
+  # Rotation Point 5 is used to rotate the Tetrimino into the T-Slot.
+  # Any further rotation will be considered a T-Spin, not a Mini T-Spin
+  [ ${5:-0} -ge 5 ] && {
+    eval "$varname=\$ACTION_TSPIN"
+    return
+  }
+
   eval set -- \$T_TETRIMINO_"$rotation"_SIDES
   side=0 # 1: A; 2: B; 3: C; 4: D
   while [ $# -gt 0 ]; do
@@ -924,37 +956,30 @@ _is_line_completed() {
 # Arguments:
 #   1 - hot zone y min
 #   2 - hot zone y max (inclusive)
-localvar process_complete_lines x y yi completed_lines field_cell action
+# Globals:
+#   lastout - completed_lines
+localvar process_complete_lines x y yi field_cell completed_lines
 _process_complete_lines() {
-  completed_lines=''
   y=$1; yi=$2
   [ $y -lt 0 ] && y=0
 
+  completed_lines=''
   while [ "$y" -le "$yi" ]; do
     is_line_completed "$y" && completed_lines="$completed_lines $y"
     y=$((y + 1))
   done
 
-  set -- $completed_lines
-  [ $# -eq 0 ] && return "$ACTION_NONE"
+  lastout=$completed_lines
 
-  action="$ACTION_NONE"
-  case $# in
-    1) action="$ACTION_SINGLE" ;;
-    2) action="$ACTION_DOUBLE" ;;
-    3) action="$ACTION_TRIPLE" ;;
-    4) action="$ACTION_TETRIS" ;;
-    *) echo "invalid line clear" >> $LOG
-  esac
+  set -- $completed_lines
+
+  [ $# -eq 0 ] && return # no line clear
 
   # move lines down. move cells from y to yi
-  y=$1; shift
-  yi=$y
+  y=$1; shift; yi=$y
   while [ "$y" -lt "$BUFFER_ZONE_Y" ]; do
-
     y=$((y + 1))
-    [ $# -gt 0 ]      &&
-    [ "$1" -eq "$y" ] && {
+    [ "${1:-}" = "$y" ] && {
       shift # line y is completed.
       continue
     }
@@ -979,15 +1004,19 @@ _process_complete_lines() {
     done
     yi=$((yi + 1))
   done
-
-  return "$action"
 }
 
-process_fallen_piece() {
-  flatten_playfield
-
-  # There should be a line clear between current_y - 4 ~ current_y
-  process_complete_lines $((current_piece_y - 4)) $current_piece_y; action="$?"
+# Arguments:
+#   1 - number of cleared lines
+localvar what_action action
+_what_action() {
+  action="$ACTION_NONE"
+  case $1 in
+    1) action="$ACTION_SINGLE" ;;
+    2) action="$ACTION_DOUBLE" ;;
+    3) action="$ACTION_TRIPLE" ;;
+    4) action="$ACTION_TETRIS" ;;
+  esac
 
   [ $current_piece -eq $T_TETRIMINO ]                &&
   [ $current_piece_behaviour -eq $BEHAVIOUR_ROTATE ] && {
@@ -1016,13 +1045,54 @@ process_fallen_piece() {
         ;;
     esac
   }
-  update_score "$action"
+  return "$action"
+}
+
+localvar process_fallen_piece action y line completed_lines
+_process_fallen_piece() {
+  flatten_playfield
+
+  # There should be a line clear between current_y - 4 ~ current_y
+  process_complete_lines $((current_piece_y - 4)) $current_piece_y
+  completed_lines=$lastout
+
+  set -- $completed_lines
+  what_action $#; action=$?
+
+  update_score "$action" && {
+    draw_action true # if last_action changed, perform flash effect
+  }
+  draw_current "$dry_cell"
+
+  # flash effect
+  flush_screen
+  sleep 0.03
+
+  show_current
+  draw_action false
+  flush_screen
 
   [ "$action" -eq $ACTION_NONE ]       ||
   [ "$action" -eq $ACTION_MINI_TSPIN ] ||
   [ "$action" -eq $ACTION_TSPIN ]      && return
 
   beep
+
+  # flash effect
+  for y in $completed_lines; do
+      str_repeat line $dry_cell $PLAYFIELD_W
+      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $y)) "$line"
+  done
+  flush_screen
+  sleep 0.045
+
+  for y in $completed_lines; do
+      str_repeat line "$empty_cell" $PLAYFIELD_W
+      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $y)) "$line"
+  done
+  flush_screen
+  sleep 0.5
+
   redraw_playfield
 }
 
@@ -1041,10 +1111,12 @@ draw_scoreboard() {
 # Arguments:
 #   1 - ACTION name. ex: ACTION_SINGLE
 #   2 - (ACTION_HARD_DROP) lines
-localvar update_score factor score_to_add lines_to_add i text
+# Returns:
+localvar update_score factor score_to_add lines_to_add action_updated
 _update_score() {
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
+  action_updated=1 # false
   score_to_add=0
   lines_to_add=0
 
@@ -1056,54 +1128,54 @@ _update_score() {
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      actions_to_show='Single'
+      last_action='Single:'; action_updated=0 # align 2 lines
       ;;
     "$ACTION_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      actions_to_show='Double'
+      last_action='Double:'; action_updated=0
       ;;
     "$ACTION_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      actions_to_show='Triple'
+      last_action='Triple:'; action_updated=0
       ;;
     "$ACTION_TETRIS")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='Tetris'
+      last_action='Tetris:'; action_updated=0
       ;;
     "$ACTION_MINI_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='Mini T-Spin'
+      last_action='Mini T-Spin:'; action_updated=0
       ;;
     "$ACTION_MINI_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='Mini T-Spin:Single'
+      last_action='Mini T-Spin: Single'; action_updated=0
       ;;
     "$ACTION_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin'
+      last_action='T-Spin:'; action_updated=0
       ;;
     "$ACTION_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin:Single'
+      last_action='T-Spin: Single'; action_updated=0
       ;;
     "$ACTION_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin:Double'
+      last_action='T-Spin: Double'; action_updated=0
       ;;
     "$ACTION_TSPIN_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin:Triple'
+      last_action='T-Spin: Triple'; action_updated=0
       ;;
     "$ACTION_SOFT_DROP")
       score_to_add=$factor
@@ -1125,7 +1197,7 @@ _update_score() {
       $b2b_sequence_continues && {
         score_to_add=$((score_to_add + score_to_add / 2))
         lines_to_add=$((lines_to_add + lines_to_add / 2))
-        actions_to_show="$actions_to_show:B2B"
+        last_action="$last_action::Back-to-Back"; action_updated=0
       }
       b2b_sequence_continues=true;;
   esac
@@ -1148,14 +1220,28 @@ _update_score() {
   str_lpad text "$goal" 4
   xyprint $((SCORE_X + 8)) $((SCORE_Y + 5)) "$text"
 
+  reset_colors
+
+  return $action_updated
+}
+
+# Arguments:
+#   1 - flash. true or false
+localvar draw_action i flash text
+_draw_action() {
+  flash=$1
+  set_bold
+  set_fg "$SCORE_COLOR"
+
   IFS_SAVE=$IFS; IFS=:
-  set -- $actions_to_show
+  set -- $last_action
   IFS=$IFS_SAVE
 
   # We should clear at least 3 lines (e.g., 'T-Spin; Double; B2B')
   i=7
-  for text in "${1:-}" "${2:-}" "${3:-}"; do
-    str_rpad text " $text" 12 # max width 12 ' Mini T-Spin'
+  for text in "${1:-}" "${2:-}" "${3:-}" "${4:-}"; do
+    $flash && str_repeat text '█' ${#text}
+    str_rpad text " $text" 13 # max width 13 ' Back-to-Back'
     xyprint "$SCORE_X" $((SCORE_Y + i)) "$text"
     i=$((i + 1))
   done
@@ -1234,7 +1320,6 @@ move_piece() {
   return 1
 }
 
-
 # Check a whole Tetrimino is above the Skyline. if yes - Game Over
 # Returns:
 #   0 - yes
@@ -1253,13 +1338,21 @@ lockdown() {
   # if can fall, dont lock down
   new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && return
 
+  # stop sub process until next the Generation Phase of the Next Tetrimino.
+  send_signal "$SIGNAL_STOP" "$ticker_pid" "$timer_pid"
+
+  process_fallen_piece # let's finalize this piece
+
   test_lockout && { # a whole Tetrimino Locks Down above the Skyline - Game Over
     quit; return    # ... Quit
   }
 
-  process_fallen_piece # let's finalize this piece
   get_next             # and start the new one
   already_hold=false   # player can hold the falling tetrimino.
+  [ ${hold_queue:-} ] && show_hold  # update hold piece active
+
+  # now lets sub process continue...
+  send_signal "$SIGNAL_CONT" "$ticker_pid" "$timer_pid"
 }
 
 # Arguments:
@@ -1290,7 +1383,7 @@ _rotate_piece_classic() {
 
 # Arguments:
 #   1 - rotation direction; 1: clockwise; -1: counter-clockwise
-localvar rotate_piece_super direction old_rotation new_rotation shift_x shift_y new_x new_y point
+localvar rotate_piece_super direction old_rotation new_rotation shift_x shift_y new_x new_y rpoint
 _rotate_piece_super() {
   direction="$1"
 
@@ -1306,8 +1399,10 @@ _rotate_piece_super() {
   # now parameters setted like below
   # '<POINT1> <POINT2> <POINT3> <POINT4> <POINT5>'
   #   <POINT<NO>>: '<LEFT_SHIFT_X> <LEFT_SHIFT_Y> <RIGHT_SHIFT_X> <RIGHT_SHIFT_Y>'
+  rpoint=0
   [ $direction -eq 1 ] && shift 2 # if rotate clockwise(RIGHT) shift 2 to next xy-coordinates of RIGHT
   while [ $# -gt 0 ]; do
+    rpoint=$((rpoint + 1))
     [ $1 = 'n' ] && {        # if 'not used' appears, skip this point
       [ $# -lt 4 ] && break;
       shift 4; continue;
@@ -1318,7 +1413,7 @@ _rotate_piece_super() {
     new_y=$((current_piece_y + shift_y))
     if new_piece_location_ok $new_x $new_y; then # check if new orientation is ok
       [ $current_piece -eq $T_TETRIMINO ] && {
-        what_type_tspin current_tspin $new_x $new_y $new_rotation
+        what_type_tspin current_tspin $new_x $new_y $new_rotation $rpoint
       }
       current_piece_rotation=$old_rotation       # if yes - restore old rotation ...
       clear_current                              # ... clear piece image
@@ -1533,24 +1628,25 @@ clear_current() {
 
 # Arguments:
 #   1 - visibility ( false - no, true - yes)
-localvar draw_next color visible x y content
+localvar draw_next color x y visible
 _draw_next() {
-  x="$NEXT_X"; y="$NEXT_Y"; visible="$1"
+  x="$NEXT_X"; y="$NEXT_Y"; visible=$1
 
   set -- $next_queue
+
   while [ $# -gt 0 ]; do
-    content='  '
-    "$visible" && {
+    $visible && {
       eval color=\"\$piece_"$1"_color\"
       set_fg "$color"
       set_bg "$color"
-      content="$filled_cell"
+      draw_piece "$x" "$y" "$1" "$NORTH" "$filled_cell"
+    } || {
+      draw_piece "$x" "$y" "$1" "$NORTH" '  '
     }
-    draw_piece "$x" "$y" "$1" "$NORTH" "$content"
     shift
     y=$((y + 3))
   done
-  "$visible" && reset_colors
+  $visible && reset_colors
 }
 
 show_next() {
@@ -1562,36 +1658,32 @@ clear_next() {
 }
 
 # Arguments:
-#   1 - visibility ( false - no, true - yes)
-localvar draw_hold visible color
+#   1 - cell to draw
+#   2 - filled with background. true or false
+localvar draw_hold color
 _draw_hold() {
-  visible="$1"
+  eval color=\"\$piece_"$hold_queue"_color\"
+  set_fg "$color"
+  $2 && set_bg "$color"
 
-  [ -z "$hold_queue" ] && return
+  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$1"
 
-  content='  '
-  "$visible" && {
-    eval color=\"\$piece_"$hold_queue"_color\"
-    set_fg "$color"
-    set_bg "$color"
-    content="$filled_cell"
-  }
-  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$content"
-  "$visible" && reset_colors
+  reset_colors
 }
 
 show_hold() {
-  draw_hold true
+  set -- "$filled_cell" true
+  $already_hold && set -- "$ghost_cell" false
+  draw_hold "$@"
 }
 
 clear_hold() {
-  draw_hold false
+  draw_hold '  ' false
 }
 
 localvar draw_border x1 x2 y1 y2 i x y
 _draw_border() {
   set_bold
-  set_fg $BORDER_COLOR
   x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
   x2=$((PLAYFIELD_X + PLAYFIELD_W * 2)) # 2 here is because each cell on play field is 2 characters wide
   y1=$((PLAYFIELD_Y - 1))
@@ -1648,15 +1740,16 @@ refresh_screen() {
 }
 
 redraw_screen() {
-  draw_help                   # should first. draw help on the lowest layer
+  draw_help # should first. draw help on the lowest layer
   show_next
-  show_hold
+  [ ${hold_queue:-} ] && show_hold
   draw_scoreboard
   update_score "$ACTION_NONE"
+  draw_action false
   draw_border
   redraw_playfield
-
-  [ ${current_piece:-''} ] && {
+  [ ${current_piece:-} ] && {
+    # There is Tetrimino in Play
     show_ghost
     show_current
   }
@@ -1924,7 +2017,7 @@ _reader() {
   done
 }
 
-localvar controller from cmd 
+localvar controller from cmd
 _controller() {
   # These signals are ignored
   trap '' $SIGNAL_TERM
