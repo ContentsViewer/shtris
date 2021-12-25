@@ -301,18 +301,22 @@ LOADING_SPIN='/ - \ |'
 # constant chars
 ESC_CH="$(printf '\033')"
 
-# this array holds all possible pieces that can be used in the game
-# each piece consists of 4 cells(minos)
-# each string is sequence of relative xy coordinates
-# Format:
-#   piece_<TETRIMINO>_minos_<FACING>='<mino_0_x> <mino_1_y> ...'
-#     (0, 0) is top left
+# Minos:
+#   this array holds all possible pieces that can be used in the game
+#   each piece consists of 4 cells(minos)
+#   each string is sequence of relative xy coordinates
+#   Format:
+#     piece_<TETRIMINO>_minos_<FACING>='<mino_0_x> <mino_1_y> ...'
+#       (0, 0) is top left
 #
-# rotation shifts
-#   piece_<TETRIMINO>_rchifts_<FACING>='<POINT_1> <POINT_2> ...'
-#     <POINT_<NO>>: <ROTATION_LEFT_shifts> <ROTATION_RIGHT_shifts>
-#     <ROTATION_<DIR>_shifts>: <shift_x> <shift_y>
-#
+# Rotaion point:
+#   Each Tetrimino has five possible rotation points. If the Tetrimino cannot rotate on the first point, it 
+#   will try to rotate on the second. If it cannot rotate on the second, it will try the third and so on. If 
+#   it cannot rotate on any of the points, then it cannot rotate.
+#   Format:
+#     piece_<TETRIMINO>_rchifts_<FACING>='<POINT_1> <POINT_2> ...'
+#       <POINT_<NO>>: <ROTATION_LEFT_shifts> <ROTATION_RIGHT_shifts>
+#       <ROTATION_<DIR>_shifts>: <shift_x> <shift_y>
 
 # O-Tetrimino
 eval piece_"$O_TETRIMINO"_color=\"$YELLOW\"
@@ -391,8 +395,27 @@ eval piece_"$Z_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -
 eval piece_"$Z_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
 
+# the side of a Mino in the T-Tetrimino:
+# Format:
+#   T_TETRIMINO_<FACING>_SIDES='<SIDE_A> <SIDE_B> <SIDE_C> <SIDE_D>'
+#     <SIDE_<NO>>: <pos_x> <pos_y>
+#     (0, 0) is top left
+#
+# T-Spin:
+#   A rotation is considered a T-Spin if any of the following conditions are met:
+#   * Sides A and B + (C or D) are touching a Surface when the Tetrimino Locks Down.
+#   * The T-Tetrimino fills a T-Slot completely with no holes.
+#   * Rotation Point 5 is used to rotate the Tetrimino into the T-Slot. 
+#     Any further rotation will be considered a T-Spin, not a Mini T-Spin
+#
+# Mini T-Spin:
+#   A rotation is considered a Mini T-Spin if either of the following conditions are met:
+#   * Sides C and D + (A or B) are touching a Surface when the Tetrimino Locks Down.
+#   * The T-Tetrimino creates holes in a T-Slot. However, if Rotation Point 5 was used to rotate 
+#     the Tetrimino into the T-Slot, the rotation is considered a T-Spin.
+#
 eval T_TETRIMINO_"$NORTH"_SIDES=\"0 0  2 0  0 2  2 2\"
-eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  0 2  0 0  0 2\"
+eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  2 2  0 0  0 2\"
 eval T_TETRIMINO_"$SOUTH"_SIDES=\"2 2  0 2  2 0  0 0\"
 eval T_TETRIMINO_"$WEST"_SIDES=\" 0 2  0 0  2 2  2 0\"
 
@@ -814,6 +837,13 @@ localvar what_type_tspin pos_x pos_y rotation side_x side_y side
 _what_type_tspin() {
   varname=$1 pos_x=$2 pos_y=$3 rotation=$4
 
+  # Rotation Point 5 is used to rotate the Tetrimino into the T-Slot. 
+  # Any further rotation will be considered a T-Spin, not a Mini T-Spin
+  [ ${5:-0} -ge 5 ] && {
+    eval "$varname=\$ACTION_TSPIN"
+    return
+  }
+
   eval set -- \$T_TETRIMINO_"$rotation"_SIDES
   side=0 # 1: A; 2: B; 3: C; 4: D
   while [ $# -gt 0 ]; do
@@ -1210,7 +1240,7 @@ _draw_action() {
   for text in "${1:-}" "${2:-}" "${3:-}"; do
     $flash && str_repeat text '█' ${#text}
     
-    str_rpad text " $text" 12 # max width 12 ' Mini T-Spin'
+    str_rpad text " $text" 13 # max width 13 ' Back-to-Back'
     xyprint "$SCORE_X" $((SCORE_Y + i)) "$text"
     i=$((i + 1))
   done
@@ -1352,7 +1382,7 @@ _rotate_piece_classic() {
 
 # Arguments:
 #   1 - rotation direction; 1: clockwise; -1: counter-clockwise
-localvar rotate_piece_super direction old_rotation new_rotation shift_x shift_y new_x new_y point
+localvar rotate_piece_super direction old_rotation new_rotation shift_x shift_y new_x new_y rpoint
 _rotate_piece_super() {
   direction="$1"
 
@@ -1368,8 +1398,10 @@ _rotate_piece_super() {
   # now parameters setted like below
   # '<POINT1> <POINT2> <POINT3> <POINT4> <POINT5>'
   #   <POINT<NO>>: '<LEFT_SHIFT_X> <LEFT_SHIFT_Y> <RIGHT_SHIFT_X> <RIGHT_SHIFT_Y>'
+  rpoint=0
   [ $direction -eq 1 ] && shift 2 # if rotate clockwise(RIGHT) shift 2 to next xy-coordinates of RIGHT
   while [ $# -gt 0 ]; do
+    rpoint=$((rpoint + 1))
     [ $1 = 'n' ] && {        # if 'not used' appears, skip this point
       [ $# -lt 4 ] && break;
       shift 4; continue;
@@ -1380,7 +1412,7 @@ _rotate_piece_super() {
     new_y=$((current_piece_y + shift_y))
     if new_piece_location_ok $new_x $new_y; then # check if new orientation is ok
       [ $current_piece -eq $T_TETRIMINO ] && {
-        what_type_tspin current_tspin $new_x $new_y $new_rotation
+        what_type_tspin current_tspin $new_x $new_y $new_rotation $rpoint
       }
       current_piece_rotation=$old_rotation       # if yes - restore old rotation ...
       clear_current                              # ... clear piece image
