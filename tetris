@@ -1018,7 +1018,6 @@ _what_action() {
 
 localvar process_fallen_piece action y line completed_lines
 _process_fallen_piece() {
-
   flatten_playfield
 
   # There should be a line clear between current_y - 4 ~ current_y
@@ -1297,6 +1296,7 @@ lockdown() {
   process_fallen_piece # let's finalize this piece
   get_next             # and start the new one
   already_hold=false   # player can hold the falling tetrimino.
+  [ ${hold_queue:-} ] && show_hold  # update hold piece active
 
   # now lets sub process continue...
   send_signal "$SIGNAL_CONT" "$ticker_pid" "$timer_pid"
@@ -1573,24 +1573,25 @@ clear_current() {
 
 # Arguments:
 #   1 - visibility ( false - no, true - yes)
-localvar draw_next color visible x y content
+localvar draw_next color x y visible
 _draw_next() {
-  x="$NEXT_X"; y="$NEXT_Y"; visible="$1"
+  x="$NEXT_X"; y="$NEXT_Y"; visible=$1
 
   set -- $next_queue
+
   while [ $# -gt 0 ]; do
-    content='  '
-    "$visible" && {
+    $visible && {
       eval color=\"\$piece_"$1"_color\"
       set_fg "$color"
       set_bg "$color"
-      content="$filled_cell"
+      draw_piece "$x" "$y" "$1" "$NORTH" "$filled_cell"
+    } || {
+      draw_piece "$x" "$y" "$1" "$NORTH" '  '
     }
-    draw_piece "$x" "$y" "$1" "$NORTH" "$content"
     shift
     y=$((y + 3))
   done
-  "$visible" && reset_colors
+  $visible && reset_colors
 }
 
 show_next() {
@@ -1602,30 +1603,27 @@ clear_next() {
 }
 
 # Arguments:
-#   1 - visibility ( false - no, true - yes)
-localvar draw_hold visible color
+#   1 - cell to draw
+#   2 - filled with background. true or false
+localvar draw_hold color
 _draw_hold() {
-  visible="$1"
+  eval color=\"\$piece_"$hold_queue"_color\"
+  set_fg "$color"
+  $2 && set_bg "$color"
 
-  [ -z "$hold_queue" ] && return
+  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$1"
 
-  content='  '
-  "$visible" && {
-    eval color=\"\$piece_"$hold_queue"_color\"
-    set_fg "$color"
-    set_bg "$color"
-    content="$filled_cell"
-  }
-  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$content"
-  "$visible" && reset_colors
+  reset_colors
 }
 
 show_hold() {
-  draw_hold true
+  set -- "$filled_cell" true
+  $already_hold && set -- "$ghost_cell" false
+  draw_hold "$@"
 }
 
 clear_hold() {
-  draw_hold false
+  draw_hold '  ' false
 }
 
 localvar draw_border x1 x2 y1 y2 i x y
@@ -1687,15 +1685,16 @@ refresh_screen() {
 }
 
 redraw_screen() {
-  draw_help                   # should first. draw help on the lowest layer
+  draw_help # should first. draw help on the lowest layer
   show_next
-  show_hold
+  [ ${hold_queue:-} ] && show_hold
   draw_scoreboard
   update_score "$ACTION_NONE"
   draw_border
   redraw_playfield
 
-  [ ${current_piece:-''} ] && {
+  [ ${current_piece:-} ] && {
+    # There is Tetrimino in Play
     show_ghost
     show_current
   }
