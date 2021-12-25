@@ -486,7 +486,7 @@ score=0                    # score variable initialization
 level=0                    # level variable initialization
 goal=0                     # goal variable initialization
 lines_completed=0          # completed lines counter initialization
-actions_to_show=''         #
+last_action=''             #
 already_hold=false         #
 help_on=true               # if this flag is true help is shown, if false, hide
 beep_on=true               #
@@ -495,7 +495,7 @@ running=true               # controller runs while this flag is true
 empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
 ghost_cell='░░'            # how we draw ghost cell
-dry_cell='██'
+dry_cell='██'              #
 lands_on=false             #
 manipulation_counter=0     #
 lowest_line=$START_X       #
@@ -529,10 +529,10 @@ fi
 #   3 - count
 str_repeat() {
   set -- "$1" "${2:-}" "${3:-0}" ""
-  while [ "$3" -gt 1 ]; do
+  while [ "$3" -gt 0 ]; do
     set -- "$1" "$2" $(($3 - 1)) "$4$2"
   done
-  eval "$1=\$4\$2"
+  eval "$1=\$4"
 }
 
 str_lpad() {
@@ -1027,7 +1027,18 @@ _process_fallen_piece() {
   set -- $completed_lines
   what_action $#; action=$?
 
-  update_score "$action"
+  update_score "$action" && {
+    draw_action true # if last_action changed, perform flash effect
+  }
+  draw_current "$dry_cell"
+
+  # flash effect
+  flush_screen
+  sleep 0.03
+
+  show_current
+  draw_action false
+  flush_screen
 
   [ "$action" -eq $ACTION_NONE ]       ||
   [ "$action" -eq $ACTION_MINI_TSPIN ] ||
@@ -1068,10 +1079,12 @@ draw_scoreboard() {
 # Arguments:
 #   1 - ACTION name. ex: ACTION_SINGLE
 #   2 - (ACTION_HARD_DROP) lines
-localvar update_score factor score_to_add lines_to_add i text
+# Returns:
+localvar update_score factor score_to_add lines_to_add action_updated
 _update_score() {
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
+  action_updated=1 # false
   score_to_add=0
   lines_to_add=0
 
@@ -1083,54 +1096,54 @@ _update_score() {
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      actions_to_show='Single'
+      last_action='Single'; action_updated=0
       ;;
     "$ACTION_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      actions_to_show='Double'
+      last_action='Double'; action_updated=0
       ;;
     "$ACTION_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      actions_to_show='Triple'
+      last_action='Triple'; action_updated=0
       ;;
     "$ACTION_TETRIS")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='Tetris'
+      last_action='Tetris'; action_updated=0
       ;;
     "$ACTION_MINI_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='Mini T-Spin'
+      last_action='Mini T-Spin'; action_updated=0
       ;;
     "$ACTION_MINI_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='Mini T-Spin:Single'
+      last_action='Mini T-Spin:Single'; action_updated=0
       ;;
     "$ACTION_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin'
+      last_action='T-Spin'; action_updated=0
       ;;
     "$ACTION_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin:Single'
+      last_action='T-Spin:Single'; action_updated=0
       ;;
     "$ACTION_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin:Double'
+      last_action='T-Spin:Double'; action_updated=0
       ;;
     "$ACTION_TSPIN_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      actions_to_show='T-Spin:Triple'
+      last_action='T-Spin:Triple'; action_updated=0
       ;;
     "$ACTION_SOFT_DROP")
       score_to_add=$factor
@@ -1152,7 +1165,7 @@ _update_score() {
       $b2b_sequence_continues && {
         score_to_add=$((score_to_add + score_to_add / 2))
         lines_to_add=$((lines_to_add + lines_to_add / 2))
-        actions_to_show="$actions_to_show:B2B"
+        last_action="$last_action:Back-to-Back"; action_updated=0
       }
       b2b_sequence_continues=true;;
   esac
@@ -1175,13 +1188,28 @@ _update_score() {
   str_lpad text "$goal" 4
   xyprint $((SCORE_X + 8)) $((SCORE_Y + 5)) "$text"
 
+  reset_colors
+
+  return $action_updated
+}
+
+# Arguments:
+#   1 - flash. true or false
+localvar draw_action i flash text
+_draw_action() {
+  flash=$1
+  set_bold
+  set_fg "$SCORE_COLOR"
+
   IFS_SAVE=$IFS; IFS=:
-  set -- $actions_to_show
+  set -- $last_action
   IFS=$IFS_SAVE
 
   # We should clear at least 3 lines (e.g., 'T-Spin; Double; B2B')
   i=7
   for text in "${1:-}" "${2:-}" "${3:-}"; do
+    $flash && str_repeat text '█' ${#text}
+    
     str_rpad text " $text" 12 # max width 12 ' Mini T-Spin'
     xyprint "$SCORE_X" $((SCORE_Y + i)) "$text"
     i=$((i + 1))
@@ -1282,18 +1310,12 @@ lockdown() {
   # stop sub process until next the Generation Phase of the Next Tetrimino.
   send_signal "$SIGNAL_STOP" "$ticker_pid" "$timer_pid"
 
-  # flush effect
-  draw_current "$dry_cell"
-  flush_screen
-  sleep 0.03
-  show_current
-  flush_screen
+  process_fallen_piece # let's finalize this piece
 
   test_lockout && { # a whole Tetrimino Locks Down above the Skyline - Game Over
     quit; return    # ... Quit
   }
 
-  process_fallen_piece # let's finalize this piece
   get_next             # and start the new one
   already_hold=false   # player can hold the falling tetrimino.
   [ ${hold_queue:-} ] && show_hold  # update hold piece active
@@ -1690,9 +1712,9 @@ redraw_screen() {
   [ ${hold_queue:-} ] && show_hold
   draw_scoreboard
   update_score "$ACTION_NONE"
+  draw_action false
   draw_border
   redraw_playfield
-
   [ ${current_piece:-} ] && {
     # There is Tetrimino in Play
     show_ghost
