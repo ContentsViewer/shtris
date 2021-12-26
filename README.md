@@ -21,12 +21,13 @@ I've implemented the following
 * Extended Placement / Infinite Placement / Classic Lock Down
 * Super / Classic Rotation System
 * Changing the Starting Level
+* Ghost Piece
 
 ## Usage
 
 ```sh
 # Download (v2.1.0)
-wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/v2.1.0/tetris
+wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/v2.2.0/tetris
 chmod +x tetris
 
 ./tetris
@@ -48,6 +49,8 @@ Options:
  --lockdown <RULE>    Three rulesets —Infinite Placement, Extended, and Classic—
                       dictate the conditions for Lock Down.
                       RULE can be 'extended'(default), 'infinite', 'classic'
+ --seed <SEED>        random seed to determine the order of Tetriminos.
+                      range from 1 to 4294967295.
  --no-color           don't display colors
  --no-beep            disable beep
  --hide-help          don't show help on start
@@ -56,7 +59,7 @@ Options:
  -V, --version  output version infromation and exit
 
 Version:
- 2.1.0
+ 2.2.0
 ```
 
 </details>
@@ -67,12 +70,12 @@ Enjoy :-)
 
 ## Supported Environments
 
-| Environment | Support? |
-| :---------: | :------: |
-| Linux   sh  | o        |
-| FreeBSD sh  | o        |
-| BusyBox sh  | o        |
-| Solaris sh  | x        |
+| Environment | Support          |
+| :---------: | :--------------: |
+| Linux   sh  | o                |
+| FreeBSD sh  | o                |
+| BusyBox sh  | o                |
+| Solaris sh  | o (Almost works) |
 
 ## Author
 
