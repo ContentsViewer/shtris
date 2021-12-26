@@ -1695,21 +1695,20 @@ clear_next() {
 
 # Arguments:
 #   1 - cell to draw
-#   2 - filled with background. true or false
+#   2 - active. true or false
 localvar draw_hold color
 _draw_hold() {
   eval color=\"\$piece_"$hold_queue"_color\"
-  set_fg "$color"
-  $2 && set_bg "$color"
-
+  $2 && { set_fg "$color"; set_bg "$color"; }
+ 
   draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$1"
 
-  reset_colors
+  $2 && reset_colors
 }
 
 show_hold() {
   set -- "$filled_cell" true
-  $already_hold && set -- "$ghost_cell" false
+  $already_hold && set -- "$dry_cell" false
   draw_hold "$@"
 }
 
