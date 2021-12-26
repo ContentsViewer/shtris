@@ -450,7 +450,8 @@ Options:
  --seed <SEED>        random seed to determine the order of Tetriminos.
                       range from 1 to 4294967295.
  --no-color           don't display colors
- --no-beep            disable beep
+ --no-beep            disable beep sound on clearing line
+ --no-freeze          disable to freeze on clearing line
  --hide-help          don't show help on start
 
  -h, --help     display this help and exit
@@ -513,8 +514,9 @@ goal=0                     # goal variable initialization
 lines_completed=0          # completed lines counter initialization
 last_action=''             #
 already_hold=false         #
-help_on=true               # if this flag is true help is shown, if false, hide
-beep_on=true               #
+help_on=true               # show help if this flag is true
+beep_on=true               # beep sound on clearing lines if this flag is true
+freeze_on=true             # freeze on clearing lines if this flag is true
 no_color=false             # do we use color or not
 running=true               # controller runs while this flag is true
 empty_cell=' .'            # how we draw empty cell
@@ -1091,7 +1093,7 @@ _process_fallen_piece() {
       xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $y)) "$line"
   done
   flush_screen
-  sleep 0.5
+  $freeze_on && sleep 0.5
 
   redraw_playfield
 }
@@ -2146,6 +2148,10 @@ main() {
         ;;
       --no-beep)
         beep_on=false
+        shift; continue
+        ;;
+      --no-freeze)
+        freeze_on=false
         shift; continue
         ;;
       --no-color)
