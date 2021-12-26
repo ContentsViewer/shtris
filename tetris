@@ -593,6 +593,7 @@ puts() {
 }
 
 flush_screen() {
+  [ -z "$screen_buffer" ] && return
   printf "$screen_buffer"
   screen_buffer=''
 }
@@ -601,6 +602,10 @@ flush_screen() {
 # (1,1) is upper left corner of the screen
 xyprint() {
   puts "\033[${2};${1}H${3}"
+}
+
+clear_screen() {
+  printf "\033[H\033[2J"
 }
 
 show_cursor() {
@@ -1523,15 +1528,29 @@ hold() {
   hold_tetrimino
 }
 
-update_ghost() {
-  clear_ghost; show_ghost
+localvar update_ghost new_ghost_piece_y
+_update_ghost() {
+  test_hard_drop $current_piece_x $current_piece_y
+  new_ghost_piece_y=$((current_piece_y - $?))
+
+  [ "$ghost_piece_x" -eq "$current_piece_x" ]               &&
+  [ "$ghost_piece_y" -eq "$new_ghost_piece_y" ]             &&
+  [ "$ghost_piece" -eq "$current_piece" ]                   &&
+  [ "$ghost_piece_rotation" -eq "$current_piece_rotation" ] && return
+
+  clear_ghost
+  show_ghost "$new_ghost_piece_y"
 }
 
 # Update ghost piece with new location according to current piece.
 localvar show_ghost color
 _show_ghost() {
-  test_hard_drop $current_piece_x $current_piece_y
-  ghost_piece_y=$((current_piece_y - $?))
+  if [ $# -gt 0 ]; then
+    ghost_piece_y=$1
+  else
+    test_hard_drop $current_piece_x $current_piece_y
+    ghost_piece_y=$((current_piece_y - $?))
+  fi
   ghost_piece=$current_piece
   ghost_piece_x=$current_piece_x
   ghost_piece_rotation=$current_piece_rotation
@@ -1744,7 +1763,7 @@ _draw_help() {
 }
 
 refresh_screen() {
-  clear
+  clear_screen
   redraw_screen
 }
 
@@ -1795,7 +1814,7 @@ quit() {
 
 localvar init x y i from cmd pid
 _init() {
-  clear
+  clear_screen
   $debug || echo "$LOGO$COPYRIGHT"
   echo 'Loading...'
 
@@ -1862,7 +1881,7 @@ _init() {
   reset_level
 
   # now setup play screen
-  clear
+  clear_screen
   hide_cursor
   redraw_screen
 
