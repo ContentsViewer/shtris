@@ -5,9 +5,10 @@ Tetris game written in pure sh.
 This script is based on [dkorolev/bash-tetris](https://github.com/dkorolev/bash-tetris)
 Thank you!
 
-## Feature
+## About
 
-The implementation follows [Tetris Guideline. Tetris Wiki. accessed at 2020-05-23](https://tetris.fandom.com/wiki/Tetris_Guideline).
+I tried to follow the Tetris Guideline(2009).
+[Tetris Guideline. Tetris Wiki. accessed at 2020-05-23](https://tetris.fandom.com/wiki/Tetris_Guideline).
 
 * [x] Hold Queue
 * [x] Next Queue
