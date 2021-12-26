@@ -28,7 +28,7 @@
 #   Linux   sh | o
 #   FreeBSD sh | o
 #   BusyBox sh | o
-#   Solaris sh | o (Almost work)
+#   Solaris sh | o (Almost works)
 #
 # Github Page:
 #   <https://github.com/ContentsViewer/sh-tetris>
@@ -65,32 +65,6 @@ VERSION='2.2.0-alpha'
 
 # program name
 PROG=${0##*/}
-
-# the year the game was created.
-# displayed in COPYRIGHT.
-CREATED_YEAR='2021'
-
-# Game logo
-LOGO="
-[][][][][] [][][][][] [][][][][] [][][][]     [][][]     [][][][]
-    []     []             []     []      []     []     []
-    []     [][][][][]     []     [][][][]       []       [][][]
-    []     []             []     []  []         []             []
-    []     [][][][][]     []     []    [][]   [][][]   [][][][]
-"
-
-# Game must have this notice when the game starts.
-COPYRIGHT="
-────────────────────────────────────────────────────────────────────────────────
-Tetris (c) 1985~${CREATED_YEAR} Tetris Holding.
-Tetris logos, Tetris theme song and Tetriminos are trademarks of Tetris Holding.
-The Tetris trade dress is owned by Tetris Holding.
-Licensed to The Tetris Company.
-Tetris Game Design by Alexey Pajitnov.
-Tetris Logo Design by Roger Dean.
-All Rights Reserved.
-────────────────────────────────────────────────────────────────────────────────
-"
 
 # Explicitly reset to the default value to prevent the import of IFS
 # from the environment. The following shells will work more safely.
@@ -211,6 +185,7 @@ ACTION_TSPIN_DOUBLE=9
 ACTION_TSPIN_TRIPLE=10
 ACTION_MINI_TSPIN=11
 ACTION_MINI_TSPIN_SINGLE=12
+ACTION_MINI_TSPIN_DOUBLE=13
 
 eval SCORE_FACTOR_"$ACTION_NONE"=0
 eval SCORE_FACTOR_"$ACTION_SINGLE"=100
@@ -223,6 +198,7 @@ eval SCORE_FACTOR_"$ACTION_TSPIN_DOUBLE"=1200
 eval SCORE_FACTOR_"$ACTION_TSPIN_TRIPLE"=1600
 eval SCORE_FACTOR_"$ACTION_MINI_TSPIN"=100
 eval SCORE_FACTOR_"$ACTION_MINI_TSPIN_SINGLE"=200
+eval SCORE_FACTOR_"$ACTION_MINI_TSPIN_DOUBLE"=300
 eval SCORE_FACTOR_"$ACTION_SOFT_DROP"=1
 eval SCORE_FACTOR_"$ACTION_HARD_DROP"=2
 
@@ -1050,6 +1026,7 @@ _what_action() {
       $ACTION_MINI_TSPIN)
         case $action in
           $ACTION_SINGLE) action=$ACTION_MINI_TSPIN_SINGLE ;;
+          $ACTION_DOUBLE) action=$ACTION_MINI_TSPIN_DOUBLE ;;
           $ACTION_NONE)   action=$ACTION_MINI_TSPIN        ;;
           *)
             # For Debugging. cannot be reached.
@@ -1170,6 +1147,11 @@ _update_score() {
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       last_action='Mini T-Spin: Single'; action_updated=0
+      ;;
+    "$ACTION_MINI_TSPIN_DOUBLE")
+      score_to_add=$((level * factor)) # Awarded Line Clears
+      lines_to_add=$((factor / 100))
+      last_action='Mini T-Spin: Double'; action_updated=0
       ;;
     "$ACTION_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
@@ -1363,7 +1345,6 @@ lockdown() {
 
   get_next             # and start the new one
   already_hold=false   # player can hold the falling tetrimino.
-  [ ${hold_queue:-} ] && show_hold  # update hold piece active
 
   # now lets sub process continue...
   send_signal "$SIGNAL_CONT" "$ticker_pid" "$timer_pid"
@@ -1686,27 +1667,25 @@ clear_next() {
 }
 
 # Arguments:
-#   1 - cell to draw
-#   2 - filled with background. true or false
-localvar draw_hold color
-_draw_hold() {
-  eval color=\"\$piece_"$hold_queue"_color\"
-  set_fg "$color"
-  $2 && set_bg "$color"
-
-  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$1"
-
-  reset_colors
+#   1 - visibility ( false - no, true - yes)
+draw_hold() {
+  $1 && {
+    eval color=\"\$piece_"$hold_queue"_color\"
+    set_fg "$color"
+    set_bg "$color"
+    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$filled_cell"
+    reset_colors
+  } || {
+    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" '  '
+  }
 }
 
 show_hold() {
-  set -- "$filled_cell" true
-  $already_hold && set -- "$ghost_cell" false
-  draw_hold "$@"
+  draw_hold true
 }
 
 clear_hold() {
-  draw_hold '  ' false
+  draw_hold false
 }
 
 localvar draw_border x1 x2 y1 y2 i x y
@@ -1814,26 +1793,13 @@ quit() {
 
 localvar init x y i from cmd pid
 _init() {
-  clear_screen
-  $debug || echo "$LOGO$COPYRIGHT"
-  echo 'Loading...'
-
-  $debug || {
-    i=30
-    while [ "$i" -gt 0 ]; do
-      printf '\r'; print_loading_spin
-
-      sleep 0.1
-      i=$(( i - 1 ))
-    done
-  }
-
   # Initialize random generator.
   [ $bag_random -eq 0 ] && {
     # if not set
     bag_random=$(rand)
     [ $bag_random -eq 0 ] && bag_random=$((bag_random + 1))
   }
+  $debug && echo "seed: $bag_random" >> $LOG # It is useful for reproducing the situation.
 
   # playfield is initialized with -1s (empty cells)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)

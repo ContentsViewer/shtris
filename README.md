@@ -5,21 +5,23 @@ Tetris game written in pure sh.
 This script is based on [dkorolev/bash-tetris](https://github.com/dkorolev/bash-tetris)
 Thank you!
 
-## Feature
+## About
 
-The implementation follows [Tetris Guideline. Tetris Wiki. accessed at 2020-05-23](https://tetris.fandom.com/wiki/Tetris_Guideline).
+I tried to follow the Tetris Guideline(2009).
+[Tetris Guideline. Tetris Wiki. accessed at 2020-05-23](https://tetris.fandom.com/wiki/Tetris_Guideline).
 
-* [x] Hold Queue
-* [x] Next Queue
-* [x] Random Generation with Bag System
-* [x] Score System
-* [x] Variable Goal System
-* [x] T-Spin / Mini T-Spin
-* [x] Back-to-Back Bonus
-* [x] Extended Placement / Infinite Placement / Classic Lock Down
-* [x] Super / Classic Rotation System
-* [x] Changing the Starting Level
-* [ ] Ghost Piece
+I implemented
+
+* Hold Queue
+* Next Queue
+* Random Generation with Bag System
+* Score System
+* Variable Goal System
+* T-Spin / Mini T-Spin
+* Back-to-Back Bonus
+* Extended Placement / Infinite Placement / Classic Lock Down
+* Super / Classic Rotation System
+* Changing the Starting Level
 
 ## Usage
 
