@@ -756,6 +756,7 @@ level_up() {
 increment_level() {
   level=$((level + 1))                            # increment level
   goal=$((goal + level * adding_lines_per_level)) # adding an additional lines to the Goal
+  goal=$((goal % 600))                            # up to level 15
 }
 
 fill_bag() {
