@@ -157,14 +157,15 @@ CYAN=6
 WHITE=7
 ORANGE=208
 
-# Those are Tetrimino type
-O_TETRIMINO=0
-I_TETRIMINO=1
-T_TETRIMINO=2
-L_TETRIMINO=3
-J_TETRIMINO=4
-S_TETRIMINO=5
-Z_TETRIMINO=6
+# Those are Tetrimino type (and empty cell)
+EMPTY_CELL=0
+O_TETRIMINO=1
+I_TETRIMINO=2
+T_TETRIMINO=3
+L_TETRIMINO=4
+J_TETRIMINO=5
+S_TETRIMINO=6
+Z_TETRIMINO=7
 
 # Those are the facing
 # Tetrimino has four facings
@@ -853,8 +854,11 @@ _what_type_tspin() {
     }
 
     eval field_cell="\$playfield_${side_y}_${side_x}"
-    [ $field_cell -ne -1 ]       &&
-    eval is_touched_${side}=true || eval is_touched_${side}=false
+    if [ $field_cell -ne "$EMPTY_CELL" ]; then
+      eval is_touched_${side}=true
+    else
+      eval is_touched_${side}=false
+    fi
 
     shift 2
   done
@@ -899,7 +903,7 @@ _new_piece_location_ok() {
     [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
 
     eval field_cell="\$playfield_${y}_${x}"
-    [ "$field_cell" != -1 ] && return 1    # false; check if location is already occupied
+    [ "$field_cell" -ne "$EMPTY_CELL" ] && return 1 # false; check if location is already occupied
 
     shift 2 # shift to next minos coordinates
   done
@@ -907,10 +911,8 @@ _new_piece_location_ok() {
 }
 
 # this function updated occupied cells in playfield array after piece is dropped
-localvar flatten_playfield color x y
+localvar flatten_playfield x y
 _flatten_playfield() {
-  eval color=\"\$piece_"$current_piece"_color\"
-
   # set minos coordinates into parameters
   # $1 - x, $2 - y
   eval set -- \$piece_"$current_piece"_minos_"$current_piece_rotation"
@@ -919,7 +921,7 @@ _flatten_playfield() {
   while [ $# -gt 0 ]; do
     x=$((current_piece_x + $1))
     y=$((current_piece_y - $2))
-    eval playfield_"$y"_"$x"="$color"
+    eval playfield_"$y"_"$x"="$current_piece"
     shift 2 # shift to next minos coordinates
   done
 }
@@ -934,7 +936,7 @@ _is_line_completed() {
   x=$((PLAYFIELD_W - 1))
   while [ "$x" -ge 0 ]; do
     eval field_cell="\$playfield_${line_y}_${x}"
-    [ "$field_cell" -eq -1 ] && return 1 # false. empty cell found
+    [ "$field_cell" -eq "$EMPTY_CELL" ] && return 1 # false
     x=$((x - 1))
   done;
 
@@ -990,7 +992,7 @@ _process_complete_lines() {
   while [ "$yi" -le "$BUFFER_ZONE_Y" ]; do
     x=$((PLAYFIELD_W - 1))
     while [ "$x" -ge 0 ]; do
-      eval playfield_"$yi"_"$x"=-1
+      eval playfield_"$yi"_"$x"="$EMPTY_CELL"
       x=$((x - 1))
     done
     yi=$((yi + 1))
@@ -1555,8 +1557,8 @@ clear_ghost() {
 # a_{y,x}
 #   x - 0, ..., (PLAYFIELD_W-1)
 #   y - 0, ..., (PLAYFIELD_H-1), ..., (START_Y-1)
-# each array element contains cell color value or -1 if cell is empty
-localvar redraw_playfield x y yp field_cell
+# each array element contains tetrimino type or empty cell
+localvar redraw_playfield x y yp color field_cell
 _redraw_playfield() {
   y=0
   while [ "$y" -lt "$PLAYFIELD_H" ]; do
@@ -1566,11 +1568,12 @@ _redraw_playfield() {
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
       eval field_cell="\$playfield_${y}_${x}"
 
-      if [ "$field_cell" -eq -1 ]; then
+      if [ "$field_cell" -eq "$EMPTY_CELL" ]; then
         puts "$empty_cell"
       else
-        set_fg "$field_cell"
-        set_bg "$field_cell"
+        eval color=\"\$piece_"$field_cell"_color\"
+        set_fg "$color"
+        set_bg "$color"
         puts "$filled_cell"
         reset_colors
       fi
@@ -1802,7 +1805,7 @@ _init() {
   }
   $debug && echo "seed: $bag_random" >> $LOG # It is useful for reproducing the situation.
 
-  # playfield is initialized with -1s (empty cells)
+  # playfield is initialized with EMPTY_CELL (0)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
   # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y), ..., (BUFFER_ZONE_Y)
   # (0, 0) is bottom left
@@ -1810,7 +1813,7 @@ _init() {
   while [ "$y" -le "$BUFFER_ZONE_Y" ]; do
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      eval playfield_"$y"_"$x"=-1
+      eval playfield_"$y"_"$x"="$EMPTY_CELL"
       x=$((x + 1))
     done
     y=$((y + 1))
