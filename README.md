@@ -1,16 +1,15 @@
 # sh-tetris
 
-Tetris game written in pure sh.
+The pure shell script (sh) that implements the Tetris game following the Tetris Guideline (2009).
 
-This script is based on [dkorolev/bash-tetris](https://github.com/dkorolev/bash-tetris)
-Thank you!
+The aim is to understand more about shell script and Tetris algorithms.
 
-## About
-
-I tried to follow the Tetris Guideline(2009).
 [Tetris Guideline. Tetris Wiki. accessed at 2020-05-23](https://tetris.fandom.com/wiki/Tetris_Guideline).
 
-I implemented
+This script is based on [dkorolev/bash-tetris](https://github.com/dkorolev/bash-tetris).<br>
+Thank you!
+
+I've implemented the following
 
 * Hold Queue
 * Next Queue
@@ -30,12 +29,7 @@ I implemented
 wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/v2.1.0/tetris
 chmod +x tetris
 
-# Local
 ./tetris
-
-# Global
-sudo install tetris /usr/local/bin
-tetris
 ```
 
 <details>

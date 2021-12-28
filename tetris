@@ -1,14 +1,15 @@
 #!/bin/sh
 
-# Tetris game written in pure sh
+# The pure shell script (sh) that implements the Tetris game following the Tetris Guideline (2009).
 #
-# I tried to follow the Tetris Guideline(2009).
-# URL: [Tetris Guideline. Tetris Wiki. accessed at 2020-05-23](https://tetris.fandom.com/wiki/Tetris_Guideline)
+# The aim is to understand more about shell script and Tetris algorithms.
+#
+# [Tetris Guideline. Tetris Wiki. accessed at 2020-05-23](https://tetris.fandom.com/wiki/Tetris_Guideline).
 #
 # This script is based on bash-tetris (Author: Kirill Timofeev <kt97679@gmail.com>)
 # Thank you!
 #
-# I implemented
+# I've implemented the following
 #
 # * Hold Queue
 # * Next Queue
