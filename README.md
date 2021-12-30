@@ -26,7 +26,7 @@ I've implemented the following
 ## Usage
 
 ```sh
-# Download (v2.1.0)
+# Download (v2.2.0)
 wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/v2.2.0/tetris
 chmod +x tetris
 
