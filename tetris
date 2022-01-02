@@ -240,6 +240,10 @@ PLAYFIELD_H=20
 PLAYFIELD_X=18
 PLAYFIELD_Y=2
 
+# Location of termination information
+TERM_X=1
+TERM_Y=$((PLAYFIELD_Y + PLAYFIELD_H + 1))
+
 # Location of score information
 SCORE_X=3
 SCORE_Y=6
@@ -651,14 +655,6 @@ clear_screen() {
   printf "\033[H\033[2J"
 }
 
-show_cursor() {
-  printf "\033[?25h"
-}
-
-hide_cursor() {
-  printf "\033[?25l"
-}
-
 set_color() {
   $no_color && return
   puts "$1"
@@ -710,18 +706,38 @@ print_loading_spin() {
 #
 # ref: <https://unix.stackexchange.com/questions/484442/how-can-i-get-the-pid-of-a-subshell>
 #
-# usage getpid [varname]
+# usage: getpid varname
 get_pid(){
-  pid=$(exec sh -c 'echo "$PPID"')
-  test "$1" && eval "$1=\$pid"
+  set -- "$1" "$(exec sh -c 'echo "$PPID"')"
+  eval "$1=\$2"
 }
 
 send_signal() {
-  kill "-$@"
+  set -- $@ # remove empty pid
+  # If implemented correctly, there should be no need to discard the error,
+  # but it's a little hard and not that important, so we ignore it.
+  { kill "-$@"; } 2>/dev/null
 }
 
 exist_process() {
-  send_signal 0 "$1" 2>/dev/null
+  send_signal 0 "$@" 2>/dev/null
+}
+
+stop_at_start() {
+  sleep 0.1 # wait a bit because the too fast(?) ksh will output an error "Stopped (SIGSTOP)".
+  send_signal "$SIGNAL_STOP" "$@"
+}
+
+stop_process() {
+  send_signal "$SIGNAL_STOP" "$@"
+}
+
+wakeup_process() {
+  send_signal "$SIGNAL_CONT" "$@"
+}
+
+terminate_process() {
+  send_signal "$SIGNAL_TERM" "$@"
 }
 
 # return random value (0 ~ 4294967295)
@@ -833,7 +849,7 @@ get_next() {
   generate_tetrimino "$1" # peek the next piece
 
   # check if piece can be placed at this location, if not - game over
-  new_piece_location_ok $current_piece_x $current_piece_y || quit
+  new_piece_location_ok $current_piece_x $current_piece_y || gameover
   show_current
 
   # now let's shift next queue
@@ -1391,19 +1407,21 @@ lockdown() {
   new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && return
 
   # stop sub process until next the Generation Phase of the Next Tetrimino.
-  send_signal "$SIGNAL_STOP" "$ticker_pid" "$timer_pid"
+  stop_process "$ticker_pid" "$timer_pid"
 
   process_fallen_piece # let's finalize this piece
 
   test_lockout && { # a whole Tetrimino Locks Down above the Skyline - Game Over
-    quit; return    # ... Quit
+    # now lets sub process continue...
+    wakeup_process "$ticker_pid" "$timer_pid"
+    gameover; return    # ... Quit
   }
 
   get_next             # and start the new one
   already_hold=false   # player can hold the falling tetrimino.
 
   # now lets sub process continue...
-  send_signal "$SIGNAL_CONT" "$ticker_pid" "$timer_pid"
+  wakeup_process "$ticker_pid" "$timer_pid"
 }
 
 # Arguments:
@@ -1816,18 +1834,16 @@ toggle_color() {
   redraw_screen
 }
 
-quit() {
-  running=false                                # let's stop controller ...
-  send_signal $SIGNAL_TERM $timer_pid          # let's kill ticker process ...
-  send_signal $SIGNAL_TERM $reader_pid         #
-  send_signal $SIGNAL_TERM $ticker_pid         #
+gameover() {
   xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
-
-  # put message at bottom of playfield so that game screen will keep its shape.
-  xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H + 1)) '> Quit'
-  xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H + 2)) '> Press any key to continue ...'
-
+  xyprint "$TERM_X" "$TERM_Y" '> Press any key to continue ...'
   flush_screen
+  quit
+}
+
+quit() {
+  running=false # let's stop controller ...
+  terminate_process "$timer_pid" "$ticker_pid" "$reader_pid"
 }
 
 init() {
@@ -1865,7 +1881,6 @@ init() {
   done
 
   $debug && echo 'Checking subprocess pid' >> $LOG
-  ticker_pid='' timer_pid='' reader_pid=''
   while [ -z $ticker_pid ] || [ -z $timer_pid ] || [ -z $reader_pid ]; do
     read from cmd pid
     [ "$cmd" = "$MY_PID" ] || continue
@@ -1890,7 +1905,6 @@ init() {
 
   # now setup play screen
   clear_screen
-  hide_cursor
   redraw_screen
 
   # show 'READY' for 1 second.
@@ -1907,7 +1921,7 @@ init() {
     i=$((i - 1))
   done
 
-  send_signal "$SIGNAL_CONT" "$ticker_pid" "$timer_pid"
+  wakeup_process "$ticker_pid" "$timer_pid"
   send_signal "$SIGNAL_UNPAUSE" "$reader_pid"
 
   get_next
@@ -1917,16 +1931,17 @@ init() {
 
 # this function runs in separate process
 lockdown_timer() {
+  game_pid=$1
+
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
   # on this signal reset the timer. lockdown 0.5~0.6(0.5 is correct) sec after receiving signal
   trap 'trigger_counter=5'  $SIGNAL_RESTART_LOCKDOWN_TIMER
   trap 'trigger_counter=-1' $SIGNAL_CANCEL_LOCKDOWN_TIMER
 
-  game_pid=$1
   get_pid my_pid
   state "$PROCESS_TIMER $MY_PID $my_pid"
-  send_signal "$SIGNAL_STOP" "$my_pid"
+  stop_at_start "$my_pid"
 
   trigger_counter=-1  # -1 - already triggerd; 0 - triggered; greater than 0 - count to trigger
   while exist_process "$game_pid"; do
@@ -1948,19 +1963,24 @@ lockdown_timer() {
 # this function runs in separate process
 # it sends FALL commands to controller with appropriate delay
 ticker() {
+  game_pid=$1 level=0
+
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
   # on this signal fall speed should be increased, this happens during level ups
   trap 'level=$((level + 1))' $SIGNAL_LEVEL_UP
   trap 'level=$starting_level' $SIGNAL_RESET_LEVEL
 
-  game_pid=$1
   get_pid my_pid
   state "$PROCESS_TICKER $MY_PID $my_pid"
-  send_signal "$SIGNAL_STOP" "$my_pid"
+
+  # wait for the level to reset, then stop
+  while exist_process "$game_pid" && [ "$level" -eq 0 ]; do
+    sleep 0.1
+  done
+  stop_at_start "$my_pid"
 
   # the game level, which levelup-signal counts up.
-  level=$starting_level
   while exist_process "$game_pid"; do
     eval sleep \"\$FALL_SPEED_LEVEL_$level\"
 
@@ -1989,12 +2009,9 @@ reader() {
   get_pid my_pid
   state "$PROCESS_READER $MY_PID $my_pid"
 
-  # disable terminal local echo (echoback) and canonical input mode
-  stty -echo -icanon time 0 min 1
-
   while exist_process "$game_pid"; do
-    # read one key
-    key=$(dd ibs=1 count=1 2>/dev/null)
+    # read one key (ulimit -t unlimited: force subshell to fork to avoid first key lost bug in ksh)
+    { key=$(ulimit -t unlimited; dd ibs=1 count=1); } 2>/dev/null
     [ -z "$key" ] && key="$LF" # the key will be empty when you type enter
     # echo "$key" >> $LOG # For debug to check input char.
     # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
@@ -2060,14 +2077,16 @@ reader() {
         ;;
     esac
     [ -n "$cmd" ] && state "$PROCESS_READER $cmd" # if not empty string
+    [ "$cmd" = "$QUIT" ] && break
   done
 }
 
 controller() {
-  local from='' cmd=''
+  local from='' cmd='' ticker_pid='' timer_pid='' reader_pid=''
 
   # These signals are ignored
   trap '' $SIGNAL_TERM
+  trap 'controller_interrupt' "$SIGNAL_INT"
 
   # initialization of commands array with appropriate functions
   eval commands_"$QUIT"=quit
@@ -2094,10 +2113,14 @@ controller() {
   done
 }
 
-game() {
-  stty_g=$(stty -g) # let's save terminal state
-  trap 'game_cleanup false' $SIGNAL_INT
+controller_interrupt() {
+  # The process that is being stopped does not terminate on WSL1
+  wakeup_process "$timer_pid" "$ticker_pid"
+  terminate_process "$timer_pid" "$ticker_pid"
+  exit 143
+}
 
+game() {
   # output of ticker, timer and reader is joined and piped into controller
   (
     ticker "$$"         & # runs as separate process
@@ -2106,19 +2129,6 @@ game() {
   ) | (
     controller
   )
-
-  trap "" $SIGNAL_INT
-  game_cleanup true
-}
-
-game_cleanup() {
-  "$1" || {
-    xyprint 0 $((PLAYFIELD_Y + PLAYFIELD_H + 1)) '> Abort'
-    flush_screen
-  }
-  echo '' # add new lines
-  show_cursor
-  stty "$stty_g" # let's restore terminal state
 }
 
 # Exit with error message and usage
@@ -2219,12 +2229,42 @@ main() {
     esac
   done
 
-  if $debug; then
-    echo "=== Debug mode enabled ===" >> $LOG
-    game
-  else
-    game 2> /dev/null # discard stderr of kill command saying 'User defined signal ...'
-  fi
+  initialize
+  ( # this subshell is needed to avoid "stty: stdin isn't a terminal" output in ksh
+    # workaround for the bug in solaris 11 ksh that cannot be stopped with CTRL-C
+    ulimit -t unlimited
+    if $debug; then
+      echo "=== Debug mode enabled ===" >> $LOG
+      game
+    else
+      game 2> /dev/null # discard stderr of kill command saying 'User defined signal ...'
+    fi
+  )
+  cleanup
+}
+
+initialize() {
+  stty_g=$(stty -g) # let's save terminal state
+  interrupt=false
+  trap 'interrupt=true' "$SIGNAL_INT"
+
+  printf '\033[?25l' # hide cursor
+  printf '\033[2J'   # clear full screen
+
+  # disable terminal local echo (echoback) and canonical input mode
+  stty -echo -icanon time 0 min 1
+}
+
+cleanup() {
+  stty "$stty_g" # let's restore terminal state
+
+  # put message at bottom of playfield so that game screen will keep its shape.
+  "$interrupt" && msg="Abort" || msg="Quit"
+  printf '\033[%d;%dH\033[K%s\n' "$TERM_Y" "$TERM_X" "> $msg"
+  printf '\033[?25h'                # show cursor
+
+  "$interrupt" && exit 130 # SIGINT (2) + 128
+  return 0
 }
 
 main "$@"
