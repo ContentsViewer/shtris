@@ -287,7 +287,7 @@ BUFFER_ZONE_Y=24
 LOADING_SPIN='/ - \ |'
 
 # constant chars
-ESC_CH="$(printf '\033')"
+ESC="$(printf '\033')"
 
 # Minos:
 #   this array holds all possible pieces that can be used in the game
@@ -1934,13 +1934,14 @@ ticker() {
 }
 
 # this function processes keyboard input
-localvar reader key a b cmd
+localvar reader key_sequences key cmd
 _reader() {
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
   trap 'paused=false' $SIGNAL_UNPAUSE
 
-  a='' b='' paused=true
+  key_sequences='-------' # preserve previous 7 keys
+  paused=true
 
   game_pid=$1
   get_pid my_pid
@@ -1952,22 +1953,32 @@ _reader() {
   while exist_process "$game_pid"; do
     # read one key
     key=$(dd ibs=1 count=1 2>/dev/null)
+    [ -z "$key" ] && key="$LF" # the key will be empty when you type enter
     # echo "$key" >> $LOG # For debug to check input char.
     # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
+    key_sequences="${key_sequences#?}${key}"
     "$paused" && continue
+
     cmd=''
-    case "$a$b$key" in
-      # 2 escapes
-      *"$ESC_CH""$ESC_CH")
+    case "$key_sequences" in
+      # Modifier keys + Arrow (include incomplete input)
+      *"$ESC"'[1'|\
+      *"$ESC"'[1;'[0-9]|\
+      *"$ESC"'[1;'[0-9][A-D]|\
+      *"$ESC"'[1;'[0-9][0-9]|\
+      *"$ESC"'[1;'[0-9][0-9][A-D])
+        # ignore
+        ;;
+      *"$ESC""$ESC")
         cmd="$QUIT"
         ;;
       # LEFT Arrow, Numpad 4
-      *"$ESC_CH"'[D'|*4)
+      *"$ESC"'[D'|*4)
         cmd="$LEFT"
         ;;
       # RIGHT Arrow, Numpad 6
-      *"$ESC_CH"'[C'|*6)
+      *"$ESC"'[C'|*6)
         cmd="$RIGHT"
         ;;
       # Space Bar, Numpad 8
@@ -1975,11 +1986,11 @@ _reader() {
         cmd="$HARD_DROP"
         ;;
       # DOWN Arrow, Numpad 2
-      *"$ESC_CH"'[B'|*2)
+      *"$ESC"'[B'|*2)
         cmd="$SOFT_DROP"
         ;;
       # UP Arrow, x, Numpad 1 5 9
-      *"$ESC_CH"'[A'|*x|*1|*5|*9)
+      *"$ESC"'[A'|*x|*1|*5|*9)
         cmd="$ROTATE_CW"
         ;;
       # z, Numpad 3, 7
@@ -2006,8 +2017,6 @@ _reader() {
         cmd="$QUIT"
         ;;
     esac
-    a=$b   # preserve previous keys
-    b=$key
     [ -n "$cmd" ] && state "$PROCESS_READER $cmd" # if not empty string
   done
 }
