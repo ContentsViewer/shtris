@@ -73,10 +73,17 @@ PROG=${0##*/}
 IFS=$(printf ' \t\n_') && IFS=${IFS%_}
 LF=${IFS#??}
 
+# Force POSIX mode if available
+( set -o posix ) 2>/dev/null && set -o posix
 if [ "${ZSH_VERSION:-}" ]; then
   IFS="$IFS"$'\0'    # Default IFS value for zsh.
-  setopt shwordsplit # Required for zsh support.
+  emulate -R sh      # Required for zsh support.
 fi
+
+# NOTICE: alias is FAKE.
+#   This is only used to make the local variables stand out.
+#   Since ksh does not support local, local will be ignored by all shells
+alias local=""
 
 # Log file to be written for debug.
 # the contents in the file will not be deleted,
@@ -505,19 +512,6 @@ theme='system'
 #   This Game Over Condition occurs when part of a newly-generated Tetrimino is blocked due to
 #   an existing Block in the Matrix
 
-# Function for defining local variables for cross-shells support.
-if (PATH=/dev/null; f() { local v; }; f) 2>/dev/null; then
-  localvar() {
-    set -- "$1" "$*"
-    eval "$1() { local${2#"$1"}; _$1 \"\$@\"; }"
-  }
-else
-  localvar() {
-    set -- "$1" "$*"
-    eval "function $1 { typeset${2#"$1"}; _$1 \"\$@\"; }"
-  }
-fi
-
 # Arguments:
 #   1 - varname
 #   2 - str to repeat
@@ -546,8 +540,9 @@ str_rpad() {
   eval "$1=\$2"
 }
 
-localvar switch_color_theme i
-_switch_color_theme() {
+switch_color_theme() {
+  local i=''
+
   SCORE_COLOR='' HELP_COLOR='' BORDER_COLOR='' FLASH_COLOR=''
   eval "TETRIMINO_${EMPTY_CELL}_COLOR=''"
   for i in I J L O S T Z; do
@@ -773,9 +768,8 @@ randnext() {
 #   1    - varname to be written shuffled args
 #   2    - current random value
 #   3... - args to be shuffled.
-localvar shuffle varname random_value shuffled len random_shift
-_shuffle() {
-  varname=$1 random_value=$2 shuffled=''
+shuffle() {
+  local varname="$1" random_value="$2" random_shift=0 shuffled=''
 
   shift 2 # shift to target args.
 
@@ -785,10 +779,10 @@ _shuffle() {
     randnext "$random_value"
     random_shift=$(( $random_value % $# ))
 
-    len=${random_shift#-}       # take the absolute value
-    while [ $len -gt 0 ]; do    # rotate args until selected arg comes up at head.
-      set -- "$@" "$1"          # push first arg
-      shift; len=$(( len - 1 )) # pop first arg
+    random_shift=${random_shift#-}          # take the absolute value
+    while [ $random_shift -gt 0 ]; do       # rotate args until selected arg comes up at head.
+      set -- "$@" "$1"; shift               # push first arg
+      random_shift=$(( random_shift - 1 ))  # pop first arg
     done
 
     shuffled="${shuffled}${1} " # push selected arg
@@ -824,22 +818,19 @@ fill_bag() {
 }
 
 #  the Tetrimino at the front of the line in the bag is placed at the end of the Next Queue
-localvar feed_next_queue poped
-_feed_next_queue() {
-  [ -z "$bag" ] && fill_bag       # if bag is empty, then fill the bag.
-  set $bag
-  poped="$1"; shift; bag="$*"     # pop the tetrimino
-  next_queue="$next_queue $poped" # place tetrimino at the end of the Next Queue
+feed_next_queue() {
+  [ -z "$bag" ] && fill_bag   # if bag is empty, then fill the bag.
+  set -- $bag
+  next_queue="$next_queue $1" # place tetrimino at the end of the Next Queue
+  shift; bag="$*"             # pop the tetrimino
 }
 
-localvar get_next next_piece
-_get_next() {
+get_next() {
   set -- $next_queue
-  next_piece="$1"; # peek the next piece
 
   # next piece becomes current
   # place current at the top of play field.
-  generate_tetrimino "$next_piece"
+  generate_tetrimino "$1" # peek the next piece
 
   # check if piece can be placed at this location, if not - game over
   new_piece_location_ok $current_piece_x $current_piece_y || quit
@@ -896,23 +887,21 @@ generate_tetrimino() {
   lands_on=false
 }
 
-localvar what_type_tspin pos_x pos_y rotation side_x side_y side field_cell
-_what_type_tspin() {
-  varname=$1 pos_x=$2 pos_y=$3 rotation=$4
+what_type_tspin() {
+  local pos_x="$1" pos_y="$2" rotation="$3" side=0 side_x=0 side_y=0 field_cell=-1
 
   # Rotation Point 5 is used to rotate the Tetrimino into the T-Slot.
   # Any further rotation will be considered a T-Spin, not a Mini T-Spin
   [ ${5:-0} -ge 5 ] && {
-    eval "$varname=\$ACTION_TSPIN"
-    return
+    return $ACTION_TSPIN
   }
 
-  eval set -- \$T_TETRIMINO_"$rotation"_SIDES
-  side=0 # 1: A; 2: B; 3: C; 4: D
+  eval set -- \$T_TETRIMINO_"$rotation"_SIDES # 1: A; 2: B; 3: C; 4: D
+
   while [ $# -gt 0 ]; do
     side=$((side + 1))
-    side_x=$1; side_y=$2
-    side_x=$((pos_x + side_x)); side_y=$((pos_y - side_y))
+    side_x=$1 side_y=$2
+    side_x=$((pos_x + side_x)) side_y=$((pos_y - side_y))
 
     [ $side_x -lt 0 ]            ||
     [ $side_x -ge $PLAYFIELD_W ] ||
@@ -935,28 +924,24 @@ _what_type_tspin() {
   # if Sides A and B + (C or D) are touching a Surface
   # considered a T-Spin
   $is_touched_3 || $is_touched_4 && $is_touched_1 && $is_touched_2 && {
-    eval "$varname=\$ACTION_TSPIN"
-    return
+    return $ACTION_TSPIN
   }
 
   # if Sides C and D + (A or B) are touching a Surface
   # considered a Mini T-Spin
   $is_touched_1 || $is_touched_2 && $is_touched_3 && $is_touched_4 && {
-    eval "$varname=\$ACTION_MINI_TSPIN"
-    return
+    return $ACTION_MINI_TSPIN
   }
 
-  eval "$varname=\$ACTION_NONE"
-  return
+  return $ACTION_NONE
 }
 
 # test if piece can be moved to new location
 # Arguments:
 #   1 - new x coordinate of the piece
 #   2 - new y coordinate of the piece
-localvar new_piece_location_ok x_test y_test x y field_cell
-_new_piece_location_ok() {
-  x_test="$1"; y_test="$2" # at first, we should preserve the parameters
+new_piece_location_ok() {
+  local x_test="$1" y_test="$2" x=0 y=0 field_cell=-1
 
   # set minos coordinates into parameters
   # $1 - x, $2 - y
@@ -980,8 +965,9 @@ _new_piece_location_ok() {
 }
 
 # this function updated occupied cells in playfield array after piece is dropped
-localvar flatten_playfield x y
-_flatten_playfield() {
+flatten_playfield() {
+  local x=0 y=0
+
   # set minos coordinates into parameters
   # $1 - x, $2 - y
   eval set -- \$piece_"$current_piece"_minos_"$current_piece_rotation"
@@ -998,16 +984,15 @@ _flatten_playfield() {
 # check the line is completed
 # Arguments:
 #   1 - line y of playfield you want to check
-localvar is_line_completed x line_y
-_is_line_completed() {
-  line_y="$1"
+is_line_completed() {
+  local line_y="$1" x=0 field_cell=-1
 
   x=$((PLAYFIELD_W - 1))
   while [ "$x" -ge 0 ]; do
     field_cell=$((playfield_${line_y}_${x}))
     [ "$field_cell" -eq "$EMPTY_CELL" ] && return 1 # false
     x=$((x - 1))
-  done;
+  done
 
   return 0 # true
 }
@@ -1020,12 +1005,11 @@ _is_line_completed() {
 #   2 - hot zone y max (inclusive)
 # Globals:
 #   lastout - completed_lines
-localvar process_complete_lines x y yi field_cell completed_lines
-_process_complete_lines() {
-  y=$1; yi=$2
+process_complete_lines() {
+  local y="$1" yi="$2" x=0 field_cell=-1 completed_lines=''
+
   [ $y -lt 0 ] && y=0
 
-  completed_lines=''
   while [ "$y" -le "$yi" ]; do
     is_line_completed "$y" && completed_lines="$completed_lines $y"
     y=$((y + 1))
@@ -1070,9 +1054,9 @@ _process_complete_lines() {
 
 # Arguments:
 #   1 - number of cleared lines
-localvar what_action action
-_what_action() {
-  action="$ACTION_NONE"
+what_action() {
+  local action="$ACTION_NONE"
+
   case $1 in
     1) action="$ACTION_SINGLE" ;;
     2) action="$ACTION_DOUBLE" ;;
@@ -1111,8 +1095,9 @@ _what_action() {
   return "$action"
 }
 
-localvar process_fallen_piece action y line completed_lines
-_process_fallen_piece() {
+process_fallen_piece() {
+  local action='' y=0 line='' completed_lines=''
+
   flatten_playfield
 
   # There should be a line clear between current_y - 4 ~ current_y
@@ -1146,7 +1131,7 @@ _process_fallen_piece() {
   set_color "$FLASH_COLOR"
   for y in $completed_lines; do
       str_repeat line $dry_cell $PLAYFIELD_W
-      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $y)) "$line"
+      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
   done
   flush_screen
   sleep 0.045
@@ -1154,7 +1139,7 @@ _process_fallen_piece() {
   set_piece_color "$EMPTY_CELL"
   for y in $completed_lines; do
       str_repeat line "$empty_cell" $PLAYFIELD_W
-      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $y)) "$line"
+      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
   done
   flush_screen
   sleep 0.5
@@ -1178,13 +1163,10 @@ draw_scoreboard() {
 #   1 - ACTION name. ex: ACTION_SINGLE
 #   2 - (ACTION_HARD_DROP) lines
 # Returns:
-localvar update_score factor score_to_add lines_to_add action_updated
-_update_score() {
-  eval factor=\"\$SCORE_FACTOR_"$1"\"
+update_score() {
+  local factor=0 score_to_add=0 lines_to_add=0 action_updated=1
 
-  action_updated=1 # false
-  score_to_add=0
-  lines_to_add=0
+  eval factor=\"\$SCORE_FACTOR_"$1"\"
 
   # A Back-to-Back sequence is only broken by a Single, Double, or Triple Line Clear.
   # Locking down a Tetrimino without clearing a line or holding a Tetrimino does not
@@ -1297,9 +1279,8 @@ _update_score() {
 
 # Arguments:
 #   1 - flash. true or false
-localvar draw_action i flash text
-_draw_action() {
-  flash=$1
+draw_action() {
+  local flash="$1" i=0 text=''
 
   set_bold
   set_color "$SCORE_COLOR"
@@ -1427,9 +1408,8 @@ lockdown() {
 
 # Arguments:
 #   1 - rotation direction; 1: clockwise; -1: counter-clockwise
-localvar rotate_piece_classic direction old_rotation new_rotation
-_rotate_piece_classic() {
-  direction="$1"
+rotate_piece_classic() {
+  local direction="$1" old_rotation=0 new_rotation=0
 
   old_rotation=$current_piece_rotation                             # preserve current orientation
   new_rotation=$((old_rotation + direction + 4))
@@ -1437,7 +1417,7 @@ _rotate_piece_classic() {
   current_piece_rotation=$new_rotation                             # set orientation to new
   if new_piece_location_ok $current_piece_x $current_piece_y; then # check if new orientation is ok
     [ $current_piece -eq $T_TETRIMINO ] && {
-      what_type_tspin current_tspin $current_piece_x $current_piece_y $new_rotation
+      what_type_tspin $current_piece_x $current_piece_y $new_rotation; current_tspin=$?
     }
     current_piece_rotation=$old_rotation                           # if yes - restore old rotation ...
     clear_current                                                  # ... clear piece image
@@ -1453,9 +1433,8 @@ _rotate_piece_classic() {
 
 # Arguments:
 #   1 - rotation direction; 1: clockwise; -1: counter-clockwise
-localvar rotate_piece_super direction old_rotation new_rotation shift_x shift_y new_x new_y rpoint
-_rotate_piece_super() {
-  direction="$1"
+rotate_piece_super() {
+  local direction="$1" old_rotation=0 new_rotation=0 new_x=0 new_y=0 rpoint=0
 
   old_rotation=$current_piece_rotation # preserve current orientation
 
@@ -1469,7 +1448,6 @@ _rotate_piece_super() {
   # now parameters setted like below
   # '<POINT1> <POINT2> <POINT3> <POINT4> <POINT5>'
   #   <POINT<NO>>: '<LEFT_SHIFT_X> <LEFT_SHIFT_Y> <RIGHT_SHIFT_X> <RIGHT_SHIFT_Y>'
-  rpoint=0
   [ $direction -eq 1 ] && shift 2 # if rotate clockwise(RIGHT) shift 2 to next xy-coordinates of RIGHT
   while [ $# -gt 0 ]; do
     rpoint=$((rpoint + 1))
@@ -1478,12 +1456,11 @@ _rotate_piece_super() {
       shift 4; continue;
     }
 
-    shift_x=$1; shift_y=$2
-    new_x=$((current_piece_x + shift_x))
-    new_y=$((current_piece_y + shift_y))
+    new_x=$((current_piece_x + $1)) # 1: shift x
+    new_y=$((current_piece_y + $2)) # 2: shift y
     if new_piece_location_ok $new_x $new_y; then # check if new orientation is ok
       [ $current_piece -eq $T_TETRIMINO ] && {
-        what_type_tspin current_tspin $new_x $new_y $new_rotation $rpoint
+        what_type_tspin $new_x $new_y $new_rotation $rpoint; current_tspin=$?
       }
       current_piece_rotation=$old_rotation       # if yes - restore old rotation ...
       clear_current                              # ... clear piece image
@@ -1559,17 +1536,18 @@ soft_drop() {
 #   2 - y
 # Returns:
 #   steps. 0 - no space to fall.
-localvar test_hard_drop steps
-_test_hard_drop() {
-  steps=1
+test_hard_drop() {
+  local steps=1
+
   while new_piece_location_ok $1 $(($2 - steps)); do
     steps=$((steps + 1))
   done
   return $((steps - 1)) # return value must be within 0 ~ 255
 }
 
-localvar hard_drop steps
-_hard_drop() {
+hard_drop() {
+  local steps=0
+
   # move piece all way down
   test_hard_drop $current_piece_x $current_piece_y; steps=$?
 
@@ -1584,8 +1562,9 @@ hold() {
   hold_tetrimino
 }
 
-localvar update_ghost new_ghost_piece_y
-_update_ghost() {
+update_ghost() {
+  local new_ghost_piece_y=0
+
   test_hard_drop $current_piece_x $current_piece_y
   new_ghost_piece_y=$((current_piece_y - $?))
 
@@ -1627,9 +1606,9 @@ clear_ghost() {
 #   x - 0, ..., (PLAYFIELD_W-1)
 #   y - 0, ..., (PLAYFIELD_H-1), ..., (START_Y-1)
 # each array element contains tetrimino type or empty cell
-localvar redraw_playfield x y yp field_cell
-_redraw_playfield() {
-  y=0 field_cell=-1
+redraw_playfield() {
+  local x=0 y=0 yp=0 field_cell=-1
+
   while [ "$y" -lt "$PLAYFIELD_H" ]; do
     yp=$((PLAYFIELD_Y + PLAYFIELD_H - y - 1))
     xyprint "$PLAYFIELD_X" "$yp" # put the cursor on the front of line
@@ -1658,10 +1637,8 @@ _redraw_playfield() {
 #   4 - rotation
 #   5 - cell content
 #   6 - mask with playfield
-localvar draw_piece posx posy type rotation content x y mask
-_draw_piece() {
-  # at first, we should save arguments.
-  posx="$1"; posy="$2"; type="$3"; rotation="$4"; content="$5"; mask="${6:-false}"
+draw_piece() {
+  local posx="$1" posy="$2" type="$3" rotation="$4" content="$5" mask="${6:-false}" x=0 y=0
 
   # set minos coordinates.
   eval set -- \$piece_"$type"_minos_"$rotation"
@@ -1706,21 +1683,20 @@ clear_current() {
 
 # Arguments:
 #   1 - visibility ( false - no, true - yes)
-localvar draw_next x y visible
-_draw_next() {
-  x="$NEXT_X"; y="$NEXT_Y"; visible=$1
+draw_next() {
+  local visible="$1" next_x="$NEXT_X" next_y="$NEXT_Y"
 
   set -- $next_queue
 
   while [ $# -gt 0 ]; do
     $visible && {
       set_piece_color "$1"
-      draw_piece "$x" "$y" "$1" "$NORTH" "$filled_cell"
+      draw_piece "$next_x" "$next_y" "$1" "$NORTH" "$filled_cell"
     } || {
-      draw_piece "$x" "$y" "$1" "$NORTH" '  '
+      draw_piece "$next_x" "$next_y" "$1" "$NORTH" '  '
     }
     shift
-    y=$((y + 3))
+    next_y=$((next_y + 3))
   done
   $visible && reset_colors
 }
@@ -1753,8 +1729,9 @@ clear_hold() {
   draw_hold false
 }
 
-localvar draw_border x1 x2 y1 y2 i x y
-_draw_border() {
+draw_border() {
+  local x1=0 x2=0 y1=0 y2=0 i=0 x=0 y=0
+
   set_bold
   set_color "$BORDER_COLOR"
 
@@ -1785,13 +1762,8 @@ _draw_border() {
   reset_colors
 }
 
-# Arguments:
-#   1 - visibility ( false(1) - no, true(0) - yes), if this argument is skipped $help_on is used
-localvar draw_help visible x y line
-_draw_help() {
-  visible=${1:-$help_on}
-
-  x="$HELP_X"; y="$HELP_Y"
+draw_help() {
+  local help_x="$HELP_X" help_y="$HELP_Y" line=''
 
   set_bold
   set_color "$HELP_COLOR"
@@ -1801,9 +1773,9 @@ _draw_help() {
   IFS=$IFS_SAVE
 
   for line in "$@"; do
-    "$visible" || str_repeat line " " ${#line}
-    xyprint "$x" "$y" "$line"
-    y=$((y + 1))
+    "$help_on" || str_repeat line " " ${#line}
+    xyprint "$help_x" "$help_y" "$line"
+    help_y=$((help_y + 1))
   done
   reset_colors
 }
@@ -1858,8 +1830,9 @@ quit() {
   flush_screen
 }
 
-localvar init x y i from cmd pid
-_init() {
+init() {
+  local x=0 y=0 i=0 from='' cmd='' pid=''
+
   switch_color_theme "$theme"
 
   # Initialize random generator.
@@ -1942,8 +1915,8 @@ _init() {
   flush_screen
 }
 
-localvar lockdown_timer trigger_counter
-_lockdown_timer() {
+# this function runs in separate process
+lockdown_timer() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
   # on this signal reset the timer. lockdown 0.5~0.6(0.5 is correct) sec after receiving signal
@@ -2002,8 +1975,9 @@ ticker() {
 }
 
 # this function processes keyboard input
-localvar reader key_sequences key cmd
-_reader() {
+reader() {
+  local key_sequences='' key='' cmd=''
+
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
   trap 'paused=false' $SIGNAL_UNPAUSE
@@ -2089,8 +2063,9 @@ _reader() {
   done
 }
 
-localvar controller from cmd
-_controller() {
+controller() {
+  local from='' cmd=''
+
   # These signals are ignored
   trap '' $SIGNAL_TERM
 
