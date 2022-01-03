@@ -244,6 +244,10 @@ PLAYFIELD_Y=2
 TERM_X=1
 TERM_Y=$((PLAYFIELD_Y + PLAYFIELD_H + 1))
 
+# Location of error logs
+ERRLOG_X=1
+ERRLOG_Y=$((PLAYFIELD_Y + PLAYFIELD_H + 2))
+
 # Location of score information
 SCORE_X=3
 SCORE_Y=6
@@ -516,6 +520,10 @@ theme='standard'
 #   This Game Over Condition occurs when part of a newly-generated Tetrimino is blocked due to
 #   an existing Block in the Matrix
 
+debug() {
+  "$@" >> "$LOG"
+}
+
 # Arguments:
 #   1 - varname
 #   2 - str to repeat
@@ -645,6 +653,7 @@ puts() {
 
 flush_screen() {
   [ -z "$screen_buffer" ] && return
+  # $debug printf "${#screen_buffer} " # For debugging. survey the output size
   printf "$screen_buffer"
   screen_buffer=''
 }
@@ -1094,8 +1103,8 @@ what_action() {
           $ACTION_TRIPLE) action=$ACTION_TSPIN_TRIPLE ;;
           $ACTION_NONE)   action=$ACTION_TSPIN        ;;
           *)
-            # For Debugging. cannot be reached.
-            echo "invalid tspin action: $action" >> $LOG
+            # Error: cannot be reached.
+            echo "invalid tspin action: $action" >&2
             ;;
         esac
         ;;
@@ -1105,8 +1114,8 @@ what_action() {
           $ACTION_DOUBLE) action=$ACTION_MINI_TSPIN_DOUBLE ;;
           $ACTION_NONE)   action=$ACTION_MINI_TSPIN        ;;
           *)
-            # For Debugging. cannot be reached.
-            echo "invalid mini-tspin action: $action" >> $LOG
+            # Error: cannot be reached.
+            echo "invalid mini-tspin action: $action" >&2
             ;;
         esac
         ;;
@@ -1331,7 +1340,7 @@ update_location() {
 }
 
 on_reach_lowest() {
-  # echo 'on_reach_lowest' >> $LOG # For Debugging
+  # $debug echo 'on_reach_lowest' # For Debugging
   manipulation_counter=0
 
   # if the tetrimino reached the lowest, it means that tetrimino has space to fall
@@ -1350,7 +1359,7 @@ on_manipulation() {
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
         send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
         manipulation_counter=$((manipulation_counter + 1))
-        # echo "mc: $manipulation_counter" >> $LOG # For Debugging. to check counter
+        # $debug echo "mc: $manipulation_counter" # For Debugging. to check counter
       }
       ;;
   esac
@@ -1384,7 +1393,7 @@ move_piece() {
   [ "$2" -eq "$current_piece_y" ] && return 1         # and this was horizontal move
 
   "$lands_on" || {
-    # echo 'Send Lock' >> $LOG # for debugging to check when signal fired.
+    # $debug echo 'Send Lock' # for debugging to check when signal fired.
     send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
   }
   lands_on=true
@@ -1857,7 +1866,7 @@ init() {
     bag_random=$(rand)
     [ $bag_random -eq 0 ] && bag_random=$((bag_random + 1))
   }
-  $debug && echo "seed: $bag_random" >> $LOG # It is useful for reproducing the situation.
+  $debug echo "seed: $bag_random" # It is useful for reproducing the situation.
 
   # playfield is initialized with EMPTY_CELL (0)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
@@ -1880,22 +1889,22 @@ init() {
     i=$((i + 1))
   done
 
-  $debug && echo 'Checking subprocess pid' >> $LOG
+  $debug echo 'Checking subprocess pid'
   while [ -z $ticker_pid ] || [ -z $timer_pid ] || [ -z $reader_pid ]; do
     read cmd from pid
     [ "$cmd" = "$NOTIFY_PID" ] || continue
     case $from in
       $PROCESS_TICKER)
         ticker_pid=$pid
-        $debug && echo "> ticker $ticker_pid ...OK" >> $LOG
+        $debug echo "> ticker $ticker_pid ...OK"
         ;;
       $PROCESS_READER)
         reader_pid=$pid
-        $debug && echo "> reader $reader_pid ...OK" >> $LOG
+        $debug echo "> reader $reader_pid ...OK"
         ;;
       $PROCESS_TIMER)
         timer_pid=$pid
-        $debug && echo "> timer  $timer_pid ...OK" >> $LOG
+        $debug echo "> timer  $timer_pid ...OK"
         ;;
     esac
   done
@@ -1947,7 +1956,7 @@ lockdown_timer() {
   while exist_process "$game_pid"; do
     [ "$trigger_counter" -eq 0 ] && {
       trigger_counter=-1
-      # echo 'Fire Lock' >> $LOG # for debugging to check when signal fired.
+      # $debug echo 'Fire Lock' # for debugging to check when signal fired.
       send_cmd "$LOCKDOWN"
     }
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
@@ -1990,7 +1999,7 @@ ticker() {
 
     send_cmd "$FALL"
 
-    # echo "$level" >> $LOG # For debuging. check level variable
+    # $debug echo "$level" # For debuging. check level variable
   done
 }
 
@@ -2105,11 +2114,11 @@ die_usage() {
 main() {
   rotate_piece_func=rotate_piece_super
   starting_level=1
-  debug=false
+  debug=":"
   while [ $# -gt 0 ]; do
     case $1 in
       -d|--debug)
-        debug=true
+        debug="debug"
         shift; continue
         ;;
       -l|--level)
@@ -2192,18 +2201,13 @@ main() {
     esac
   done
 
+  $debug echo "=== Debug mode enabled ==="
   initialize
   (
     # workaround for the bug in solaris 11 sh (ksh) that cannot be stopped with CTRL-C
     ulimit -t unlimited # force a real subshell in ksh
-
-    if $debug; then
-      echo "=== Debug mode enabled ===" >> $LOG
-      game
-    else
-      game 2> /dev/null # discard stderr of kill command saying 'User defined signal ...'
-    fi
-  )
+    game 2>&1 >&3 | errlogger
+  ) 3>&1
   cleanup
 }
 
@@ -2215,6 +2219,9 @@ initialize() {
   printf '\033[?25l' # hide cursor
   printf '\033[2J'   # clear full screen
 
+  # save error log position
+  printf '\033[%d;%dH\0337' "$ERRLOG_Y" "$ERRLOG_X"
+
   # disable terminal local echo (echoback) and canonical input mode
   stty -echo -icanon time 0 min 1
 }
@@ -2225,10 +2232,24 @@ cleanup() {
   # put message at bottom of playfield so that game screen will keep its shape.
   "$interrupt" && msg="Abort" || msg="Quit"
   printf '\033[%d;%dH\033[K%s\n' "$TERM_Y" "$TERM_X" "> $msg"
-  printf '\033[?25h'                # show cursor
+  printf '\0338'     # restore cursor position
+  printf '\033[?25h' # show cursor
 
   "$interrupt" && exit 130 # SIGINT (2) + 128
   return 0
+}
+
+errlogger() {
+  i=0
+  while IFS= read -r line; do
+    i=$((i + 1))
+    printf '\033[%dr' "$ERRLOG_Y"   # set scroll region
+    printf '\0338'                  # restore cursor position
+    printf '[%d] %s\n' "$i" "$line" # error log
+    printf "\0337"                  # save cursor position
+    printf "\033[r"                 # unset scroll region
+    $debug printf '%s\n' "$line"
+  done
 }
 
 main "$@"
