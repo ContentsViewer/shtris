@@ -1851,7 +1851,7 @@ quit() {
 }
 
 init() {
-  local x=0 y=0 i=0 from='' cmd='' pid=''
+  local x=0 y=0 i=0 cmd='' from='' pid=''
 
   switch_color_theme "$theme"
 
@@ -1886,7 +1886,7 @@ init() {
 
   $debug && echo 'Checking subprocess pid' >> $LOG
   while [ -z $ticker_pid ] || [ -z $timer_pid ] || [ -z $reader_pid ]; do
-    read from cmd pid
+    read cmd from pid
     [ "$cmd" = "$MY_PID" ] || continue
     case $from in
       $PROCESS_TICKER)
@@ -1944,7 +1944,7 @@ lockdown_timer() {
   trap 'trigger_counter=-1' $SIGNAL_CANCEL_LOCKDOWN_TIMER
 
   get_pid my_pid
-  state "$PROCESS_TIMER $MY_PID $my_pid"
+  state "$MY_PID $PROCESS_TIMER $my_pid"
   stop_at_start "$my_pid"
 
   trigger_counter=-1  # -1 - already triggerd; 0 - triggered; greater than 0 - count to trigger
@@ -1952,7 +1952,7 @@ lockdown_timer() {
     [ "$trigger_counter" -eq 0 ] && {
       trigger_counter=-1
       # echo 'Fire Lock' >> $LOG # for debugging to check when signal fired.
-      state "$PROCESS_TIMER $LOCKDOWN"
+      state "$LOCKDOWN"
     }
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
 
@@ -1976,7 +1976,7 @@ ticker() {
   trap 'level=$starting_level' $SIGNAL_RESET_LEVEL
 
   get_pid my_pid
-  state "$PROCESS_TICKER $MY_PID $my_pid"
+  state "$MY_PID $PROCESS_TICKER $my_pid"
 
   # wait for the level to reset, then stop
   while exist_process "$game_pid" && [ "$level" -eq 0 ]; do
@@ -1992,7 +1992,7 @@ ticker() {
     #   eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
     #   wait $!
 
-    state "$PROCESS_TICKER $FALL"
+    state "$FALL"
 
     # echo "$level" >> $LOG # For debuging. check level variable
   done
@@ -2011,7 +2011,7 @@ reader() {
 
   game_pid=$1
   get_pid my_pid
-  state "$PROCESS_READER $MY_PID $my_pid"
+  state "$MY_PID $PROCESS_READER $my_pid"
 
   while exist_process "$game_pid"; do
     # read one key (ulimit -t unlimited: force subshell to fork to avoid first key lost bug in ksh)
@@ -2080,13 +2080,13 @@ reader() {
         cmd="$QUIT"
         ;;
     esac
-    [ -n "$cmd" ] && state "$PROCESS_READER $cmd" # if not empty string
+    [ -n "$cmd" ] && state "$cmd" # if not empty string
     [ "$cmd" = "$QUIT" ] && break
   done
 }
 
 controller() {
-  local from='' cmd='' ticker_pid='' timer_pid='' reader_pid=''
+  local cmd='' ticker_pid='' timer_pid='' reader_pid=''
 
   # These signals are ignored
   trap '' $SIGNAL_TERM
@@ -2111,7 +2111,7 @@ controller() {
   init
 
   while $running; do           # run while this variable is true, it is changed to false in quit function
-    read from cmd              # read next command from stdout
+    read cmd                   # read next command from stdout
     eval "\"\$commands_$cmd\"" # run command
     flush_screen
   done
