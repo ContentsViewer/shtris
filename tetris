@@ -417,7 +417,7 @@ Options:
                       RULE can be 'extended'(default), 'infinite', 'classic'
  --seed <SEED>        random seed to determine the order of Tetriminos.
                       range from 1 to 4294967295.
- --theme <THEME>      color theme 'system'(default), 'standard'
+ --theme <THEME>      color theme 'standard'(default), 'system'
  --no-color           don't display colors
  --no-beep            disable beep
  --hide-help          don't show help on start
@@ -494,7 +494,7 @@ lands_on=false             #
 manipulation_counter=0     #
 lowest_line=$START_X       #
 current_tspin=$ACTION_NONE #
-theme='system'
+theme='standard'
 
 # Game Over Conditions
 #
