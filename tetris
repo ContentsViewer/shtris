@@ -62,7 +62,7 @@ set -u # non initialized variable is an error
 # game versioin
 # should follow "Semantic Versioning 2.0.0" <https://semver.org/>
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
-VERSION='2.2.0'
+VERSION='2.3.0-alpha'
 
 # program name
 PROG=${0##*/}
