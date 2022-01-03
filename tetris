@@ -287,7 +287,7 @@ BUFFER_ZONE_Y=24
 LOADING_SPIN='/ - \ |'
 
 # constant chars
-ESC="$(printf '\033')"
+ESC="$(printf '\033')" SP=' '
 
 # Minos:
 #   this array holds all possible pieces that can be used in the game
@@ -2000,16 +2000,13 @@ ticker() {
 
 # this function processes keyboard input
 reader() {
-  local key_sequences='' key='' cmd=''
+  local game_pid="$1" my_pid='' key_sequences='' key='' paused=true cmd=''
+  key_sequences='-------' # preserve previous 7 keys
 
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
   trap 'paused=false' $SIGNAL_UNPAUSE
 
-  key_sequences='-------' # preserve previous 7 keys
-  paused=true
-
-  game_pid=$1
   get_pid my_pid
   send_cmd "$NOTIFY_PID $PROCESS_READER $my_pid"
 
@@ -2025,60 +2022,22 @@ reader() {
 
     cmd=''
     case "$key_sequences" in
-      # Modifier keys + Arrow (include incomplete input)
-      *"$ESC"'[1'|\
-      *"$ESC"'[1;'[0-9]|\
-      *"$ESC"'[1;'[0-9][A-D]|\
-      *"$ESC"'[1;'[0-9][0-9]|\
-      *"$ESC"'[1;'[0-9][0-9][A-D])
-        # ignore
-        ;;
-      *"$ESC""$ESC")
-        cmd="$QUIT"
-        ;;
-      # LEFT Arrow, Numpad 4
-      *"$ESC"'[D'|*4)
-        cmd="$LEFT"
-        ;;
-      # RIGHT Arrow, Numpad 6
-      *"$ESC"'[C'|*6)
-        cmd="$RIGHT"
-        ;;
-      # Space Bar, Numpad 8
-      *' '|*8)
-        cmd="$HARD_DROP"
-        ;;
-      # DOWN Arrow, Numpad 2
-      *"$ESC"'[B'|*2)
-        cmd="$SOFT_DROP"
-        ;;
-      # UP Arrow, x, Numpad 1 5 9
-      *"$ESC"'[A'|*x|*1|*5|*9)
-        cmd="$ROTATE_CW"
-        ;;
-      # z, Numpad 3, 7
-      *z|*3|*7)
-        cmd="$ROTATE_CCW"
-        ;;
-      # c, Numpad 0
-      *c|*0)
-        cmd="$HOLD"
-        ;;
-      *B)
-        cmd="$TOGGLE_BEEP"
-        ;;
-      *C)
-        cmd="$TOGGLE_COLOR"
-        ;;
-      *R)
-        cmd="$REFRESH_SCREEN"
-        ;;
-      *H)
-        cmd="$TOGGLE_HELP"
-        ;;
-      *Q)
-        cmd="$QUIT"
-        ;;
+      # Ignore (incompleted) modifier keys + arrow
+      *"${ESC}[1" | *"${ESC}[1;"[0-9] | *"${ESC}[1;"[0-9][A-D]) ;;
+      *"${ESC}[1;"[0-9][0-9] | *"${ESC}[1;"[0-9][0-9][A-D]) ;;
+
+      *[4]      | *"${ESC}[D"    ) cmd="$LEFT"           ;; # Left, Numpad 4
+      *[6]      | *"${ESC}[C"    ) cmd="$RIGHT"          ;; # Right, Numpad 6
+      *[x159]   | *"${ESC}[A"    ) cmd="$ROTATE_CW"      ;; # Up, x, Numpad 1 5 9
+      *[z37]                     ) cmd="$ROTATE_CCW"     ;; # Numpad 3, 7
+      *[c0]                      ) cmd="$HOLD"           ;; # Numpad 0
+      *[2]      | *"${ESC}[B"    ) cmd="$SOFT_DROP"      ;; # Down, Numpad 2
+      *[${SP}8]                  ) cmd="$HARD_DROP"      ;; # Space Bar, Numpad 8
+      *[R]                       ) cmd="$REFRESH_SCREEN" ;;
+      *[C]                       ) cmd="$TOGGLE_COLOR"   ;;
+      *[B]                       ) cmd="$TOGGLE_BEEP"    ;;
+      *[H]                       ) cmd="$TOGGLE_HELP"    ;;
+      *[Q]      | *"${ESC}${ESC}") cmd="$QUIT"           ;;
     esac
     [ -n "$cmd" ] && send_cmd "$cmd" # if not empty string
     [ "$cmd" = "$QUIT" ] && break
