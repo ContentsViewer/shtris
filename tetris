@@ -2002,13 +2002,14 @@ ticker() {
 }
 
 # this function processes keyboard input
-localvar reader key a b cmd
+localvar reader key_sequences key cmd
 _reader() {
   # this process exits on SIGTERM
   trap exit $SIGNAL_TERM
   trap 'paused=false' $SIGNAL_UNPAUSE
 
-  a='' b='' paused=true
+  key_sequences='-------' # preserve previous 7 keys
+  paused=true
 
   game_pid=$1
   get_pid my_pid
@@ -2020,13 +2021,23 @@ _reader() {
   while exist_process "$game_pid"; do
     # read one key
     key=$(dd ibs=1 count=1 2>/dev/null)
+    [ -z "$key" ] && key="$LF" # the key will be empty when you type enter
     # echo "$key" >> $LOG # For debug to check input char.
     # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
+    key_sequences="${key_sequences#?}${key}"
     "$paused" && continue
+
     cmd=''
-    case "$a$b$key" in
-      # 2 escapes
+    case "$key_sequences" in
+      # Modifier keys + Arrow (include incomplete input)
+      *"$ESC"'[1'|\
+      *"$ESC"'[1;'[0-9]|\
+      *"$ESC"'[1;'[0-9][A-D]|\
+      *"$ESC"'[1;'[0-9][0-9]|\
+      *"$ESC"'[1;'[0-9][0-9][A-D])
+        # ignore
+        ;;
       *"$ESC""$ESC")
         cmd="$QUIT"
         ;;
@@ -2074,8 +2085,6 @@ _reader() {
         cmd="$QUIT"
         ;;
     esac
-    a=$b   # preserve previous keys
-    b=$key
     [ -n "$cmd" ] && state "$PROCESS_READER $cmd" # if not empty string
   done
 }
