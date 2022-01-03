@@ -428,7 +428,7 @@ Options:
                       RULE can be 'extended'(default), 'infinite', 'classic'
  --seed <SEED>        random seed to determine the order of Tetriminos.
                       range from 1 to 4294967295.
- --theme <THEME>      color theme 'system'(default), 'standard'
+ --theme <THEME>      color theme 'standard'(default), 'system'
  --no-color           don't display colors
  --no-beep            disable beep
  --hide-help          don't show help on start
@@ -505,7 +505,7 @@ lands_on=false             #
 manipulation_counter=0     #
 lowest_line=$START_X       #
 current_tspin=$ACTION_NONE #
-theme='system'
+theme='standard'
 
 # Game Over Conditions
 #
@@ -605,8 +605,10 @@ switch_color_theme() {
 color_theme_system() {
   SCORE_COLOR='32'  # GREEN
   HELP_COLOR='33'   # YELLOW
-  BORDER_COLOR='37' # WHITE
-  FLASH_COLOR='37'  # WHITE
+
+  #  not specify color (e.g., WHITE) to match terminal color theme (dark or light)
+  BORDER_COLOR='39' # default
+  FLASH_COLOR='39'  # default
 
   TETRIMINO_I_COLOR='36  46  36 49' # CYAN
   TETRIMINO_J_COLOR='34  44  34 49' # BLUE
@@ -618,18 +620,20 @@ color_theme_system() {
 }
 
 color_theme_standard() {
-  SCORE_COLOR='38;5;46'   # GREEN
-  HELP_COLOR='38;5;226'   # YELLOW
-  BORDER_COLOR='38;5;231' # WHITE
-  FLASH_COLOR='38;5;231'  # WHITE
+  SCORE_COLOR='38;5;70' # green  (r:1 g:3 b:0)
+  HELP_COLOR='38;5;220' # yellow (r:5 g:4 b:0)
 
-  TETRIMINO_I_COLOR='38;5;51  48;5;51   38;5;51  49' # CYAN
-  TETRIMINO_J_COLOR='38;5;21  48;5;21   38;5;21  49' # BLUE
-  TETRIMINO_L_COLOR='38;5;208 48;5;208  38;5;208 49' # ORANGE
-  TETRIMINO_O_COLOR='38;5;226 48;5;226  38;5;226 49' # YELLOW
-  TETRIMINO_S_COLOR='38;5;46  48;5;46   38;5;46  49' # GREEN
-  TETRIMINO_T_COLOR='38;5;127 48;5;127  38;5;127 49' # MAGENTA
-  TETRIMINO_Z_COLOR='38;5;196 48;5;196  38;5;196 49' # RED
+  #  not specify color (e.g., WHITE) to match terminal color theme (dark or light)
+  BORDER_COLOR='39' # default
+  FLASH_COLOR='39'  # default
+
+  TETRIMINO_I_COLOR='38;5;39  48;5;39   38;5;39  49' # light blue (r:0 g:3 b:5)
+  TETRIMINO_J_COLOR='38;5;25  48;5;25   38;5;25  49' # dark blue  (r:0 g:1 b:3)
+  TETRIMINO_L_COLOR='38;5;208 48;5;208  38;5;208 49' # orange     (r:5 g:2 b:0)
+  TETRIMINO_O_COLOR='38;5;220 48;5;220  38;5;220 49' # yellow     (r:5 g:4 b:0)
+  TETRIMINO_S_COLOR='38;5;70  48;5;70   38;5;70  49' # green      (r:1 g:3 b:0)
+  TETRIMINO_T_COLOR='38;5;90  48;5;90   38;5;90  49' # purple     (r:2 g:0 b:2)
+  TETRIMINO_Z_COLOR='38;5;160 48;5;160  38;5;160 49' # red        (r:4 g:0 b:0)
 }
 
 # screen_buffer is variable, that accumulates all screen changes
