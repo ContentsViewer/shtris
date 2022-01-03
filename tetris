@@ -62,7 +62,7 @@ set -u # non initialized variable is an error
 # game versioin
 # should follow "Semantic Versioning 2.0.0" <https://semver.org/>
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
-VERSION='2.2.0'
+VERSION='2.3.0-alpha'
 
 # program name
 PROG=${0##*/}
@@ -147,24 +147,15 @@ FALL_SPEED_LEVEL_14=0.011
 FALL_SPEED_LEVEL_15=0.007
 LEVEL_MAX=15
 
-# color codes
-RED=1
-GREEN=2
-YELLOW=3
-BLUE=4
-MAGENTA=5
-CYAN=6
-WHITE=7
-ORANGE=208
-
-# Those are Tetrimino type
-O_TETRIMINO=0
-I_TETRIMINO=1
-T_TETRIMINO=2
-L_TETRIMINO=3
-J_TETRIMINO=4
-S_TETRIMINO=5
-Z_TETRIMINO=6
+# Those are Tetrimino type (and empty cell)
+EMPTY_CELL=0
+O_TETRIMINO=1
+I_TETRIMINO=2
+T_TETRIMINO=3
+L_TETRIMINO=4
+J_TETRIMINO=5
+S_TETRIMINO=6
+Z_TETRIMINO=7
 
 # Those are the facing
 # Tetrimino has four facings
@@ -236,21 +227,19 @@ LOCKDOWN_RULE_INFINITE=1
 LOCKDOWN_RULE_CLASSIC=2
 LOCKDOWN_ALLOWED_MANIPULATIONS=15
 
-# Location and size of playfield, color and border
+# Location and size of playfield and border
 PLAYFIELD_W=10
 PLAYFIELD_H=20
 PLAYFIELD_X=18
 PLAYFIELD_Y=2
 
-# Location and color of score information
+# Location of score information
 SCORE_X=3
 SCORE_Y=6
-SCORE_COLOR=$GREEN
 
-# Location and color of help information
+# Location of help information
 HELP_X=52
 HELP_Y=10
-HELP_COLOR=$YELLOW
 
 # Next piece location
 NEXT_X=41
@@ -307,7 +296,6 @@ ESC="$(printf '\033')"
 #       <ROTATION_<DIR>_shifts>: <shift_x> <shift_y>
 
 # O-Tetrimino
-eval piece_"$O_TETRIMINO"_color=\"$YELLOW\"
 eval piece_"$O_TETRIMINO"_minos_"$NORTH"=\'1 0  2 0  1 1  2 1\'
 eval piece_"$O_TETRIMINO"_minos_"$EAST"=\' 1 0  2 0  1 1  2 1\'
 eval piece_"$O_TETRIMINO"_minos_"$SOUTH"=\'1 0  2 0  1 1  2 1\'
@@ -318,7 +306,6 @@ eval piece_"$O_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   0  0  0  0   0  0  0  
 eval piece_"$O_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 
 # I-Tetrimino
-eval piece_"$I_TETRIMINO"_color=\"$CYAN\"
 eval piece_"$I_TETRIMINO"_minos_"$NORTH"=\'0 1  1 1  2 1  3 1\'
 eval piece_"$I_TETRIMINO"_minos_"$EAST"=\' 2 0  2 1  2 2  2 3\'
 eval piece_"$I_TETRIMINO"_minos_"$SOUTH"=\'0 2  1 2  2 2  3 2\'
@@ -329,7 +316,6 @@ eval piece_"$I_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   1  0  2  0  -2  0 -1  
 eval piece_"$I_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -2  0  1  0   1  0 -2  0  -2 -1  1 -2   1  2 -2  1\"
 
 # T-Tetrimino
-eval piece_"$T_TETRIMINO"_color=\"$MAGENTA\"
 eval piece_"$T_TETRIMINO"_minos_"$NORTH"=\'1 0  0 1  1 1  2 1\'
 eval piece_"$T_TETRIMINO"_minos_"$EAST"=\' 1 0  1 1  2 1  1 2\'
 eval piece_"$T_TETRIMINO"_minos_"$SOUTH"=\'0 1  1 1  2 1  1 2\'
@@ -340,7 +326,6 @@ eval piece_"$T_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0   n  n  n  
 eval piece_"$T_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
 
 # L-Tetrimino
-eval piece_"$L_TETRIMINO"_color=\"$ORANGE\"
 eval piece_"$L_TETRIMINO"_minos_"$NORTH"=\'2 0  0 1  1 1  2 1\'
 eval piece_"$L_TETRIMINO"_minos_"$EAST"=\' 1 0  1 1  1 2  2 2\'
 eval piece_"$L_TETRIMINO"_minos_"$SOUTH"=\'0 1  1 1  2 1  0 2\'
@@ -351,7 +336,6 @@ eval piece_"$L_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  
 eval piece_"$L_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
 
 # J-Tetrimino
-eval piece_"$J_TETRIMINO"_color=\"$BLUE\"
 eval piece_"$J_TETRIMINO"_minos_"$NORTH"=\'0 0  0 1  1 1  2 1\'
 eval piece_"$J_TETRIMINO"_minos_"$EAST"=\' 1 0  2 0  1 1  1 2\'
 eval piece_"$J_TETRIMINO"_minos_"$SOUTH"=\'0 1  1 1  2 1  2 2\'
@@ -362,7 +346,6 @@ eval piece_"$J_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  
 eval piece_"$J_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
 
 # S-Tetrimino
-eval piece_"$S_TETRIMINO"_color=\"$GREEN\"
 eval piece_"$S_TETRIMINO"_minos_"$NORTH"=\'1 0  2 0  0 1  1 1\'
 eval piece_"$S_TETRIMINO"_minos_"$EAST"=\' 1 0  1 1  2 1  2 2\'
 eval piece_"$S_TETRIMINO"_minos_"$SOUTH"=\'1 1  2 1  0 2  1 2\'
@@ -373,7 +356,6 @@ eval piece_"$S_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  
 eval piece_"$S_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
 
 # Z-Tetrimino
-eval piece_"$Z_TETRIMINO"_color=\"$RED\"
 eval piece_"$Z_TETRIMINO"_minos_"$NORTH"=\"0 0  1 0  1 1  2 1\"
 eval piece_"$Z_TETRIMINO"_minos_"$EAST"=\" 2 0  1 1  2 1  1 2\"
 eval piece_"$Z_TETRIMINO"_minos_"$SOUTH"=\"0 1  1 1  1 2  2 2\"
@@ -435,6 +417,7 @@ Options:
                       RULE can be 'extended'(default), 'infinite', 'classic'
  --seed <SEED>        random seed to determine the order of Tetriminos.
                       range from 1 to 4294967295.
+ --theme <THEME>      color theme 'system'(default), 'standard'
  --no-color           don't display colors
  --no-beep            disable beep
  --hide-help          don't show help on start
@@ -511,6 +494,7 @@ lands_on=false             #
 manipulation_counter=0     #
 lowest_line=$START_X       #
 current_tspin=$ACTION_NONE #
+theme='system'
 
 # Game Over Conditions
 #
@@ -562,6 +546,93 @@ str_rpad() {
   eval "$1=\$2"
 }
 
+localvar switch_color_theme i
+_switch_color_theme() {
+  SCORE_COLOR='' HELP_COLOR='' BORDER_COLOR='' FLASH_COLOR=''
+  eval "TETRIMINO_${EMPTY_CELL}_COLOR=''"
+  for i in I J L O S T Z; do
+    eval "TETRIMINO_${i}_COLOR=''"
+  done
+
+  "color_theme_$1"
+
+  SCORE_COLOR="${ESC}[${SCORE_COLOR};49m"
+  HELP_COLOR="${ESC}[${HELP_COLOR};49m"
+  BORDER_COLOR="${ESC}[${BORDER_COLOR};49m"
+  FLASH_COLOR="${ESC}[${FLASH_COLOR};49m"
+
+  eval "TETRIMINO_${EMPTY_CELL}_COLOR='${ESC}[39;49m'"
+  for i in I J L O S T Z; do
+    eval "set -- \$${i}_TETRIMINO \$TETRIMINO_${i}_COLOR"
+    eval "TETRIMINO_${1}_COLOR='${ESC}[${2:-};${3:-}m'"
+    eval "GHOST_${1}_COLOR='${ESC}[${4:-};${5:-}m'"
+  done
+}
+
+# Color Codes
+#   39 - default foreground color
+#   49 - default background color
+#
+# 8 Colors
+#   30-37 - foreground color
+#     30:BLACK 31:RED 32:GREEN 33:YELLOW 34:BLUE 35:MAGENTA 36:CYAN 37:WHITE
+#   40-47 - background color
+#     40:BLACK 41:RED 42:GREEN 43:YELLOW 44:BLUE 45:MAGENTA 46:CYAN 47:WHITE
+#
+# 16 Colors
+#    90- 97 - bright foreground color
+#     90:BLACK 91:RED 92:GREEN 93:YELLOW 94:BLUE 95:MAGENTA 96:CYAN 97:WHITE
+#   100-107 - bright background color
+#     100:BLACK 101:RED 102:GREEN 103:YELLOW 104:BLUE 105:MAGENTA 106:CYAN 107:WHITE
+#
+# 256 Colors
+#   38;5;<N> - foreground color
+#   48;5;<N> - background color
+#     N=  0-  7: standard colors
+#           0:BLACK 1:RED  2:GREEN  3:YELLOW  4:BLUE  5:MAGENTA  6:CYAN  7:WHITE
+#         8- 15: high intensity colors
+#           8:BLACK 9:RED 10:GREEN 11:YELLOW 12:BLUE 13:MAGENTA 14:CYAN 15:WHITE
+#        16-231: 216 colors (6 * 6 * 6)
+#                R*36 + G*6 + B + 16 (0 <= R, G, B <= 5)
+#       232-255: grayscale from black to white in 24 steps
+#
+# 16777216 Colors
+#   38;2;<R>;<G>;<B> - foreground color
+#   48;2;<R>;<G>;<B> - background color
+#
+# Format:
+#   TETRIMINO_<T>_COLOR='<FG> <BG> <GHOST_FG> <GHOST_BG>'
+
+color_theme_system() {
+  SCORE_COLOR='32'  # GREEN
+  HELP_COLOR='33'   # YELLOW
+  BORDER_COLOR='37' # WHITE
+  FLASH_COLOR='37'  # WHITE
+
+  TETRIMINO_I_COLOR='36  46  36 49' # CYAN
+  TETRIMINO_J_COLOR='34  44  34 49' # BLUE
+  TETRIMINO_L_COLOR='91 101  91 49' # BRIGHT RED
+  TETRIMINO_O_COLOR='33  43  33 49' # YELLOW
+  TETRIMINO_S_COLOR='32  42  32 49' # GREEN
+  TETRIMINO_T_COLOR='35  45  35 49' # MAGENTA
+  TETRIMINO_Z_COLOR='31  41  31 49' # RED
+}
+
+color_theme_standard() {
+  SCORE_COLOR='38;5;46'   # GREEN
+  HELP_COLOR='38;5;226'   # YELLOW
+  BORDER_COLOR='38;5;231' # WHITE
+  FLASH_COLOR='38;5;231'  # WHITE
+
+  TETRIMINO_I_COLOR='38;5;51  48;5;51   38;5;51  49' # CYAN
+  TETRIMINO_J_COLOR='38;5;21  48;5;21   38;5;21  49' # BLUE
+  TETRIMINO_L_COLOR='38;5;208 48;5;208  38;5;208 49' # ORANGE
+  TETRIMINO_O_COLOR='38;5;226 48;5;226  38;5;226 49' # YELLOW
+  TETRIMINO_S_COLOR='38;5;46  48;5;46   38;5;46  49' # GREEN
+  TETRIMINO_T_COLOR='38;5;127 48;5;127  38;5;127 49' # MAGENTA
+  TETRIMINO_Z_COLOR='38;5;196 48;5;196  38;5;196 49' # RED
+}
+
 # screen_buffer is variable, that accumulates all screen changes
 # this variable is printed in controller once per game cycle
 screen_buffer=''
@@ -578,7 +649,7 @@ flush_screen() {
 # move cursor to (x,y) and print string
 # (1,1) is upper left corner of the screen
 xyprint() {
-  puts "\033[${2};${1}H${3}"
+  puts "\033[${2};${1}H${3:-}"
 }
 
 clear_screen() {
@@ -593,18 +664,17 @@ hide_cursor() {
   printf "\033[?25l"
 }
 
-# foreground color
-set_fg() {
+set_color() {
   $no_color && return
-  puts "\033[38;5;${1}m"
-  # puts "\033[3${1}m" # for using 8/16 Colors
+  puts "$1"
 }
 
-# background color
-set_bg() {
-  $no_color && return
-  puts "\033[48;5;${1}m"
-  # puts "\033[4${1}m" # for using 8/16 Colors
+set_piece_color() {
+  eval set_color "\$TETRIMINO_${1}_COLOR"
+}
+
+set_ghost_color() {
+  eval set_color "\$GHOST_${1}_COLOR"
 }
 
 reset_colors() {
@@ -826,7 +896,7 @@ generate_tetrimino() {
   lands_on=false
 }
 
-localvar what_type_tspin pos_x pos_y rotation side_x side_y side
+localvar what_type_tspin pos_x pos_y rotation side_x side_y side field_cell
 _what_type_tspin() {
   varname=$1 pos_x=$2 pos_y=$3 rotation=$4
 
@@ -852,9 +922,12 @@ _what_type_tspin() {
       shift 2; continue
     }
 
-    eval field_cell="\$playfield_${side_y}_${side_x}"
-    [ $field_cell -ne -1 ]       &&
-    eval is_touched_${side}=true || eval is_touched_${side}=false
+    field_cell=$((playfield_${side_y}_${side_x}))
+    if [ $field_cell -ne "$EMPTY_CELL" ]; then
+      eval is_touched_${side}=true
+    else
+      eval is_touched_${side}=false
+    fi
 
     shift 2
   done
@@ -898,8 +971,8 @@ _new_piece_location_ok() {
     [ "$x" -lt 0 ]              ||
     [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
 
-    eval field_cell="\$playfield_${y}_${x}"
-    [ "$field_cell" != -1 ] && return 1    # false; check if location is already occupied
+    field_cell=$((playfield_${y}_${x}))
+    [ "$field_cell" -ne "$EMPTY_CELL" ] && return 1 # false; check if location is already occupied
 
     shift 2 # shift to next minos coordinates
   done
@@ -907,10 +980,8 @@ _new_piece_location_ok() {
 }
 
 # this function updated occupied cells in playfield array after piece is dropped
-localvar flatten_playfield color x y
+localvar flatten_playfield x y
 _flatten_playfield() {
-  eval color=\"\$piece_"$current_piece"_color\"
-
   # set minos coordinates into parameters
   # $1 - x, $2 - y
   eval set -- \$piece_"$current_piece"_minos_"$current_piece_rotation"
@@ -919,7 +990,7 @@ _flatten_playfield() {
   while [ $# -gt 0 ]; do
     x=$((current_piece_x + $1))
     y=$((current_piece_y - $2))
-    eval playfield_"$y"_"$x"="$color"
+    eval playfield_"$y"_"$x"="$current_piece"
     shift 2 # shift to next minos coordinates
   done
 }
@@ -933,8 +1004,8 @@ _is_line_completed() {
 
   x=$((PLAYFIELD_W - 1))
   while [ "$x" -ge 0 ]; do
-    eval field_cell="\$playfield_${line_y}_${x}"
-    [ "$field_cell" -eq -1 ] && return 1 # false. empty cell found
+    field_cell=$((playfield_${line_y}_${x}))
+    [ "$field_cell" -eq "$EMPTY_CELL" ] && return 1 # false
     x=$((x - 1))
   done;
 
@@ -978,7 +1049,7 @@ _process_complete_lines() {
     # move line y to y1
     x=$((PLAYFIELD_W - 1))
     while [ "$x" -ge 0 ]; do
-      eval field_cell="\$playfield_${y}_${x}"
+      field_cell=$((playfield_${y}_${x}))
       eval playfield_"$yi"_"$x"=\"$field_cell\"
       x=$((x - 1))
     done
@@ -990,7 +1061,7 @@ _process_complete_lines() {
   while [ "$yi" -le "$BUFFER_ZONE_Y" ]; do
     x=$((PLAYFIELD_W - 1))
     while [ "$x" -ge 0 ]; do
-      eval playfield_"$yi"_"$x"=-1
+      eval playfield_"$yi"_"$x"="$EMPTY_CELL"
       x=$((x - 1))
     done
     yi=$((yi + 1))
@@ -1054,9 +1125,10 @@ _process_fallen_piece() {
   update_score "$action" && {
     draw_action true # if last_action changed, perform flash effect
   }
-  draw_current "$dry_cell"
 
-  # flash effect
+  # flash piece effect
+  set_color "$FLASH_COLOR"
+  draw_current "$dry_cell"
   flush_screen
   sleep 0.03
 
@@ -1070,7 +1142,8 @@ _process_fallen_piece() {
 
   beep
 
-  # flash effect
+  # flash line effect
+  set_color "$FLASH_COLOR"
   for y in $completed_lines; do
       str_repeat line $dry_cell $PLAYFIELD_W
       xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $y)) "$line"
@@ -1078,6 +1151,7 @@ _process_fallen_piece() {
   flush_screen
   sleep 0.045
 
+  set_piece_color "$EMPTY_CELL"
   for y in $completed_lines; do
       str_repeat line "$empty_cell" $PLAYFIELD_W
       xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $y)) "$line"
@@ -1090,7 +1164,7 @@ _process_fallen_piece() {
 
 draw_scoreboard() {
   set_bold
-  set_fg "$SCORE_COLOR"
+  set_color "$SCORE_COLOR"
   xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE:"
   xyprint "$SCORE_X" $((SCORE_Y + 1)) "│"
   xyprint "$SCORE_X" $((SCORE_Y + 2)) "│"
@@ -1208,7 +1282,7 @@ _update_score() {
   }
 
   set_bold
-  set_fg "$SCORE_COLOR"
+  set_color "$SCORE_COLOR"
   xyprint $((SCORE_X + 1)) $((SCORE_Y + 1)) "$score"
   str_lpad text "$lines_completed" 4
   xyprint $((SCORE_X + 8)) $((SCORE_Y + 3)) "$text"
@@ -1216,7 +1290,6 @@ _update_score() {
   xyprint $((SCORE_X + 8)) $((SCORE_Y + 4)) "$text"
   str_lpad text "$goal" 4
   xyprint $((SCORE_X + 8)) $((SCORE_Y + 5)) "$text"
-
   reset_colors
 
   return $action_updated
@@ -1227,8 +1300,9 @@ _update_score() {
 localvar draw_action i flash text
 _draw_action() {
   flash=$1
+
   set_bold
-  set_fg "$SCORE_COLOR"
+  set_color "$SCORE_COLOR"
 
   IFS_SAVE=$IFS; IFS=:
   set -- $last_action
@@ -1525,8 +1599,7 @@ _update_ghost() {
 }
 
 # Update ghost piece with new location according to current piece.
-localvar show_ghost color
-_show_ghost() {
+show_ghost() {
   if [ $# -gt 0 ]; then
     ghost_piece_y=$1
   else
@@ -1537,9 +1610,7 @@ _show_ghost() {
   ghost_piece_x=$current_piece_x
   ghost_piece_rotation=$current_piece_rotation
 
-  eval color=\"\$piece_"$current_piece"_color\"
-
-  set_fg "$color"
+  set_ghost_color "$current_piece"
   draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$ghost_cell"
 
   reset_colors
@@ -1555,29 +1626,29 @@ clear_ghost() {
 # a_{y,x}
 #   x - 0, ..., (PLAYFIELD_W-1)
 #   y - 0, ..., (PLAYFIELD_H-1), ..., (START_Y-1)
-# each array element contains cell color value or -1 if cell is empty
+# each array element contains tetrimino type or empty cell
 localvar redraw_playfield x y yp field_cell
 _redraw_playfield() {
-  y=0
+  y=0 field_cell=-1
   while [ "$y" -lt "$PLAYFIELD_H" ]; do
     yp=$((PLAYFIELD_Y + PLAYFIELD_H - y - 1))
-    xyprint $PLAYFIELD_X $yp '' # put the cursor on the front of line
+    xyprint "$PLAYFIELD_X" "$yp" # put the cursor on the front of line
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      eval field_cell="\$playfield_${y}_${x}"
-
-      if [ "$field_cell" -eq -1 ]; then
+      if [ "$field_cell" -ne $((playfield_${y}_${x})) ]; then
+        field_cell=$((playfield_${y}_${x}))
+        set_piece_color "$field_cell"
+      fi
+      if [ "$field_cell" -eq "$EMPTY_CELL" ]; then
         puts "$empty_cell"
       else
-        set_fg "$field_cell"
-        set_bg "$field_cell"
         puts "$filled_cell"
-        reset_colors
       fi
       x=$((x + 1))
     done
     y=$((y + 1))
   done
+  reset_colors
 }
 
 # Arguments:
@@ -1623,11 +1694,8 @@ draw_current() {
   draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$1"
 }
 
-localvar show_current color
-_show_current() {
-  eval color=\"\$piece_"$current_piece"_color\"
-  set_fg "$color"
-  set_bg "$color"
+show_current() {
+  set_piece_color "$current_piece"
   draw_current "$filled_cell"
   reset_colors
 }
@@ -1638,7 +1706,7 @@ clear_current() {
 
 # Arguments:
 #   1 - visibility ( false - no, true - yes)
-localvar draw_next color x y visible
+localvar draw_next x y visible
 _draw_next() {
   x="$NEXT_X"; y="$NEXT_Y"; visible=$1
 
@@ -1646,9 +1714,7 @@ _draw_next() {
 
   while [ $# -gt 0 ]; do
     $visible && {
-      eval color=\"\$piece_"$1"_color\"
-      set_fg "$color"
-      set_bg "$color"
+      set_piece_color "$1"
       draw_piece "$x" "$y" "$1" "$NORTH" "$filled_cell"
     } || {
       draw_piece "$x" "$y" "$1" "$NORTH" '  '
@@ -1671,9 +1737,7 @@ clear_next() {
 #   1 - visibility ( false - no, true - yes)
 draw_hold() {
   $1 && {
-    eval color=\"\$piece_"$hold_queue"_color\"
-    set_fg "$color"
-    set_bg "$color"
+    set_piece_color "$hold_queue"
     draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$filled_cell"
     reset_colors
   } || {
@@ -1692,6 +1756,8 @@ clear_hold() {
 localvar draw_border x1 x2 y1 y2 i x y
 _draw_border() {
   set_bold
+  set_color "$BORDER_COLOR"
+
   x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
   x2=$((PLAYFIELD_X + PLAYFIELD_W * 2)) # 2 here is because each cell on play field is 2 characters wide
   y1=$((PLAYFIELD_Y - 1))
@@ -1728,7 +1794,7 @@ _draw_help() {
   x="$HELP_X"; y="$HELP_Y"
 
   set_bold
-  set_fg "$HELP_COLOR"
+  set_color "$HELP_COLOR"
 
   IFS_SAVE=$IFS; IFS=$LF
   set -- $HELP
@@ -1794,6 +1860,8 @@ quit() {
 
 localvar init x y i from cmd pid
 _init() {
+  switch_color_theme "$theme"
+
   # Initialize random generator.
   [ $bag_random -eq 0 ] && {
     # if not set
@@ -1802,7 +1870,7 @@ _init() {
   }
   $debug && echo "seed: $bag_random" >> $LOG # It is useful for reproducing the situation.
 
-  # playfield is initialized with -1s (empty cells)
+  # playfield is initialized with EMPTY_CELL (0)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
   # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y), ..., (BUFFER_ZONE_Y)
   # (0, 0) is bottom left
@@ -1810,7 +1878,7 @@ _init() {
   while [ "$y" -le "$BUFFER_ZONE_Y" ]; do
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      eval playfield_"$y"_"$x"=-1
+      eval playfield_"$y"_"$x"="$EMPTY_CELL"
       x=$((x + 1))
     done
     y=$((y + 1))
@@ -2146,6 +2214,16 @@ main() {
           die_usage "invalid seed '$2'"
         }
         bag_random=$2
+        shift 2; continue
+        ;;
+      --theme)
+        [ $# -le 1 ] && { # if next arg not exists
+          die_usage "option '$1' requires an argument"
+        }
+        case $2 in
+          system | standard) theme=$2 ;;
+          *) die_usage "unrecognized color theme '$2'" ;;
+        esac
         shift 2; continue
         ;;
       --no-beep)
