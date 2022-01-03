@@ -606,8 +606,10 @@ _switch_color_theme() {
 color_theme_system() {
   SCORE_COLOR='32'  # GREEN
   HELP_COLOR='33'   # YELLOW
-  BORDER_COLOR='37' # WHITE
-  FLASH_COLOR='37'  # WHITE
+
+  #  not specify color (e.g., WHITE) to match terminal color theme (dark or light)
+  BORDER_COLOR='39' # default
+  FLASH_COLOR='39'  # default
 
   TETRIMINO_I_COLOR='36  46  36 49' # CYAN
   TETRIMINO_J_COLOR='34  44  34 49' # BLUE
@@ -619,10 +621,12 @@ color_theme_system() {
 }
 
 color_theme_standard() {
-  SCORE_COLOR='38;5;46'   # GREEN
-  HELP_COLOR='38;5;226'   # YELLOW
-  BORDER_COLOR='38;5;231' # WHITE
-  FLASH_COLOR='38;5;231'  # WHITE
+  SCORE_COLOR='38;5;46' # GREEN
+  HELP_COLOR='38;5;226' # YELLOW
+
+  #  not specify color (e.g., WHITE) to match terminal color theme (dark or light)
+  BORDER_COLOR='39'     # default
+  FLASH_COLOR='39'      # default
 
   TETRIMINO_I_COLOR='38;5;51  48;5;51   38;5;51  49' # CYAN
   TETRIMINO_J_COLOR='38;5;21  48;5;21   38;5;21  49' # BLUE
