@@ -119,7 +119,7 @@ TOGGLE_COLOR=10
 TOGGLE_HELP=11
 REFRESH_SCREEN=12
 LOCKDOWN=13
-MY_PID=14
+NOTIFY_PID=14
 
 PROCESS_CONTROLLER=0
 PROCESS_TICKER=1
@@ -287,7 +287,7 @@ BUFFER_ZONE_Y=24
 LOADING_SPIN='/ - \ |'
 
 # constant chars
-ESC="$(printf '\033')"
+ESC="$(printf '\033')" SP=' '
 
 # Minos:
 #   this array holds all possible pieces that can be used in the game
@@ -685,7 +685,7 @@ beep() {
   printf '\007'
 }
 
-state() {
+send_cmd() {
   echo "$1"
 }
 
@@ -853,7 +853,7 @@ get_next() {
   generate_tetrimino "$1" # peek the next piece
 
   # check if piece can be placed at this location, if not - game over
-  new_piece_location_ok $current_piece_x $current_piece_y || gameover
+  new_piece_location_ok $current_piece_x $current_piece_y || quit
   show_current
 
   # now let's shift next queue
@@ -1418,7 +1418,7 @@ lockdown() {
   test_lockout && { # a whole Tetrimino Locks Down above the Skyline - Game Over
     # now lets sub process continue...
     wakeup_process "$ticker_pid" "$timer_pid"
-    gameover; return    # ... Quit
+    quit; return    # ... Quit
   }
 
   get_next             # and start the new one
@@ -1838,20 +1838,16 @@ toggle_color() {
   redraw_screen
 }
 
-gameover() {
+quit() {
+  running=false # let's stop controller ...
   xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
   xyprint "$TERM_X" "$TERM_Y" '> Press any key to continue ...'
   flush_screen
-  quit
-}
-
-quit() {
-  running=false # let's stop controller ...
   terminate_process "$timer_pid" "$ticker_pid" "$reader_pid"
 }
 
 init() {
-  local x=0 y=0 i=0 from='' cmd='' pid=''
+  local x=0 y=0 i=0 cmd='' from='' pid=''
 
   switch_color_theme "$theme"
 
@@ -1886,8 +1882,8 @@ init() {
 
   $debug && echo 'Checking subprocess pid' >> $LOG
   while [ -z $ticker_pid ] || [ -z $timer_pid ] || [ -z $reader_pid ]; do
-    read from cmd pid
-    [ "$cmd" = "$MY_PID" ] || continue
+    read cmd from pid
+    [ "$cmd" = "$NOTIFY_PID" ] || continue
     case $from in
       $PROCESS_TICKER)
         ticker_pid=$pid
@@ -1944,7 +1940,7 @@ lockdown_timer() {
   trap 'trigger_counter=-1' $SIGNAL_CANCEL_LOCKDOWN_TIMER
 
   get_pid my_pid
-  state "$PROCESS_TIMER $MY_PID $my_pid"
+  send_cmd "$NOTIFY_PID $PROCESS_TIMER $my_pid"
   stop_at_start "$my_pid"
 
   trigger_counter=-1  # -1 - already triggerd; 0 - triggered; greater than 0 - count to trigger
@@ -1952,7 +1948,7 @@ lockdown_timer() {
     [ "$trigger_counter" -eq 0 ] && {
       trigger_counter=-1
       # echo 'Fire Lock' >> $LOG # for debugging to check when signal fired.
-      state "$PROCESS_TIMER $LOCKDOWN"
+      send_cmd "$LOCKDOWN"
     }
     [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
 
@@ -1976,7 +1972,7 @@ ticker() {
   trap 'level=$starting_level' $SIGNAL_RESET_LEVEL
 
   get_pid my_pid
-  state "$PROCESS_TICKER $MY_PID $my_pid"
+  send_cmd "$NOTIFY_PID $PROCESS_TICKER $my_pid"
 
   # wait for the level to reset, then stop
   while exist_process "$game_pid" && [ "$level" -eq 0 ]; do
@@ -1992,7 +1988,7 @@ ticker() {
     #   eval sleep \"\$FALL_SPEED_LEVEL_$level\" &
     #   wait $!
 
-    state "$PROCESS_TICKER $FALL"
+    send_cmd "$FALL"
 
     # echo "$level" >> $LOG # For debuging. check level variable
   done
@@ -2000,93 +1996,56 @@ ticker() {
 
 # this function processes keyboard input
 reader() {
-  local key_sequences='' key='' cmd=''
-
-  # this process exits on SIGTERM
-  trap exit $SIGNAL_TERM
-  trap 'paused=false' $SIGNAL_UNPAUSE
-
+  local game_pid="$1" my_pid='' key_sequences='' key='' paused=true cmd=''
   key_sequences='-------' # preserve previous 7 keys
-  paused=true
 
-  game_pid=$1
-  get_pid my_pid
-  state "$PROCESS_READER $MY_PID $my_pid"
+  while dd ibs=1 count=1; do
+    echo # insert a newline: convert one character to one line
+  done 2>/dev/null | {
+    # this process exits on SIGTERM
+    trap exit $SIGNAL_TERM
+    trap 'paused=false' $SIGNAL_UNPAUSE
 
-  while exist_process "$game_pid"; do
-    # read one key (ulimit -t unlimited: force subshell to fork to avoid first key lost bug in ksh)
-    { key=$(ulimit -t unlimited; dd ibs=1 count=1); } 2>/dev/null
-    [ -z "$key" ] && key="$LF" # the key will be empty when you type enter
-    # echo "$key" >> $LOG # For debug to check input char.
-    # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
+    get_pid my_pid
+    send_cmd "$NOTIFY_PID $PROCESS_READER $my_pid"
 
-    key_sequences="${key_sequences#?}${key}"
-    "$paused" && continue
+    while exist_process "$game_pid"; do
+      IFS= read -r key # read one key
+      # echo "$key" >> $LOG # For debug to check input char.
+      # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
-    cmd=''
-    case "$key_sequences" in
-      # Modifier keys + Arrow (include incomplete input)
-      *"$ESC"'[1'|\
-      *"$ESC"'[1;'[0-9]|\
-      *"$ESC"'[1;'[0-9][A-D]|\
-      *"$ESC"'[1;'[0-9][0-9]|\
-      *"$ESC"'[1;'[0-9][0-9][A-D])
-        # ignore
-        ;;
-      *"$ESC""$ESC")
-        cmd="$QUIT"
-        ;;
-      # LEFT Arrow, Numpad 4
-      *"$ESC"'[D'|*4)
-        cmd="$LEFT"
-        ;;
-      # RIGHT Arrow, Numpad 6
-      *"$ESC"'[C'|*6)
-        cmd="$RIGHT"
-        ;;
-      # Space Bar, Numpad 8
-      *' '|*8)
-        cmd="$HARD_DROP"
-        ;;
-      # DOWN Arrow, Numpad 2
-      *"$ESC"'[B'|*2)
-        cmd="$SOFT_DROP"
-        ;;
-      # UP Arrow, x, Numpad 1 5 9
-      *"$ESC"'[A'|*x|*1|*5|*9)
-        cmd="$ROTATE_CW"
-        ;;
-      # z, Numpad 3, 7
-      *z|*3|*7)
-        cmd="$ROTATE_CCW"
-        ;;
-      # c, Numpad 0
-      *c|*0)
-        cmd="$HOLD"
-        ;;
-      *B)
-        cmd="$TOGGLE_BEEP"
-        ;;
-      *C)
-        cmd="$TOGGLE_COLOR"
-        ;;
-      *R)
-        cmd="$REFRESH_SCREEN"
-        ;;
-      *H)
-        cmd="$TOGGLE_HELP"
-        ;;
-      *Q)
-        cmd="$QUIT"
-        ;;
-    esac
-    [ -n "$cmd" ] && state "$PROCESS_READER $cmd" # if not empty string
-    [ "$cmd" = "$QUIT" ] && break
-  done
+      # the key will be empty when you type enter
+      key_sequences="${key_sequences#?}${key:-"$LF"}"
+
+      "$paused" && continue
+
+      cmd=''
+      case "$key_sequences" in
+        # Ignore (incompleted) modifier keys + arrow
+        *"${ESC}[1" | *"${ESC}[1;"[0-9] | *"${ESC}[1;"[0-9][A-D]) ;;
+        *"${ESC}[1;"[0-9][0-9] | *"${ESC}[1;"[0-9][0-9][A-D]) ;;
+
+        *[4]     | *"${ESC}[D") cmd=$LEFT           ;; # Numpad 4, Left
+        *[6]     | *"${ESC}[C") cmd=$RIGHT          ;; # Numpad 6, Right
+        *[x159]  | *"${ESC}[A") cmd=$ROTATE_CW      ;; # x, Numpad 1 5 9, Up
+        *[z37]                ) cmd=$ROTATE_CCW     ;; # z, Numpad 3, 7
+        *[c0]                 ) cmd=$HOLD           ;; # c, Numpad 0
+        *[2]     | *"${ESC}[B") cmd=$SOFT_DROP      ;; # Numpad 2, Down
+        *[${SP}8]             ) cmd=$HARD_DROP      ;; # Space Bar, Numpad 8
+        *[R]                  ) cmd=$REFRESH_SCREEN ;;
+        *[C]                  ) cmd=$TOGGLE_COLOR   ;;
+        *[B]                  ) cmd=$TOGGLE_BEEP    ;;
+        *[H]                  ) cmd=$TOGGLE_HELP    ;;
+        *[Q] | *"${ESC}${ESC}") cmd=$QUIT           ;;
+      esac
+      [ -n "$cmd" ] && send_cmd "$cmd" # if not empty string
+      [ "$cmd" = "$QUIT" ] && break
+    done
+  }
 }
 
 controller() {
-  local from='' cmd='' ticker_pid='' timer_pid='' reader_pid=''
+  local cmd='' ticker_pid='' timer_pid='' reader_pid=''
 
   # These signals are ignored
   trap '' $SIGNAL_TERM
@@ -2111,7 +2070,7 @@ controller() {
   init
 
   while $running; do           # run while this variable is true, it is changed to false in quit function
-    read from cmd              # read next command from stdout
+    read cmd                   # read next command from stdout
     eval "\"\$commands_$cmd\"" # run command
     flush_screen
   done
@@ -2234,9 +2193,10 @@ main() {
   done
 
   initialize
-  ( # this subshell is needed to avoid "stty: stdin isn't a terminal" output in ksh
-    # workaround for the bug in solaris 11 ksh that cannot be stopped with CTRL-C
-    ulimit -t unlimited
+  (
+    # workaround for the bug in solaris 11 sh (ksh) that cannot be stopped with CTRL-C
+    ulimit -t unlimited # force a real subshell in ksh
+
     if $debug; then
       echo "=== Debug mode enabled ===" >> $LOG
       game
