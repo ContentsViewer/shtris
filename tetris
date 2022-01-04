@@ -70,8 +70,7 @@ PROG=${0##*/}
 # Explicitly reset to the default value to prevent the import of IFS
 # from the environment. The following shells will work more safely.
 #   dash <= 0.5.10.2, FreeBSD sh <= 10.4, etc.
-IFS=$(printf ' \t\n_') && IFS=${IFS%_}
-LF=${IFS#??}
+IFS=$(printf '\n\t') && SP=' ' TAB=${IFS#?} LF=${IFS%?} && IFS=" ${TAB}${LF}"
 
 # Force POSIX mode if available
 ( set -o posix ) 2>/dev/null && set -o posix
@@ -291,7 +290,7 @@ BUFFER_ZONE_Y=24
 LOADING_SPIN='/ - \ |'
 
 # constant chars
-ESC="$(printf '\033')" SP=' '
+ESC="$(printf '\033')"
 
 # Minos:
 #   this array holds all possible pieces that can be used in the game
@@ -2005,18 +2004,22 @@ ticker() {
 
 # this function processes keyboard input
 reader() {
-  local game_pid="$1" my_pid='' key_sequences='' key='' paused=true cmd=''
-  key_sequences='-------' # preserve previous 7 keys
+  local game_pid="$1" my_pid='' key_sequences='' key='' paused=true
 
   while dd ibs=1 count=1; do
     echo # insert a newline: convert one character to one line
-  done 2>/dev/null | {
+  done 2>/dev/null | { # Do not use '(' here
+    # Do not use subshell to make it work correctly with Solaris 11 sh (ksh).
+    # It will not respond to keystrokes.
+
     # this process exits on SIGTERM
     trap exit $SIGNAL_TERM
     trap 'paused=false' $SIGNAL_UNPAUSE
 
     get_pid my_pid
     send_cmd "$NOTIFY_PID $PROCESS_READER $my_pid"
+
+    key_sequences='-------' # preserve previous 7 keys
 
     while exist_process "$game_pid"; do
       IFS= read -r key # read one key
@@ -2028,27 +2031,24 @@ reader() {
 
       "$paused" && continue
 
-      cmd=''
       case "$key_sequences" in
-        # Ignore (incompleted) modifier keys + arrow
+        # Ignore (incompleted) modifier + arrow keys
         *"${ESC}[1" | *"${ESC}[1;"[0-9] | *"${ESC}[1;"[0-9][A-D]) ;;
         *"${ESC}[1;"[0-9][0-9] | *"${ESC}[1;"[0-9][0-9][A-D]) ;;
 
-        *[4]     | *"${ESC}[D") cmd=$LEFT           ;; # Numpad 4, Left
-        *[6]     | *"${ESC}[C") cmd=$RIGHT          ;; # Numpad 6, Right
-        *[x159]  | *"${ESC}[A") cmd=$ROTATE_CW      ;; # x, Numpad 1 5 9, Up
-        *[z37]                ) cmd=$ROTATE_CCW     ;; # z, Numpad 3, 7
-        *[c0]                 ) cmd=$HOLD           ;; # c, Numpad 0
-        *[2]     | *"${ESC}[B") cmd=$SOFT_DROP      ;; # Numpad 2, Down
-        *[${SP}8]             ) cmd=$HARD_DROP      ;; # Space Bar, Numpad 8
-        *[R]                  ) cmd=$REFRESH_SCREEN ;;
-        *[C]                  ) cmd=$TOGGLE_COLOR   ;;
-        *[B]                  ) cmd=$TOGGLE_BEEP    ;;
-        *[H]                  ) cmd=$TOGGLE_HELP    ;;
-        *[Q] | *"${ESC}${ESC}") cmd=$QUIT           ;;
+        *[4]     | *"${ESC}[D") send_cmd "$LEFT"           ;; # Numpad 4, Left
+        *[6]     | *"${ESC}[C") send_cmd "$RIGHT"          ;; # Numpad 6, Right
+        *[x159]  | *"${ESC}[A") send_cmd "$ROTATE_CW"      ;; # x, Numpad 1 5 9, Up
+        *[z37]                ) send_cmd "$ROTATE_CCW"     ;; # z, Numpad 3, 7
+        *[c0]                 ) send_cmd "$HOLD"           ;; # c, Numpad 0
+        *[2]     | *"${ESC}[B") send_cmd "$SOFT_DROP"      ;; # Numpad 2, Down
+        *[${SP}8]             ) send_cmd "$HARD_DROP"      ;; # Space Bar, Numpad 8
+        *[R]                  ) send_cmd "$REFRESH_SCREEN" ;; # R
+        *[C]                  ) send_cmd "$TOGGLE_COLOR"   ;; # C
+        *[B]                  ) send_cmd "$TOGGLE_BEEP"    ;; # B
+        *[H]                  ) send_cmd "$TOGGLE_HELP"    ;; # H
+        *[Q] | *"${ESC}${ESC}") send_cmd "$QUIT"; break    ;; # Q, ESCx2
       esac
-      [ -n "$cmd" ] && send_cmd "$cmd" # if not empty string
-      [ "$cmd" = "$QUIT" ] && break
     done
   }
 }
@@ -2203,11 +2203,7 @@ main() {
 
   $debug echo "=== Debug mode enabled ==="
   initialize
-  (
-    # workaround for the bug in solaris 11 sh (ksh) that cannot be stopped with CTRL-C
-    ulimit -t unlimited # force a real subshell in ksh
-    game 2>&1 >&3 | errlogger
-  ) 3>&1
+  ( game 2>&1 >&3 | errlogger ) 3>&1
   cleanup
 }
 
