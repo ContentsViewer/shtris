@@ -97,10 +97,18 @@ SIGNAL_TERM=TERM
 SIGNAL_INT=INT
 SIGNAL_STOP=STOP
 SIGNAL_CONT=CONT
+# signals for ticker
 SIGNAL_LEVEL_UP=USR1
 SIGNAL_RESET_LEVEL=USR2
-SIGNAL_CANCEL_LOCKDOWN_TIMER=USR1
-SIGNAL_RESTART_LOCKDOWN_TIMER=USR2
+# signals for lockdown_timer
+#   In ksh, signals are processed starting with the lowest number.
+#     ref: <https://docs.oracle.com/cd/E36784_01/html/E36870/ksh-1.html>
+#     > Trap commands are executed in order of signal number. 
+#   For ksh (solaris 11 sh only?) to work properly, the signal number of
+#   RESTART_LOCKDOWN_TIMER must be smaller than CANCEL_LOCKDOWN_TIMER.
+SIGNAL_RESTART_LOCKDOWN_TIMER=USR1
+SIGNAL_CANCEL_LOCKDOWN_TIMER=USR2
+# signals for reader
 SIGNAL_UNPAUSE=USR1
 
 # Those are commands sent to controller by key press processing code
@@ -1346,6 +1354,7 @@ on_reach_lowest() {
   # if the tetrimino reached the lowest, it means that tetrimino has space to fall
   # and not lifts up before it lands on.
   # so, we can cancel lockdown timer which is running.
+  # $debug echo "send_signal: CANCEL_LOCKDOWN_TIMER"
   send_signal "$SIGNAL_CANCEL_LOCKDOWN_TIMER" $timer_pid
 }
 
@@ -1353,10 +1362,12 @@ on_reach_lowest() {
 on_manipulation() {
   case $lockdown_rule in
     $LOCKDOWN_RULE_INFINITE)
+      # $debug echo "send_signal: RESTART_LOCKDOWN_TIMER"
       send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
       ;;
     $LOCKDOWN_RULE_EXTENDED)
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
+        # $debug echo "send_signal: RESTART_LOCKDOWN_TIMER"
         send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
         manipulation_counter=$((manipulation_counter + 1))
         # $debug echo "mc: $manipulation_counter" # For Debugging. to check counter
@@ -1393,7 +1404,7 @@ move_piece() {
   [ "$2" -eq "$current_piece_y" ] && return 1         # and this was horizontal move
 
   "$lands_on" || {
-    # $debug echo 'Send Lock' # for debugging to check when signal fired.
+    # $debug echo "send_signal: RESTART_LOCKDOWN_TIMER (move_piece)"
     send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
   }
   lands_on=true
@@ -1948,6 +1959,10 @@ lockdown_timer() {
   trap 'trigger_counter=5'  $SIGNAL_RESTART_LOCKDOWN_TIMER
   trap 'trigger_counter=-1' $SIGNAL_CANCEL_LOCKDOWN_TIMER
 
+  # For debuging
+  # trap 'lockdown_timer_restart_debug_handler'  $SIGNAL_RESTART_LOCKDOWN_TIMER
+  # trap 'lockdown_timer_cancel_debug_handler' $SIGNAL_CANCEL_LOCKDOWN_TIMER
+
   get_pid my_pid
   send_cmd "$NOTIFY_PID $PROCESS_TIMER $my_pid"
   stop_at_start "$my_pid"
@@ -1956,10 +1971,13 @@ lockdown_timer() {
   while exist_process "$game_pid"; do
     [ "$trigger_counter" -eq 0 ] && {
       trigger_counter=-1
-      # $debug echo 'Fire Lock' # for debugging to check when signal fired.
+      # $debug echo "send_cmd: LOCKDOWN"
       send_cmd "$LOCKDOWN"
     }
-    [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
+    [ "$trigger_counter" -gt 0 ] && {
+      trigger_counter=$((trigger_counter - 1))
+      # $debug echo "lockdown_timer: countdown $trigger_counter"
+    }
 
     sleep 0.1
 
@@ -1967,6 +1985,20 @@ lockdown_timer() {
     #   sleep 0.1 & # wait in background for receiving the signal
     #   wait $!
   done
+}
+
+# Since we want to minimize the signal processing as much as possible,
+# these functions are provided for use only in debugging.
+{
+  lockdown_timer_restart_debug_handler() {
+    trigger_counter=5
+    $debug echo "lockdown_timer: restart $trigger_counter"
+  }
+
+  lockdown_timer_cancel_debug_handler() {
+    trigger_counter=-1
+    $debug echo "lockdown_timer: cancel $trigger_counter"
+  }
 }
 
 # this function runs in separate process
