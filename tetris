@@ -99,8 +99,8 @@ SIGNAL_CONT=CONT
 SIGNAL_LEVEL_UP=USR1
 SIGNAL_RESET_LEVEL=USR2
 SIGNAL_RESTART_LOCKDOWN_TIMER=USR1
-SIGNAL_CAPTURE_INPUT=USR1
-SIGNAL_RELEASE_INPUT=USR2
+SIGNAL_RELEASE_INPUT=USR1
+SIGNAL_CAPTURE_INPUT=USR2
 
 # Those are commands sent to controller by key press processing code
 # In controller they are used as index to retrieve actual function from array
