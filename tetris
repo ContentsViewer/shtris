@@ -100,7 +100,8 @@ SIGNAL_LEVEL_UP=USR1
 SIGNAL_RESET_LEVEL=USR2
 SIGNAL_CANCEL_LOCKDOWN_TIMER=USR1
 SIGNAL_RESTART_LOCKDOWN_TIMER=USR2
-SIGNAL_UNPAUSE=USR1
+SIGNAL_CAPTURE_INPUT=USR1
+SIGNAL_RELEASE_INPUT=USR2
 
 # Those are commands sent to controller by key press processing code
 # In controller they are used as index to retrieve actual function from array
@@ -1154,6 +1155,8 @@ process_fallen_piece() {
   [ "$action" -eq $ACTION_MINI_TSPIN ] ||
   [ "$action" -eq $ACTION_TSPIN ]      && return
 
+  send_signal "$SIGNAL_RELEASE_INPUT" "$reader_pid"
+
   beep
 
   # flash line effect
@@ -1172,6 +1175,8 @@ process_fallen_piece() {
   done
   flush_screen
   sleep 0.5
+
+  send_signal "$SIGNAL_CAPTURE_INPUT" "$reader_pid"
 
   redraw_playfield
 }
@@ -1931,7 +1936,7 @@ init() {
   done
 
   wakeup_process "$ticker_pid" "$timer_pid"
-  send_signal "$SIGNAL_UNPAUSE" "$reader_pid"
+  send_signal "$SIGNAL_CAPTURE_INPUT" "$reader_pid"
 
   get_next
   redraw_screen
@@ -2005,7 +2010,7 @@ ticker() {
 
 # this function processes keyboard input
 reader() {
-  local game_pid="$1" my_pid='' key_sequences='' key='' paused=true
+  local game_pid="$1" my_pid='' key_sequences='' key='' capture=false
 
   while dd ibs=1 count=1; do
     echo # insert a newline: convert one character to one line
@@ -2015,7 +2020,8 @@ reader() {
 
     # this process exits on SIGTERM
     trap exit $SIGNAL_TERM
-    trap 'paused=false' $SIGNAL_UNPAUSE
+    trap 'capture=true' $SIGNAL_CAPTURE_INPUT
+    trap 'capture=false' $SIGNAL_RELEASE_INPUT
 
     get_pid my_pid
     send_cmd "$NOTIFY_PID $PROCESS_READER $my_pid"
@@ -2030,7 +2036,7 @@ reader() {
       # the key will be empty when you type enter
       key_sequences="${key_sequences#?}${key:-"$LF"}"
 
-      "$paused" && continue
+      "$capture" || continue
 
       case "$key_sequences" in
         # Ignore (incompleted) modifier + arrow keys
