@@ -286,9 +286,6 @@ START_Y=21
 # assured over 3 blocks above START_Y
 BUFFER_ZONE_Y=24
 
-# loading spin sequence
-LOADING_SPIN='/ - \ |'
-
 # constant chars
 BEL="$(printf '\007')"
 ESC="$(printf '\033')"
@@ -697,14 +694,6 @@ beep() {
 
 send_cmd() {
   echo "$1"
-}
-
-current_loading_spin_shift=0
-print_loading_spin() {
-  set $LOADING_SPIN
-  shift $current_loading_spin_shift
-  current_loading_spin_shift=$(( (current_loading_spin_shift + 1) % 4 ))
-  printf '%s' "$1"
 }
 
 # Get pid of current process regardless of subshell
@@ -2001,7 +1990,7 @@ ticker() {
 
 # this function processes keyboard input
 reader() {
-  local game_pid="$1" my_pid='' key_sequences='' key='' capture=false
+  local game_pid="$1" my_pid='' key_sequence='' key='' capture=false
 
   while dd ibs=1 count=1; do
     echo # insert a newline: convert one character to one line
@@ -2017,7 +2006,7 @@ reader() {
     get_pid my_pid
     send_cmd "$NOTIFY_PID $PROCESS_READER $my_pid"
 
-    key_sequences='-------' # preserve previous 7 keys
+    key_sequence='-------' # preserve previous 7 keys
 
     while exist_process "$game_pid"; do
       # The read command is aborted with an error when a signal is received (e.g. USR1 + 128 * 2).
@@ -2026,11 +2015,11 @@ reader() {
       # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
       # the key will be empty when you type enter
-      key_sequences="${key_sequences#?}${key:-"$LF"}"
+      key_sequence="${key_sequence#?}${key:-"$LF"}"
 
       "$capture" || continue
 
-      case "$key_sequences" in
+      case "$key_sequence" in
         # Ignore (incompleted) modifier + arrow keys
         *"${ESC}[1" | *"${ESC}[1;"[0-9] | *"${ESC}[1;"[0-9][A-D]) ;;
         *"${ESC}[1;"[0-9][0-9] | *"${ESC}[1;"[0-9][0-9][A-D]) ;;
