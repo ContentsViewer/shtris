@@ -290,6 +290,7 @@ BUFFER_ZONE_Y=24
 LOADING_SPIN='/ - \ |'
 
 # constant chars
+BEL="$(printf '\007')"
 ESC="$(printf '\033')"
 
 # Minos:
@@ -653,18 +654,18 @@ puts() {
 flush_screen() {
   [ -z "$screen_buffer" ] && return
   # $debug printf "${#screen_buffer} " # For debugging. survey the output size
-  printf "$screen_buffer"
+  echo "$screen_buffer"
   screen_buffer=''
 }
 
 # move cursor to (x,y) and print string
 # (1,1) is upper left corner of the screen
 xyprint() {
-  puts "\033[${2};${1}H${3:-}"
+  puts "${ESC}[${2};${1}H${3:-}"
 }
 
 clear_screen() {
-  printf "\033[H\033[2J"
+  puts "${ESC}[H${ESC}[2J"
 }
 
 set_color() {
@@ -681,16 +682,16 @@ set_ghost_color() {
 }
 
 reset_colors() {
-  puts "\033[0m"
+  puts "${ESC}[m"
 }
 
 set_bold() {
-  puts "\033[1m"
+  puts "${ESC}[1m"
 }
 
 beep() {
   $beep_on || return
-  printf '\007'
+  puts "$BEL"
 }
 
 send_cmd() {
