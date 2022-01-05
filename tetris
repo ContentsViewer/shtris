@@ -1855,7 +1855,7 @@ toggle_color() {
 quit() {
   running=false # let's stop controller ...
   xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
-  xyprint "$TERM_X" "$TERM_Y" '> Press any key to continue ...'
+  xyprint "$TERM_X" "$TERM_Y" '> Press enter to continue ...'
   flush_screen
   terminate_process "$timer_pid" "$ticker_pid" "$reader_pid"
 }
@@ -2058,6 +2058,7 @@ reader() {
       esac
     done
   }
+  read key # Remove extra input after game over.
 }
 
 controller() {
