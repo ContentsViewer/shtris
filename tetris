@@ -254,7 +254,7 @@ SCORE_Y=6
 
 # Location of help information
 HELP_X=52
-HELP_Y=10
+HELP_Y=9
 
 # Next piece location
 NEXT_X=41
@@ -405,20 +405,21 @@ eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  2 2  0 0  0 2\"
 eval T_TETRIMINO_"$SOUTH"_SIDES=\"2 2  0 2  2 0  0 0\"
 eval T_TETRIMINO_"$WEST"_SIDES=\" 0 2  0 0  2 2  2 0\"
 
-HELP='
-←         Move Left or Right
-→         Move Right
-↑, x      Rotate Right
-z         Rotate Left
-c         Hold
-↓         Soft Drop
-Space     Hard Drop
-R         Refresh Screen
-C         Toggle Color
-B         Toggle Beep
-H         Toggle Help
-Q, ESCx2  Quit
-'
+HELP="
+Move Left       ←
+Move Right      →
+Rotate Left     z
+Rotate Right    x, ↑
+Hold            c
+Soft Drop       ↓
+Hard Drop       Space
+${SP}
+Refresh Screen  R
+Toggle Color    C
+Toggle Beep     B
+Toggle Help     H
+Quit            Q, ESCx2
+"
 
 USAGE="
 Usage: $PROG [options]
