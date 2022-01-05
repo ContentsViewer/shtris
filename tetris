@@ -98,8 +98,7 @@ SIGNAL_STOP=STOP
 SIGNAL_CONT=CONT
 SIGNAL_LEVEL_UP=USR1
 SIGNAL_RESET_LEVEL=USR2
-SIGNAL_CANCEL_LOCKDOWN_TIMER=USR1
-SIGNAL_RESTART_LOCKDOWN_TIMER=USR2
+SIGNAL_RESTART_LOCKDOWN_TIMER=USR1
 SIGNAL_CAPTURE_INPUT=USR1
 SIGNAL_RELEASE_INPUT=USR2
 
@@ -1340,29 +1339,23 @@ update_location() {
   current_piece_y="$2"
   [ $current_piece_y -lt $lowest_line ] && {
     lowest_line=$current_piece_y
-    on_reach_lowest
+    manipulation_counter=0
+    # when the tetromino drops below the lowest line, the lockdown timer is reset
+    restart_lockdown_timer=true
   }
-}
-
-on_reach_lowest() {
-  # $debug echo 'on_reach_lowest' # For Debugging
-  manipulation_counter=0
-
-  # if the tetrimino reached the lowest, it means that tetrimino has space to fall
-  # and not lifts up before it lands on.
-  # so, we can cancel lockdown timer which is running.
-  send_signal "$SIGNAL_CANCEL_LOCKDOWN_TIMER" $timer_pid
 }
 
 # this function called when player manipulate tetrimino.
 on_manipulation() {
   case $lockdown_rule in
     $LOCKDOWN_RULE_INFINITE)
-      send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+      # when the tetromino moves or rotates, the lockdown timer is reset
+      restart_lockdown_timer=true
       ;;
     $LOCKDOWN_RULE_EXTENDED)
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
-        send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+        # when the tetromino moves or rotates, the lockdown timer is reset
+        restart_lockdown_timer=true
         manipulation_counter=$((manipulation_counter + 1))
         # $debug echo "mc: $manipulation_counter" # For Debugging. to check counter
       }
@@ -1398,8 +1391,7 @@ move_piece() {
   [ "$2" -eq "$current_piece_y" ] && return 1         # and this was horizontal move
 
   "$lands_on" || {
-    # $debug echo 'Send Lock' # for debugging to check when signal fired.
-    send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+    restart_lockdown_timer=true
   }
   lands_on=true
 
@@ -1951,20 +1943,18 @@ lockdown_timer() {
   trap exit $SIGNAL_TERM
   # on this signal reset the timer. lockdown 0.5~0.6(0.5 is correct) sec after receiving signal
   trap 'trigger_counter=5'  $SIGNAL_RESTART_LOCKDOWN_TIMER
-  trap 'trigger_counter=-1' $SIGNAL_CANCEL_LOCKDOWN_TIMER
 
   get_pid my_pid
   send_cmd "$NOTIFY_PID $PROCESS_TIMER $my_pid"
   stop_at_start "$my_pid"
 
-  trigger_counter=-1  # -1 - already triggerd; 0 - triggered; greater than 0 - count to trigger
+  trigger_counter=-1 # -1: already triggerd, 0: triggered, >0: count to trigger
   while exist_process "$game_pid"; do
+    trigger_counter=$((trigger_counter >= 0 ? trigger_counter - 1 : trigger_counter))
     [ "$trigger_counter" -eq 0 ] && {
-      trigger_counter=-1
-      # $debug echo 'Fire Lock' # for debugging to check when signal fired.
+      # $debug echo "send_cmd: LOCKDOWN
       send_cmd "$LOCKDOWN"
     }
-    [ "$trigger_counter" -gt 0 ] && trigger_counter=$((trigger_counter - 1))
 
     sleep 0.1
 
@@ -2087,9 +2077,14 @@ controller() {
   init
 
   while $running; do           # run while this variable is true, it is changed to false in quit function
+    restart_lockdown_timer=false
     read cmd                   # read next command from stdout
     eval "\"\$commands_$cmd\"" # run command
     flush_screen
+    if "$restart_lockdown_timer"; then
+      send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+      $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+    fi
   done
 }
 
