@@ -264,12 +264,8 @@ NEXT_MAX=7
 HOLD_X=7
 HOLD_Y=2
 
-# Location of 'Game Over!' at end of the game
-GAMEOVER_X=$((PLAYFIELD_X + PLAYFIELD_W - 5))  # 1 width equals 2 character
-GAMEOVER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
-
-# Location of center of play field.
-CENTER_X=$((PLAYFIELD_X + PLAYFIELD_W))
+# Location of center of play field
+CENTER_X=$((PLAYFIELD_X + PLAYFIELD_W))     # 1 width equals 2 character
 CENTER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
 
 # piece starting location
@@ -907,6 +903,7 @@ generate_tetrimino() {
 
   # beginning from its generation position and North Facing orientation.
   current_piece_rotation="$NORTH"
+  
   current_piece_x=$START_X
   current_piece_y=$(($START_Y + 1))
   lowest_line=$current_piece_y
@@ -1865,7 +1862,7 @@ toggle_color() {
 
 quit() {
   running=false # let's stop controller ...
-  xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
+  xyprint $((CENTER_X - 5)) $CENTER_Y 'Game Over!'
   xyprint "$TERM_X" "$TERM_Y" '> Press enter to continue ...'
   flush_screen
   terminate_process "$timer_pid" "$ticker_pid" "$reader_pid"
