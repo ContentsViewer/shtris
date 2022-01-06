@@ -932,10 +932,10 @@ generate_tetrimino() {
   # beginning from its generation position and North Facing orientation.
   current_piece_rotation="$NORTH"
   current_piece_x=$START_X
-  current_piece_y=$START_Y
-  lowest_line=$START_Y
+  current_piece_y=$((START_Y + 1)) # so that update_location() can process the update correctly
+  lowest_line=$current_piece_y     # ...
 
-  update_location $START_X $START_Y
+  update_location $START_X $START_Y false
 
   current_piece_behaviour=$BEHAVIOUR_NON
 
@@ -1363,6 +1363,7 @@ draw_action() {
 # Arguments:
 #   1 - new x
 #   2 - new y
+#   3 - rotation changed (true or false)
 update_location() {
   local lowest=0
 
@@ -1376,15 +1377,17 @@ update_location() {
     lowest_line=$lowest    # update lowest_line y
   }
 
-  [ $2 -ne "$current_piece_y" ] && {
+  $3 || [ $2 -ne "$current_piece_y" ] && {
     new_piece_location_ok "$1" $(($2 - 1)) || {
       # lands on
       $debug echo "lands on"
       $lock_phase || {
+        # start lock phase
         send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
         $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+        lock_phase=true
       }
-      lock_phase=true
+      can_maniqulate || lockdown
     }
   }
 
@@ -1402,11 +1405,16 @@ on_manipulation() {
       ;;
     $LOCKDOWN_RULE_EXTENDED)
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
-        # when the tetromino moves or rotates, the lockdown timer is reset
-        send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-        $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
         manipulation_counter=$((manipulation_counter + 1))
-        # $debug echo "mc: $manipulation_counter" # For Debugging. to check counter
+        $debug echo "mc: $manipulation_counter" # For Debugging. to check counter
+        [ $manipulation_counter -eq $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
+          # last manipulation
+          lockdown # if possible
+        } || {
+          # when the tetromino moves or rotates, the lockdown timer is reset
+          send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+          $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+        }
       }
       ;;
   esac
@@ -1415,9 +1423,7 @@ on_manipulation() {
 can_maniqulate() {
   case $lockdown_rule in
     $LOCKDOWN_RULE_EXTENDED)
-      [ $manipulation_counter -ge $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
-        return 1 # false
-      }
+      [ $manipulation_counter -ge $LOCKDOWN_ALLOWED_MANIPULATIONS ] && return 1 # false
       ;;
   esac
   return 0
@@ -1430,7 +1436,7 @@ can_maniqulate() {
 move_piece() {
   if new_piece_location_ok "$1" "$2"; then            # if new location is ok
     clear_current                                     # let's wipe out piece current location
-    update_location $1 $2                             # update location
+    update_location $1 $2 false                       # update location
     update_ghost                                      # update ghost with new pose of current piece
     show_current                                      # and draw piece in new location
     return 0                                          # nothing more to do here
@@ -1464,6 +1470,10 @@ lockdown() {
     $debug echo 'can fall'
     return
   }
+
+  $debug echo 'lockdown'
+
+  lock_phase=false # now start lockdown
 
   # stop sub process until next the Generation Phase of the Next Tetrimino.
   stop_process "$ticker_pid" "$timer_pid"
@@ -1542,7 +1552,7 @@ rotate_piece_super() {
       current_piece_rotation=$old_rotation       # if yes - restore old rotation ...
       clear_current                              # ... clear piece image
       current_piece_rotation=$new_rotation       # ... set new orientation
-      update_location $new_x $new_y              # ... set new location
+      update_location $new_x $new_y true         # ... set new location
       update_ghost
       show_current                               # ... draw piece with new pose
       return 0                                   # nothing to do more here
