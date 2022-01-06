@@ -760,7 +760,7 @@ terminate_process() {
 # it is enough for almost shell environment (maybe).
 # (if not, considering to use `ps` as seed)
 rand() {
-  od -A n -t u4 -N 4 /dev/urandom | sed 's/[^0-9]//g'
+  od -A n -t u4 -N 4 /dev/urandom | sed 's/[^0-9]//g; s/^0*//'
 }
 
 # Generate next random value
@@ -1861,8 +1861,8 @@ init() {
   # Initialize random generator.
   [ $bag_random -eq 0 ] && {
     # if not set
-    bag_random=$(rand)
-    [ $bag_random -eq 0 ] && bag_random=$((bag_random + 1))
+    bag_random=$(rand 2>/dev/null)
+    [ ${bag_random:-0} -eq 0 ] && bag_random=$(date +%s)
   }
   $debug echo "seed: $bag_random" # It is useful for reproducing the situation.
 
