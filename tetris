@@ -312,6 +312,10 @@ eval piece_"$O_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   0  0  0  0   0  0  0  
 eval piece_"$O_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 eval piece_"$O_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 eval piece_"$O_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
+eval piece_"$O_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$O_TETRIMINO"_lowest_"$EAST"=\' 1\'
+eval piece_"$O_TETRIMINO"_lowest_"$SOUTH"=\'1\'
+eval piece_"$O_TETRIMINO"_lowest_"$WEST"=\' 1\'
 
 # I-Tetrimino
 eval piece_"$I_TETRIMINO"_minos_"$NORTH"=\'0 1  1 1  2 1  3 1\'
@@ -322,6 +326,10 @@ eval piece_"$I_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0  -1  0 -2  0   2  0  1  
 eval piece_"$I_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   2  0 -1  0  -1  0  2  0   2  1 -1  2  -1 -2  2 -1\"
 eval piece_"$I_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   1  0  2  0  -2  0 -1  0   1 -2  2  1  -2  1 -1 -2\"
 eval piece_"$I_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -2  0  1  0   1  0 -2  0  -2 -1  1 -2   1  2 -2  1\"
+eval piece_"$I_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$I_TETRIMINO"_lowest_"$EAST"=\' 3\'
+eval piece_"$I_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$I_TETRIMINO"_lowest_"$WEST"=\' 3\'
 
 # T-Tetrimino
 eval piece_"$T_TETRIMINO"_minos_"$NORTH"=\'1 0  0 1  1 1  2 1\'
@@ -332,6 +340,10 @@ eval piece_"$T_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$T_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$T_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0   n  n  n  n   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$T_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$T_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$T_TETRIMINO"_lowest_"$EAST"=\' 2\'
+eval piece_"$T_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$T_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # L-Tetrimino
 eval piece_"$L_TETRIMINO"_minos_"$NORTH"=\'2 0  0 1  1 1  2 1\'
@@ -342,6 +354,10 @@ eval piece_"$L_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$L_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$L_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$L_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$L_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$L_TETRIMINO"_lowest_"$EAST"=\' 2\'
+eval piece_"$L_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$L_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # J-Tetrimino
 eval piece_"$J_TETRIMINO"_minos_"$NORTH"=\'0 0  0 1  1 1  2 1\'
@@ -352,6 +368,10 @@ eval piece_"$J_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$J_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$J_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$J_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$J_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$J_TETRIMINO"_lowest_"$EAST"=\' 2\'
+eval piece_"$J_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$J_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # S-Tetrimino
 eval piece_"$S_TETRIMINO"_minos_"$NORTH"=\'1 0  2 0  0 1  1 1\'
@@ -362,6 +382,10 @@ eval piece_"$S_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$S_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$S_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$S_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$S_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$S_TETRIMINO"_lowest_"$EAST"=\' 2\'
+eval piece_"$S_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$S_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # Z-Tetrimino
 eval piece_"$Z_TETRIMINO"_minos_"$NORTH"=\"0 0  1 0  1 1  2 1\"
@@ -372,6 +396,10 @@ eval piece_"$Z_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$Z_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$Z_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$Z_TETRIMINO"_lowest_"$EAST"=\' 2\'
+eval piece_"$Z_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$Z_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # the side of a Mino in the T-Tetrimino:
 # Format:
@@ -511,7 +539,7 @@ filled_cell='[]'           # how we draw filled cell
 ghost_cell='░░'            # how we draw ghost cell
 dry_cell='██'              #
 manipulation_counter=0     #
-lowest_line=$START_X       #
+lowest_line=$START_Y       #
 current_tspin=$ACTION_NONE #
 theme='standard'
 
@@ -903,10 +931,9 @@ generate_tetrimino() {
 
   # beginning from its generation position and North Facing orientation.
   current_piece_rotation="$NORTH"
-  
   current_piece_x=$START_X
-  current_piece_y=$(($START_Y + 1))
-  lowest_line=$current_piece_y
+  current_piece_y=$START_Y
+  lowest_line=$START_Y
 
   update_location $START_X $START_Y
 
@@ -1333,14 +1360,20 @@ draw_action() {
   reset_colors
 }
 
+# Arguments:
+#   1 - new x
+#   2 - new y
 update_location() {
+  local lowest=0
 
-  [ $2 -lt $lowest_line ] && {
+  lowest=$(($2 - piece_${current_piece}_lowest_${current_piece_rotation}))
+  [ $lowest -lt $lowest_line ] && {
     # when the tetromino drops below the lowest line
-    $debug echo "lowest line" $lowest_line
+    $debug echo "lowest line" $lowest
+    
     manipulation_counter=0 # reset manipulation counter
     lock_phase=false       # exit lock phase
-    lowest_line=$2         # update lowest_line y
+    lowest_line=$lowest    # update lowest_line y
   }
 
   [ $2 -ne "$current_piece_y" ] && {
