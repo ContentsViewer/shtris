@@ -487,6 +487,17 @@ adding_lines_per_level=5
 #   performed consecutively in a B2B sequence.
 b2b_sequence_continues=false
 
+# The player can perform the same actions on a Tetrimino in this phase as he/she can in the
+# Falling Phase, as long as the Tetrimino is not yet Locked Down. A Tetrimino that is Hard Dropped
+# Locks Down immediately. However, if a Tetrimino naturally falls or Soft Drops onto a landing
+# Surface, it is given 0.5 seconds on a Lock Down Timer before it actually Locks Down.
+#
+# There are three rulesets - Infinite Placement, Extended, and Classic.
+# For more details, see LOCKDOWN_RULE
+#
+# LOCKDOWN command is valid only when lock_phase=true
+lock_phase=false
+
 lockdown_rule=$LOCKDOWN_RULE_EXTENDED
 
 score=0                    # score variable initialization
@@ -503,7 +514,6 @@ empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
 ghost_cell='░░'            # how we draw ghost cell
 dry_cell='██'              #
-lands_on=false             #
 manipulation_counter=0     #
 lowest_line=$START_X       #
 current_tspin=$ACTION_NONE #
@@ -892,18 +902,20 @@ hold_tetrimino() {
 # Arguments:
 #   1 - tetrimino to generate
 generate_tetrimino() {
+  $debug echo "generate"
   current_piece="$1"
 
   # beginning from its generation position and North Facing orientation.
-  update_location $START_X $START_Y
   current_piece_rotation="$NORTH"
+  current_piece_x=$START_X
+  current_piece_y=$(($START_Y + 1))
+  lowest_line=$current_piece_y
+
+  update_location $START_X $START_Y
 
   current_piece_behaviour=$BEHAVIOUR_NON
 
   show_ghost
-
-  lowest_line=$START_Y
-  lands_on=false
 }
 
 what_type_tspin() {
@@ -1325,14 +1337,29 @@ draw_action() {
 }
 
 update_location() {
+
+  [ $2 -lt $lowest_line ] && {
+    # when the tetromino drops below the lowest line
+    $debug echo "lowest line" $lowest_line
+    manipulation_counter=0 # reset manipulation counter
+    lock_phase=false       # exit lock phase
+    lowest_line=$2         # update lowest_line y
+  }
+
+  [ $2 -ne "$current_piece_y" ] && {
+    new_piece_location_ok "$1" $(($2 - 1)) || {
+      # lands on
+      $debug echo "lands on"
+      $lock_phase || {
+        send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+        $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+      }
+      lock_phase=true
+    }
+  }
+
   current_piece_x="$1"
   current_piece_y="$2"
-  [ $current_piece_y -lt $lowest_line ] && {
-    lowest_line=$current_piece_y
-    manipulation_counter=0
-    # when the tetromino drops below the lowest line, the lockdown timer is reset
-    restart_lockdown_timer=true
-  }
 }
 
 # this function called when player manipulate tetrimino.
@@ -1340,12 +1367,14 @@ on_manipulation() {
   case $lockdown_rule in
     $LOCKDOWN_RULE_INFINITE)
       # when the tetromino moves or rotates, the lockdown timer is reset
-      restart_lockdown_timer=true
+      send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+      $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
       ;;
     $LOCKDOWN_RULE_EXTENDED)
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
         # when the tetromino moves or rotates, the lockdown timer is reset
-        restart_lockdown_timer=true
+        send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+        $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
         manipulation_counter=$((manipulation_counter + 1))
         # $debug echo "mc: $manipulation_counter" # For Debugging. to check counter
       }
@@ -1370,20 +1399,12 @@ can_maniqulate() {
 #   2 - new y coordinate
 move_piece() {
   if new_piece_location_ok "$1" "$2"; then            # if new location is ok
-    [ "$2" -lt "$current_piece_y" ] && lands_on=false # can move down means not lands on
     clear_current                                     # let's wipe out piece current location
     update_location $1 $2                             # update location
     update_ghost                                      # update ghost with new pose of current piece
     show_current                                      # and draw piece in new location
     return 0                                          # nothing more to do here
   fi                                                  # if we could not move piece to new location
-
-  [ "$2" -eq "$current_piece_y" ] && return 1         # and this was horizontal move
-
-  "$lands_on" || {
-    restart_lockdown_timer=true
-  }
-  lands_on=true
 
   return 1
 }
@@ -1403,8 +1424,16 @@ test_lockout() {
 }
 
 lockdown() {
+  $lock_phase || {
+    $debug echo 'not lock_phase'
+    return
+  }
+
   # if can fall, dont lock down
-  new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && return
+  new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && {
+    $debug echo 'can fall'
+    return
+  }
 
   # stop sub process until next the Generation Phase of the Next Tetrimino.
   stop_process "$ticker_pid" "$timer_pid"
@@ -2068,14 +2097,9 @@ controller() {
   init
 
   while $running; do           # run while this variable is true, it is changed to false in quit function
-    restart_lockdown_timer=false
     read cmd                   # read next command from stdout
     eval "\"\$commands_$cmd\"" # run command
     flush_screen
-    if "$restart_lockdown_timer"; then
-      send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-      $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
-    fi
   done
 }
 
