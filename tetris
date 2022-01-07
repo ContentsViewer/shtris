@@ -942,7 +942,7 @@ hold_tetrimino() {
 # Arguments:
 #   1 - tetrimino to generate
 generate_tetrimino() {
-  $debug echo "generate"
+  # $debug echo "generate"
   current_piece="$1"
 
   # beginning from its generation position and North Facing orientation.
@@ -1387,7 +1387,7 @@ update_location() {
   lowest=$(($2 - piece_${current_piece}_lowest_${current_piece_rotation}))
   [ $lowest -lt $lowest_line ] && {
     # when the tetromino drops below the lowest line
-    $debug echo "lowest line" $lowest
+    # $debug echo "lowest line" $lowest
 
     manipulation_counter=0 # reset manipulation counter
     lock_phase=false       # exit lock phase
@@ -1397,18 +1397,18 @@ update_location() {
   #test lands on
   if ! new_piece_location_ok "$1" $(($2 - 1)); then
     if $3 || ! $lands_on; then
-      $debug echo "lands on"
+      # $debug echo "lands on"
       lands_on=true
       if ! $lock_phase; then
         # start lock Phase
         wakeup_process "$timer_pid"
         send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-        $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+        # $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
         lock_phase=true
       else
         # already in Lock Phase
         wakeup_process "$timer_pid"
-        $debug echo 'wakeup lockdown timer'
+        # $debug echo 'wakeup lockdown timer'
       fi
 
       # Once these movements/rotations have been used, the Lock Down
@@ -1418,9 +1418,9 @@ update_location() {
     fi
   else
     $lands_on && { # currently not lands on but previously lands on - lifts up
-      $debug echo 'lifts up'
+      # $debug echo 'lifts up'
       stop_process "$timer_pid"
-      $debug echo 'stop lockdown timer'
+      # $debug echo 'stop lockdown timer'
     }
     lands_on=false
   fi
@@ -1436,13 +1436,13 @@ on_manipulation() {
       $lock_phase && {
         # when the tetromino moves or rotates, the lockdown timer is reset
         send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-        $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+        # $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
       }
       ;;
     $LOCKDOWN_RULE_EXTENDED)
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
         manipulation_counter=$((manipulation_counter + 1))
-        $debug echo "mc: $manipulation_counter" # For Debugging. to check counter
+        # $debug echo "mc: $manipulation_counter" # For Debugging. to check counter
         [ $manipulation_counter -eq $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
           # last manipulation
           lockdown # if possible
@@ -1450,7 +1450,7 @@ on_manipulation() {
           $lock_phase && {
             # when the tetromino moves or rotates, the lockdown timer is reset
             send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-            $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+            # $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
           }
         }
       }
@@ -1499,17 +1499,17 @@ test_lockout() {
 
 lockdown() {
   $lock_phase || {
-    $debug echo 'not lock_phase'
+    # $debug echo 'not lock_phase'
     return
   }
 
   # if can fall, dont lock down
   new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && {
-    $debug echo 'can fall'
+    # $debug echo 'can fall'
     return
   }
 
-  $debug echo 'lockdown'
+  # $debug echo 'lockdown'
 
   lock_phase=false # exit lock Phase, then start Pattern Phase
 
