@@ -1403,9 +1403,11 @@ update_location() {
 on_manipulation() {
   case $lockdown_rule in
     $LOCKDOWN_RULE_INFINITE)
-      # when the tetromino moves or rotates, the lockdown timer is reset
-      send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-      $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+      $lock_phase && {
+        # when the tetromino moves or rotates, the lockdown timer is reset
+        send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+        $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+      }
       ;;
     $LOCKDOWN_RULE_EXTENDED)
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
@@ -1415,9 +1417,11 @@ on_manipulation() {
           # last manipulation
           lockdown # if possible
         } || {
-          # when the tetromino moves or rotates, the lockdown timer is reset
-          send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-          $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+          $lock_phase && {
+            # when the tetromino moves or rotates, the lockdown timer is reset
+            send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+            $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+          }
         }
       }
       ;;
