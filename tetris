@@ -82,7 +82,9 @@ fi
 # NOTICE: alias is FAKE.
 #   This is only used to make the local variables stand out.
 #   Since ksh does not support local, local will be ignored by all shells
-alias local=""
+if [ -z "${POSH_VERSION:-}" ]; then # alias is not implemented in posh.
+  alias local=""
+fi
 
 # Log file to be written for debug.
 # the contents in the file will not be deleted,
