@@ -939,6 +939,7 @@ generate_tetrimino() {
   current_piece_x=$START_X
   current_piece_y=$((START_Y + 1)) # so that update_location() can process the update correctly
   lowest_line=$current_piece_y     # ...
+  lands_on=false                   # ...
 
   update_location $START_X $START_Y false
 
@@ -1376,36 +1377,35 @@ update_location() {
   [ $lowest -lt $lowest_line ] && {
     # when the tetromino drops below the lowest line
     $debug echo "lowest line" $lowest
-    
+
     manipulation_counter=0 # reset manipulation counter
     lock_phase=false       # exit lock phase
     lowest_line=$lowest    # update lowest_line y
   }
 
   $3 || [ $2 -ne "$current_piece_y" ] && {
-
     #test lands on
     new_piece_location_ok "$1" $(($2 - 1))
     if [ $? -ne 0 ]; then
-      lands_on=true
       $debug echo "lands on"
-      $lock_phase || {
+      lands_on=true
+      if $lock_phase; [ $? -ne 0 ]; then
         # start lock Phase
         wakeup_process "$timer_pid"
         send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
         $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
         lock_phase=true
-      }
-      $lock_phase && {
+      else
+        # already in Lock Phase
         wakeup_process "$timer_pid"
-      }
+      fi
 
-      # Once these movements/rotations have been used, the Lock Down 
-      # Timer will not be reset and the Tetrimino will Lock Down immediately on the first Surface it 
-      # touches. 
+      # Once these movements/rotations have been used, the Lock Down
+      # Timer will not be reset and the Tetrimino will Lock Down immediately on the first Surface it
+      # touches.
       can_maniqulate || lockdown
     else
-      $lands_on && {
+      $lands_on && { # currently not lands on but previously lands on - lifts up
         $debug echo "lifts up"
         stop_process "$timer_pid"
       }
