@@ -546,6 +546,7 @@ manipulation_counter=0     #
 lowest_line=$START_Y       #
 current_tspin=$ACTION_NONE #
 theme='standard'
+lands_on=false
 
 # Game Over Conditions
 #
@@ -1382,17 +1383,34 @@ update_location() {
   }
 
   $3 || [ $2 -ne "$current_piece_y" ] && {
-    new_piece_location_ok "$1" $(($2 - 1)) || {
-      # lands on
+
+    #test lands on
+    new_piece_location_ok "$1" $(($2 - 1))
+    if [ $? -ne 0 ]; then
+      lands_on=true
       $debug echo "lands on"
       $lock_phase || {
-        # start lock phase
+        # start lock Phase
+        wakeup_process "$timer_pid"
         send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
         $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
         lock_phase=true
       }
+      $lock_phase && {
+        wakeup_process "$timer_pid"
+      }
+
+      # Once these movements/rotations have been used, the Lock Down 
+      # Timer will not be reset and the Tetrimino will Lock Down immediately on the first Surface it 
+      # touches. 
       can_maniqulate || lockdown
-    }
+    else
+      $lands_on && {
+        $debug echo "lifts up"
+        stop_process "$timer_pid"
+      }
+      lands_on=false
+    fi
   }
 
   current_piece_x="$1"
@@ -1442,13 +1460,13 @@ can_maniqulate() {
 #   1 - new x coordinate
 #   2 - new y coordinate
 move_piece() {
-  if new_piece_location_ok "$1" "$2"; then            # if new location is ok
-    clear_current                                     # let's wipe out piece current location
-    update_location $1 $2 false                       # update location
-    update_ghost                                      # update ghost with new pose of current piece
-    show_current                                      # and draw piece in new location
-    return 0                                          # nothing more to do here
-  fi                                                  # if we could not move piece to new location
+  if new_piece_location_ok "$1" "$2"; then # if new location is ok
+    clear_current                          # let's wipe out piece current location
+    update_location $1 $2 false            # update location
+    update_ghost                           # update ghost with new pose of current piece
+    show_current                           # and draw piece in new location
+    return 0                               # nothing more to do here
+  fi                                       # if we could not move piece to new location
 
   return 1
 }
@@ -1481,7 +1499,7 @@ lockdown() {
 
   $debug echo 'lockdown'
 
-  lock_phase=false # now start lockdown
+  lock_phase=false # exit lock Phase, then start Pattern Phase
 
   # stop sub process until next the Generation Phase of the Next Tetrimino.
   stop_process "$ticker_pid" "$timer_pid"
