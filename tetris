@@ -730,10 +730,11 @@ print_loading_spin() {
 #
 # ref: <https://unix.stackexchange.com/questions/484442/how-can-i-get-the-pid-of-a-subshell>
 #
-# usage: getpid varname
+# usage: getpid [varname]
 get_pid(){
-  set -- "$1" "$(exec sh -c 'echo "$PPID"')"
-  eval "$1=\$2"
+  set -- "${1:-}" "$(exec sh -c 'echo "$PPID"')"
+  [ "$1" ] && eval "$1=\$2" && return
+  echo "$2"
 }
 
 send_signal() {
@@ -2011,19 +2012,23 @@ ticker() {
 
 # this function processes keyboard input
 reader() {
-  local game_pid="$1" my_pid='' key_sequences='' key='' capture=false
+  local game_pid="$1" my_pid='' dd_wrapper_pid='' key_sequences='' key='' capture=false
 
-  while dd ibs=1 count=1; do
-    echo # insert a newline: convert one character to one line
-  done 2>/dev/null | { # Do not use '(' here
+  {
+    get_pid
+    while dd ibs=1 count=1; do
+      echo # insert a newline: convert one character to one line
+    done 2>/dev/null
+  } | { # Do not use '(' here
     # Do not use subshell to make it work correctly with Solaris 11 sh (ksh).
     # It will not respond to keystrokes.
 
     # this process exits on SIGTERM
-    trap exit $SIGNAL_TERM
+    trap 'killdd "$dd_wrapper_pid"; exit' $SIGNAL_TERM
     trap 'capture=true' $SIGNAL_CAPTURE_INPUT
     trap 'capture=false' $SIGNAL_RELEASE_INPUT
 
+    read dd_wrapper_pid
     get_pid my_pid
     send_cmd "$NOTIFY_PID $PROCESS_READER $my_pid"
 
@@ -2059,8 +2064,24 @@ reader() {
         *[Q] | *"${ESC}${ESC}") send_cmd "$QUIT"; break    ;; # Q, ESCx2
       esac
     done
+
+    killdd "$dd_wrapper_pid"
   }
-  read key # Remove extra input after game over.
+
+  # Prevent the input after the game from being output to the terminal.
+  read key
+}
+
+# Even if the game is finished, dd is still waiting for input, so we need to find it and kill it.
+killdd() {
+  local parent_pid="$1" pid="" ppid="" comm=""
+  ps -o pid= -o ppid= -o comm= 2>/dev/null | {
+    while IFS="${SP}${TAB}" read -r pid ppid comm; do
+      if [ "$ppid" = "$parent_pid" ] && [ "$comm" = "dd" ]; then
+        terminate_process "$pid"
+      fi
+    done
+  }
 }
 
 controller() {
