@@ -56,6 +56,10 @@
 #
 #   * Delete extra spaces
 #     `sed 's/ *$//' tetris >_ && mv _ tetris && chmod +x tetris`
+#
+#   * Peformance test
+#     `time sh -c 'i=0; while [ $i -lt 1000 ]; do i=$((i+1)); <TEST CODE>; done'`
+#
 
 set -u # non initialized variable is an error
 
@@ -212,13 +216,13 @@ eval SCORE_FACTOR_"$ACTION_HARD_DROP"=2
 
 # A Tetrimino that is Hard Dropped Locks Down immediately. However, if a Tetrimino naturally falls
 # or Soft Drops onto a Surface, it is given 0.5 seconds on a Lock Down Timer before it actually
-# Locks Down. Three rulesets —Infinite Placement, Extended, and Classic— dictate the conditions
+# Locks Down. Three rulesets -Infinite Placement, Extended, and Classic- dictate the conditions
 # for Lock Down. The default is Extended Placement.
 #
 # Extended Placement Lock Down
 #   This is the default Lock Down setting.
 #   Once the Tetrimino in play lands on a Surface in the Matrix, the Lock Down Timer starts counting
-#   down from 0.5 seconds. Once it hits zero, the Tetrimino Locks Down and the Next Tetrimino’s
+#   down from 0.5 seconds. Once it hits zero, the Tetrimino Locks Down and the Next Tetrimino's
 #   generation phase starts. The Lock Down Timer resets to 0.5 seconds if the player simply moves
 #   or rotates the Tetrimino. In Extended Placement, a Tetrimino gets 15 left/right movements or
 #   rotations before it Locks Down, regardless of the time left on the Lock Down Timer. However, if
@@ -227,7 +231,7 @@ eval SCORE_FACTOR_"$ACTION_HARD_DROP"=2
 #
 # Infinite Placement Lock Down
 #   Once the Tetrimino in play lands on a Surface in the Matrix, the Lock Down Timer starts counting
-#   down from 0.5 seconds. Once it hits zero, the Tetrimino Locks Down and the Next Tetrimino’s
+#   down from 0.5 seconds. Once it hits zero, the Tetrimino Locks Down and the Next Tetrimino's
 #   generation phase starts. However, the Lock Down Timer resets to 0.5 seconds if the player simply
 #   moves or rotates the Tetrimino. Thus, Infinite Placement allows the player to continue movement
 #   and rotation of a Tetrimino as long as there is an actual change in its position or orientation
@@ -274,12 +278,8 @@ NEXT_MAX=7
 HOLD_X=7
 HOLD_Y=2
 
-# Location of 'Game Over!' at end of the game
-GAMEOVER_X=$((PLAYFIELD_X + PLAYFIELD_W - 5))  # 1 width equals 2 character
-GAMEOVER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
-
-# Location of center of play field.
-CENTER_X=$((PLAYFIELD_X + PLAYFIELD_W))
+# Location of center of play field
+CENTER_X=$((PLAYFIELD_X + PLAYFIELD_W))     # 1 width equals 2 character
 CENTER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
 
 # piece starting location
@@ -295,9 +295,6 @@ START_Y=21
 
 # assured over 3 blocks above START_Y
 BUFFER_ZONE_Y=24
-
-# loading spin sequence
-LOADING_SPIN='/ - \ |'
 
 # constant chars
 BEL="$(printf '\007')"
@@ -329,6 +326,10 @@ eval piece_"$O_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   0  0  0  0   0  0  0  
 eval piece_"$O_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 eval piece_"$O_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
 eval piece_"$O_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0\"
+eval piece_"$O_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$O_TETRIMINO"_lowest_"$EAST"=\' 1\'
+eval piece_"$O_TETRIMINO"_lowest_"$SOUTH"=\'1\'
+eval piece_"$O_TETRIMINO"_lowest_"$WEST"=\' 1\'
 
 # I-Tetrimino
 eval piece_"$I_TETRIMINO"_minos_"$NORTH"=\'0 1  1 1  2 1  3 1\'
@@ -339,6 +340,10 @@ eval piece_"$I_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0  -1  0 -2  0   2  0  1  
 eval piece_"$I_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   2  0 -1  0  -1  0  2  0   2  1 -1  2  -1 -2  2 -1\"
 eval piece_"$I_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0   1  0  2  0  -2  0 -1  0   1 -2  2  1  -2  1 -1 -2\"
 eval piece_"$I_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -2  0  1  0   1  0 -2  0  -2 -1  1 -2   1  2 -2  1\"
+eval piece_"$I_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$I_TETRIMINO"_lowest_"$EAST"=\' 3\'
+eval piece_"$I_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$I_TETRIMINO"_lowest_"$WEST"=\' 3\'
 
 # T-Tetrimino
 eval piece_"$T_TETRIMINO"_minos_"$NORTH"=\'1 0  0 1  1 1  2 1\'
@@ -349,6 +354,10 @@ eval piece_"$T_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$T_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$T_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0   n  n  n  n   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$T_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$T_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$T_TETRIMINO"_lowest_"$EAST"=\' 2\'
+eval piece_"$T_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$T_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # L-Tetrimino
 eval piece_"$L_TETRIMINO"_minos_"$NORTH"=\'2 0  0 1  1 1  2 1\'
@@ -359,6 +368,10 @@ eval piece_"$L_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$L_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$L_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$L_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$L_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$L_TETRIMINO"_lowest_"$EAST"=\' 2\'
+eval piece_"$L_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$L_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # J-Tetrimino
 eval piece_"$J_TETRIMINO"_minos_"$NORTH"=\'0 0  0 1  1 1  2 1\'
@@ -369,6 +382,10 @@ eval piece_"$J_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$J_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$J_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$J_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$J_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$J_TETRIMINO"_lowest_"$EAST"=\' 2\'
+eval piece_"$J_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$J_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # S-Tetrimino
 eval piece_"$S_TETRIMINO"_minos_"$NORTH"=\'1 0  2 0  0 1  1 1\'
@@ -379,6 +396,10 @@ eval piece_"$S_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$S_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$S_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$S_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$S_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$S_TETRIMINO"_lowest_"$EAST"=\' 2\'
+eval piece_"$S_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$S_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # Z-Tetrimino
 eval piece_"$Z_TETRIMINO"_minos_"$NORTH"=\"0 0  1 0  1 1  2 1\"
@@ -389,6 +410,10 @@ eval piece_"$Z_TETRIMINO"_rshifts_"$NORTH"=\"0  0  0  0   1  0 -1  0   1  1 -1  
 eval piece_"$Z_TETRIMINO"_rshifts_"$EAST"=\" 0  0  0  0   1  0  1  0   1 -1  1 -1   0  2  0  2   1  2  1  2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$SOUTH"=\"0  0  0  0  -1  0  1  0  -1  1  1  1   0 -2  0 -2  -1 -2  1 -2\"
 eval piece_"$Z_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -1   0  2  0  2  -1  2 -1  2\"
+eval piece_"$Z_TETRIMINO"_lowest_"$NORTH"=\'1\'
+eval piece_"$Z_TETRIMINO"_lowest_"$EAST"=\' 2\'
+eval piece_"$Z_TETRIMINO"_lowest_"$SOUTH"=\'2\'
+eval piece_"$Z_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # the side of a Mino in the T-Tetrimino:
 # Format:
@@ -398,8 +423,8 @@ eval piece_"$Z_TETRIMINO"_rshifts_"$WEST"=\" 0  0  0  0  -1  0 -1  0  -1 -1 -1 -
 #
 # T-Spin:
 #   A rotation is considered a T-Spin if any of the following conditions are met:
-#   * Sides A and B + (C or D) are touching a Surface when the Tetrimino Locks Down.
-#   * The T-Tetrimino fills a T-Slot completely with no holes.
+#   * Sides A and B + (C or D) are touching a Surface when the Tetrimino Locks Down.
+#   * The T-Tetrimino fills a T-Slot completely with no holes.
 #   * Rotation Point 5 is used to rotate the Tetrimino into the T-Slot.
 #     Any further rotation will be considered a T-Spin, not a Mini T-Spin
 #
@@ -438,7 +463,7 @@ Options:
  -l, --level <LEVEL>  game level (default=1). range from 1 to $LEVEL_MAX
  --rotation <MODE>    use 'Super' or 'Classic' rotation system
                       MODE can be 'super'(default) or 'classic'
- --lockdown <RULE>    Three rulesets —Infinite Placement, Extended, and Classic—
+ --lockdown <RULE>    Three rulesets -Infinite Placement, Extended, and Classic-
                       dictate the conditions for Lock Down.
                       RULE can be 'extended'(default), 'infinite', 'classic'
  --seed <SEED>        random seed to determine the order of Tetriminos.
@@ -462,11 +487,11 @@ next_queue=''
 # the hold queue allows the player to hold a falling tetrimino for as long as they wish.
 hold_queue=''
 
-# Tetris uses a “bag” system to determine the sequence of Tetriminos that appear during game
+# Tetris uses a "bag" system to determine the sequence of Tetriminos that appear during game
 # play. This system allows for equal distribution among the seven Tetriminos.
 #
 # The seven different Tetriminos are placed into a virtual bag, then shuffled into a random order.
-# This order is the sequence that the bag “feeds” the Next Queue. Every time a new Tetrimino is
+# This order is the sequence that the bag "feeds" the Next Queue. Every time a new Tetrimino is
 # generated and starts its fall within the Matrix, the Tetrimino at the front of the line in the bag is
 # placed at the end of the Next Queue, pushing all Tetriminos in the Next Queue forward by one.
 # The bag is refilled and reshuffled once it is empty.
@@ -486,7 +511,7 @@ bag_random=0
 # by level 15.
 #
 # This system also includes line bonuses to help speed up the game.
-# To speed up the process of “clearing” 600 lines, in the Variable Goal System the number of Line
+# To speed up the process of "clearing" 600 lines, in the Variable Goal System the number of Line
 # Clears awarded for any action is directly based off the score of the action performed (score
 # at level 1 / 100 = Total Line Clears
 adding_lines_per_level=5
@@ -499,6 +524,17 @@ adding_lines_per_level=5
 #   Bonus for Tetrises, T-Spin Line Clears, and Mini T-Spin Line Clears
 #   performed consecutively in a B2B sequence.
 b2b_sequence_continues=false
+
+# The player can perform the same actions on a Tetrimino in this phase as he/she can in the
+# Falling Phase, as long as the Tetrimino is not yet Locked Down. A Tetrimino that is Hard Dropped
+# Locks Down immediately. However, if a Tetrimino naturally falls or Soft Drops onto a landing
+# Surface, it is given 0.5 seconds on a Lock Down Timer before it actually Locks Down.
+#
+# There are three rulesets - Infinite Placement, Extended, and Classic.
+# For more details, see LOCKDOWN_RULE
+#
+# LOCKDOWN command is valid only when lock_phase=true
+lock_phase=false
 
 lockdown_rule=$LOCKDOWN_RULE_EXTENDED
 
@@ -516,11 +552,11 @@ empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
 ghost_cell='░░'            # how we draw ghost cell
 dry_cell='██'              #
-lands_on=false             #
 manipulation_counter=0     #
-lowest_line=$START_X       #
+lowest_line=$START_Y       #
 current_tspin=$ACTION_NONE #
 theme='standard'
+lands_on=false
 
 # Game Over Conditions
 #
@@ -709,14 +745,6 @@ send_cmd() {
   echo "$1"
 }
 
-current_loading_spin_shift=0
-print_loading_spin() {
-  set $LOADING_SPIN
-  shift $current_loading_spin_shift
-  current_loading_spin_shift=$(( (current_loading_spin_shift + 1) % 4 ))
-  printf '%s' "$1"
-}
-
 # Get pid of current process regardless of subshell
 #
 # $$:
@@ -801,7 +829,7 @@ randnext() {
 
 # Shuffle args
 #
-# Using Fisher–Yates shuffle.
+# Using Fisher-Yates shuffle.
 # details:
 #   * <https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle>
 #
@@ -914,18 +942,21 @@ hold_tetrimino() {
 # Arguments:
 #   1 - tetrimino to generate
 generate_tetrimino() {
+  $debug echo "generate"
   current_piece="$1"
 
   # beginning from its generation position and North Facing orientation.
-  update_location $START_X $START_Y
   current_piece_rotation="$NORTH"
+  current_piece_x=$START_X
+  current_piece_y=$((START_Y + 1)) # so that update_location() can process the update correctly
+  lowest_line=$current_piece_y     # ...
+  lands_on=false                   # ...
+
+  update_location $START_X $START_Y false
 
   current_piece_behaviour=$BEHAVIOUR_NON
 
   show_ghost
-
-  lowest_line=$START_Y
-  lands_on=false
 }
 
 what_type_tspin() {
@@ -1346,30 +1377,80 @@ draw_action() {
   reset_colors
 }
 
+# Arguments:
+#   1 - new x
+#   2 - new y
+#   3 - rotation changed (true or false)
 update_location() {
+  local lowest=0
+
+  lowest=$(($2 - piece_${current_piece}_lowest_${current_piece_rotation}))
+  [ $lowest -lt $lowest_line ] && {
+    # when the tetromino drops below the lowest line
+    $debug echo "lowest line" $lowest
+
+    manipulation_counter=0 # reset manipulation counter
+    lock_phase=false       # exit lock phase
+    lowest_line=$lowest    # update lowest_line y
+  }
+
+  $3 || [ $2 -ne "$current_piece_y" ] && {
+    #test lands on
+    if ! new_piece_location_ok "$1" $(($2 - 1)); then
+      $debug echo "lands on"
+      lands_on=true
+      if ! $lock_phase; then
+        # start lock Phase
+        wakeup_process "$timer_pid"
+        send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+        $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+        lock_phase=true
+      else
+        # already in Lock Phase
+        wakeup_process "$timer_pid"
+      fi
+
+      # Once these movements/rotations have been used, the Lock Down
+      # Timer will not be reset and the Tetrimino will Lock Down immediately on the first Surface it
+      # touches.
+      can_maniqulate || lockdown
+    else
+      $lands_on && { # currently not lands on but previously lands on - lifts up
+        $debug echo "lifts up"
+        stop_process "$timer_pid"
+      }
+      lands_on=false
+    fi
+  }
+
   current_piece_x="$1"
   current_piece_y="$2"
-  [ $current_piece_y -lt $lowest_line ] && {
-    lowest_line=$current_piece_y
-    manipulation_counter=0
-    # when the tetromino drops below the lowest line, the lockdown timer is reset
-    restart_lockdown_timer=true
-  }
 }
 
 # this function called when player manipulate tetrimino.
 on_manipulation() {
   case $lockdown_rule in
     $LOCKDOWN_RULE_INFINITE)
-      # when the tetromino moves or rotates, the lockdown timer is reset
-      restart_lockdown_timer=true
+      $lock_phase && {
+        # when the tetromino moves or rotates, the lockdown timer is reset
+        send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+        $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+      }
       ;;
     $LOCKDOWN_RULE_EXTENDED)
       [ $manipulation_counter -lt $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
-        # when the tetromino moves or rotates, the lockdown timer is reset
-        restart_lockdown_timer=true
         manipulation_counter=$((manipulation_counter + 1))
-        # $debug echo "mc: $manipulation_counter" # For Debugging. to check counter
+        $debug echo "mc: $manipulation_counter" # For Debugging. to check counter
+        [ $manipulation_counter -eq $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
+          # last manipulation
+          lockdown # if possible
+        } || {
+          $lock_phase && {
+            # when the tetromino moves or rotates, the lockdown timer is reset
+            send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+            $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+          }
+        }
       }
       ;;
   esac
@@ -1378,9 +1459,7 @@ on_manipulation() {
 can_maniqulate() {
   case $lockdown_rule in
     $LOCKDOWN_RULE_EXTENDED)
-      [ $manipulation_counter -ge $LOCKDOWN_ALLOWED_MANIPULATIONS ] && {
-        return 1 # false
-      }
+      [ $manipulation_counter -ge $LOCKDOWN_ALLOWED_MANIPULATIONS ] && return 1 # false
       ;;
   esac
   return 0
@@ -1391,21 +1470,13 @@ can_maniqulate() {
 #   1 - new x coordinate
 #   2 - new y coordinate
 move_piece() {
-  if new_piece_location_ok "$1" "$2"; then            # if new location is ok
-    [ "$2" -lt "$current_piece_y" ] && lands_on=false # can move down means not lands on
-    clear_current                                     # let's wipe out piece current location
-    update_location $1 $2                             # update location
-    update_ghost                                      # update ghost with new pose of current piece
-    show_current                                      # and draw piece in new location
-    return 0                                          # nothing more to do here
-  fi                                                  # if we could not move piece to new location
-
-  [ "$2" -eq "$current_piece_y" ] && return 1         # and this was horizontal move
-
-  "$lands_on" || {
-    restart_lockdown_timer=true
-  }
-  lands_on=true
+  if new_piece_location_ok "$1" "$2"; then # if new location is ok
+    clear_current                          # let's wipe out piece current location
+    update_location $1 $2 false            # update location
+    update_ghost                           # update ghost with new pose of current piece
+    show_current                           # and draw piece in new location
+    return 0                               # nothing more to do here
+  fi                                       # if we could not move piece to new location
 
   return 1
 }
@@ -1425,8 +1496,20 @@ test_lockout() {
 }
 
 lockdown() {
+  $lock_phase || {
+    $debug echo 'not lock_phase'
+    return
+  }
+
   # if can fall, dont lock down
-  new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && return
+  new_piece_location_ok "$current_piece_x" $((current_piece_y - 1)) && {
+    $debug echo 'can fall'
+    return
+  }
+
+  $debug echo 'lockdown'
+
+  lock_phase=false # exit lock Phase, then start Pattern Phase
 
   # stop sub process until next the Generation Phase of the Next Tetrimino.
   stop_process "$ticker_pid" "$timer_pid"
@@ -1505,7 +1588,7 @@ rotate_piece_super() {
       current_piece_rotation=$old_rotation       # if yes - restore old rotation ...
       clear_current                              # ... clear piece image
       current_piece_rotation=$new_rotation       # ... set new orientation
-      update_location $new_x $new_y              # ... set new location
+      update_location $new_x $new_y true         # ... set new location
       update_ghost
       show_current                               # ... draw piece with new pose
       return 0                                   # nothing to do more here
@@ -1858,7 +1941,7 @@ toggle_color() {
 
 quit() {
   running=false # let's stop controller ...
-  xyprint $GAMEOVER_X $GAMEOVER_Y 'Game Over!'
+  xyprint $((CENTER_X - 5)) $CENTER_Y 'Game Over!'
   xyprint "$TERM_X" "$TERM_Y" '> Press enter to continue ...'
   flush_screen
   terminate_process "$timer_pid" "$ticker_pid" "$reader_pid"
@@ -2012,7 +2095,7 @@ ticker() {
 
 # this function processes keyboard input
 reader() {
-  local game_pid="$1" my_pid='' dd_wrapper_pid='' key_sequences='' key='' capture=false
+  local game_pid="$1" my_pid='' dd_wrapper_pid='' key_sequence='' key='' capture=false
 
   {
     get_pid
@@ -2032,7 +2115,7 @@ reader() {
     get_pid my_pid
     send_cmd "$NOTIFY_PID $PROCESS_READER $my_pid"
 
-    key_sequences='-------' # preserve previous 7 keys
+    key_sequence='-------' # preserve previous 7 keys
 
     while exist_process "$game_pid"; do
       # The read command is aborted with an error when a signal is received (e.g. USR1 + 128 * 2).
@@ -2041,11 +2124,11 @@ reader() {
       # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
       # the key will be empty when you type enter
-      key_sequences="${key_sequences#?}${key:-"$LF"}"
+      key_sequence="${key_sequence#?}${key:-"$LF"}"
 
       "$capture" || continue
 
-      case "$key_sequences" in
+      case "$key_sequence" in
         # Ignore (incompleted) modifier + arrow keys
         *"${ESC}[1" | *"${ESC}[1;"[0-9] | *"${ESC}[1;"[0-9][A-D]) ;;
         *"${ESC}[1;"[0-9][0-9] | *"${ESC}[1;"[0-9][0-9][A-D]) ;;
@@ -2110,14 +2193,9 @@ controller() {
   init
 
   while $running; do           # run while this variable is true, it is changed to false in quit function
-    restart_lockdown_timer=false
     read cmd                   # read next command from stdout
     eval "\"\$commands_$cmd\"" # run command
     flush_screen
-    if "$restart_lockdown_timer"; then
-      send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-      $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
-    fi
   done
 }
 
