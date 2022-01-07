@@ -99,8 +99,8 @@ SIGNAL_CONT=CONT
 SIGNAL_LEVEL_UP=USR1
 SIGNAL_RESET_LEVEL=USR2
 SIGNAL_RESTART_LOCKDOWN_TIMER=USR1
-SIGNAL_CAPTURE_INPUT=USR1
-SIGNAL_RELEASE_INPUT=USR2
+SIGNAL_RELEASE_INPUT=USR1
+SIGNAL_CAPTURE_INPUT=USR2
 
 # Those are commands sent to controller by key press processing code
 # In controller they are used as index to retrieve actual function from array
@@ -2020,7 +2020,8 @@ reader() {
     key_sequences='-------' # preserve previous 7 keys
 
     while exist_process "$game_pid"; do
-      IFS= read -r key # read one key
+      # The read command is aborted with an error when a signal is received (e.g. USR1 + 128 * 2).
+      IFS= read -r key || continue # read one key
       # echo "$key" >> $LOG # For debug to check input char.
       # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
