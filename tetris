@@ -1385,11 +1385,10 @@ update_location() {
 
   $3 || [ $2 -ne "$current_piece_y" ] && {
     #test lands on
-    new_piece_location_ok "$1" $(($2 - 1))
-    if [ $? -ne 0 ]; then
+    if ! new_piece_location_ok "$1" $(($2 - 1)); then
       $debug echo "lands on"
       lands_on=true
-      if $lock_phase; [ $? -ne 0 ]; then
+      if ! $lock_phase; then
         # start lock Phase
         wakeup_process "$timer_pid"
         send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
