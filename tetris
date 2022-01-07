@@ -79,6 +79,14 @@ if [ "${ZSH_VERSION:-}" ]; then
   emulate -R sh      # Required for zsh support.
 fi
 
+# Some ancient shells have an issue with empty position parameter references.
+# There is a well-known workaround for this, ${1+"$@"}, but it is
+# easy to miss and cumbersome to deal with, we disable nounset (set -u).
+#
+# What does ${1+"$@"} mean
+# ref: <https://www.in-ulm.de/~mascheck/various/bourne_args/>
+(set --; : "$@") 2>/dev/null || set +u
+
 # NOTICE: alias is FAKE.
 #   This is only used to make the local variables stand out.
 #   Since ksh does not support local, local will be ignored by all shells
