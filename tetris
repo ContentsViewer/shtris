@@ -1184,8 +1184,7 @@ process_fallen_piece() {
   }
 
   # flash piece effect
-  set_color "$FLASH_COLOR"
-  draw_current "$dry_cell"
+  flash_current
   flush_screen
   sleep 0.03
 
@@ -1810,20 +1809,20 @@ draw_playfield_piece() {
   done
 }
 
-# Arguments:
-#   1 - string to draw single cell
-draw_current() {
-  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$1"
-}
-
 show_current() {
   set_piece_color "$current_piece"
-  draw_current "$filled_cell"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$filled_cell"
+  reset_colors
+}
+
+flash_current() {
+  set_color "$FLASH_COLOR"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$dry_cell"
   reset_colors
 }
 
 clear_current() {
-  draw_current "$empty_cell"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$empty_cell"
 }
 
 # Arguments:
