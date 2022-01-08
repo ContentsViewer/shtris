@@ -2121,8 +2121,14 @@ reader() {
     key_sequence='-------' # preserve previous 7 keys
 
     while exist_process "$game_pid"; do
-      # The read command is aborted with an error when a signal is received (e.g. USR1 + 128 * 2).
-      IFS= read -r key || continue # read one key
+      # There is a bug in bash < 4.3.0 that ignores temporary IFS assignments when signal is
+      # received during read. Therefore, do not read and assign IFS at the same time here,
+      # since the space immediately after the signal will be ignored.
+      IFS_SAVE=$IFS; IFS=''
+      # The read command is aborted with an error (e.g. USR1 + 128 * 2) when a signal is received.
+      read -r key || { IFS=$IFS_SAVE; continue; } # read one key
+      IFS=$IFS_SAVE
+
       # echo "$key" >> $LOG # For debug to check input char.
       # printf '%s' "$key" | od -An -tx1 >> $LOG # For debug to check input char as hex value.
 
