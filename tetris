@@ -1761,33 +1761,53 @@ redraw_playfield() {
 #   3 - type
 #   4 - rotation
 #   5 - cell content
-#   6 - mask with playfield
 draw_piece() {
-  local posx="$1" posy="$2" type="$3" rotation="$4" content="$5" mask="${6:-false}" x=0 y=0
+  local posx="$1" posy="$2" type="$3" rotation="$4" content="$5" x=0 y=0
 
   # set minos coordinates.
   eval set -- \$piece_"$type"_minos_"$rotation"
 
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
-    # relative coordinates are retrieved bassed on orientation and added to absolute coordinates
+    # relative coordinates are retrieved based on orientation and added to absolute coordinates
     x=$((posx + $1 * 2)) # the width of cell is 2 characters thick
     y=$((posy + $2))
 
-    "$mask"                                         &&
-    [ "$y" -ge "$PLAYFIELD_Y" ]                     &&
-    [ "$y" -lt $((PLAYFIELD_Y + PLAYFIELD_H)) ]     &&
-    [ "$x" -ge "$PLAYFIELD_X" ]                     &&
-    [ "$x" -lt $((PLAYFIELD_X + PLAYFIELD_W * 2)) ] && xyprint $x $y "$content" # draw mino within playfield
-    "$mask"                                         || xyprint $x $y "$content"
+    xyprint $x $y "$content"
 
     shift 2
   done
 }
 
+# Arguments:
+#   1 - x
+#   2 - y
+#   3 - type
+#   4 - rotation
+#   5 - cell content
 draw_playfield_piece() {
+  local posx="$1" posy="$2" type="$3" rotation="$4" content="$5" x=0 y=0
+
   # factor 2 for x because each cell is 2 characters wide
-  draw_piece $((PLAYFIELD_X + $1 * 2)) $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $2)) "$3" "$4" "$5" true
+  posx=$((PLAYFIELD_X + posx * 2))
+  posy=$((PLAYFIELD_Y + PLAYFIELD_H - 1 - posy))
+
+  # set minos coordinates.
+  eval set -- \$piece_"$type"_minos_"$rotation"
+
+  # loop through tetrimino minos: 4 minos, each has 2 coordinates
+  while [ $# -gt 0 ]; do
+    # relative coordinates are retrieved based on orientation and added to absolute coordinates
+    x=$((posx + $1 * 2)) # the width of cell is 2 characters thick
+    y=$((posy + $2))
+
+    [ "$y" -ge "$PLAYFIELD_Y" ]                     &&
+    [ "$y" -lt $((PLAYFIELD_Y + PLAYFIELD_H)) ]     &&
+    [ "$x" -ge "$PLAYFIELD_X" ]                     &&
+    [ "$x" -lt $((PLAYFIELD_X + PLAYFIELD_W * 2)) ] && xyprint $x $y "$content" # draw mino within playfield
+
+    shift 2
+  done
 }
 
 # Arguments:
