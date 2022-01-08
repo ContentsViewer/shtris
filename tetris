@@ -1686,45 +1686,6 @@ hold() {
   hold_tetrimino
 }
 
-update_ghost() {
-  local new_ghost_piece_y=0
-
-  test_hard_drop $current_piece_x $current_piece_y
-  new_ghost_piece_y=$((current_piece_y - $?))
-
-  [ "$ghost_piece_x" -eq "$current_piece_x" ]               &&
-  [ "$ghost_piece_y" -eq "$new_ghost_piece_y" ]             &&
-  [ "$ghost_piece" -eq "$current_piece" ]                   &&
-  [ "$ghost_piece_rotation" -eq "$current_piece_rotation" ] && return
-
-  clear_ghost
-  show_ghost "$new_ghost_piece_y"
-}
-
-# Update ghost piece with new location according to current piece.
-show_ghost() {
-  if [ $# -gt 0 ]; then
-    ghost_piece_y=$1
-  else
-    test_hard_drop $current_piece_x $current_piece_y
-    ghost_piece_y=$((current_piece_y - $?))
-  fi
-  ghost_piece=$current_piece
-  ghost_piece_x=$current_piece_x
-  ghost_piece_rotation=$current_piece_rotation
-
-  set_ghost_color "$current_piece"
-  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$ghost_cell"
-
-  reset_colors
-}
-
-clear_ghost() {
-  ${ghost_piece+:} return
-
-  draw_playfield_piece $ghost_piece_x $ghost_piece_y  $ghost_piece $ghost_piece_rotation "$empty_cell"
-}
-
 # playfield is 2-dimensional array, data is stored as follows:
 # a_{y,x}
 #   x - 0, ..., (PLAYFIELD_W-1)
@@ -1819,6 +1780,45 @@ flash_current() {
 
 clear_current() {
   draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$empty_cell"
+}
+
+# Update ghost piece with new location according to current piece.
+show_ghost() {
+  if [ $# -gt 0 ]; then
+    ghost_piece_y=$1
+  else
+    test_hard_drop $current_piece_x $current_piece_y
+    ghost_piece_y=$((current_piece_y - $?))
+  fi
+  ghost_piece=$current_piece
+  ghost_piece_x=$current_piece_x
+  ghost_piece_rotation=$current_piece_rotation
+
+  set_ghost_color "$current_piece"
+  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$ghost_cell"
+
+  reset_colors
+}
+
+clear_ghost() {
+  ${ghost_piece+:} return
+
+  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$empty_cell"
+}
+
+update_ghost() {
+  local new_ghost_piece_y=0
+
+  test_hard_drop $current_piece_x $current_piece_y
+  new_ghost_piece_y=$((current_piece_y - $?))
+
+  [ "$ghost_piece_x" -eq "$current_piece_x" ]               &&
+  [ "$ghost_piece_y" -eq "$new_ghost_piece_y" ]             &&
+  [ "$ghost_piece" -eq "$current_piece" ]                   &&
+  [ "$ghost_piece_rotation" -eq "$current_piece_rotation" ] && return
+
+  clear_ghost
+  show_ghost "$new_ghost_piece_y"
 }
 
 # Arguments:
