@@ -2096,6 +2096,7 @@ ticker() {
 # this function processes keyboard input
 reader() {
   local game_pid="$1" my_pid='' dd_wrapper_pid='' key_sequence='' key='' capture=false
+  trap exit "$SIGNAL_INT" # Only required for bash on macOS. Why?
 
   {
     get_pid
