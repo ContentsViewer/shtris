@@ -1761,7 +1761,7 @@ redraw_playfield() {
 #   4 - rotation
 #   5 - cell content
 draw_piece() {
-  local posx="$1" posy="$2" type="$3" rotation="$4" content="$5" x=0 y=0
+  local posx="$1" posy="$2" type="$3" rotation="$4" content="$5"
 
   # set minos coordinates.
   eval set -- \$piece_"$type"_minos_"$rotation"
@@ -1769,11 +1769,8 @@ draw_piece() {
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     # relative coordinates are retrieved based on orientation and added to absolute coordinates
-    x=$((posx + $1 * 2)) # the width of cell is 2 characters thick
-    y=$((posy + $2))
-
-    xyprint $x $y "$content"
-
+    # the width of cell is 2 characters thick
+    xyprint $((posx + $1 * 2)) $((posy + $2)) "$content"
     shift 2
   done
 }
@@ -1787,23 +1784,22 @@ draw_piece() {
 draw_playfield_piece() {
   local posx="$1" posy="$2" type="$3" rotation="$4" content="$5" x=0 y=0
 
-  # factor 2 for x because each cell is 2 characters wide
-  posx=$((PLAYFIELD_X + posx * 2))
-  posy=$((PLAYFIELD_Y + PLAYFIELD_H - 1 - posy))
-
   # set minos coordinates.
   eval set -- \$piece_"$type"_minos_"$rotation"
 
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     # relative coordinates are retrieved based on orientation and added to absolute coordinates
-    x=$((posx + $1 * 2)) # the width of cell is 2 characters thick
-    y=$((posy + $2))
+    x=$((posx + $1)) 
+    y=$((PLAYFIELD_H - 1 - posy + $2))
 
-    [ "$y" -ge "$PLAYFIELD_Y" ]                     &&
-    [ "$y" -lt $((PLAYFIELD_Y + PLAYFIELD_H)) ]     &&
-    [ "$x" -ge "$PLAYFIELD_X" ]                     &&
-    [ "$x" -lt $((PLAYFIELD_X + PLAYFIELD_W * 2)) ] && xyprint $x $y "$content" # draw mino within playfield
+    [ "$y" -ge 0 ]              &&
+    [ "$y" -lt "$PLAYFIELD_H" ] &&
+    [ "$x" -ge 0 ]              &&
+    [ "$x" -lt "$PLAYFIELD_W" ] && {
+      # the width of cell is 2 characters thick
+      xyprint $((PLAYFIELD_X + x * 2)) $((PLAYFIELD_Y + y)) "$content"
+    }
 
     shift 2
   done
