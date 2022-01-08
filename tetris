@@ -1396,7 +1396,7 @@ update_location() {
 
   #test lands on
   if ! new_piece_location_ok "$1" $(($2 - 1)); then
-    if $3 || ! $lands_on; then 
+    if $3 || ! $lands_on; then
       $debug echo "lands on"
       lands_on=true
       if ! $lock_phase; then
