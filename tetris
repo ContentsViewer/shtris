@@ -1263,7 +1263,7 @@ draw_scoreboard() {
 #   2 - (ACTION_HARD_DROP) lines
 update_score_on_drop() {
   local factor=0 score_to_add=0
-  
+
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
   case "$1" in
@@ -1271,9 +1271,9 @@ update_score_on_drop() {
     "$ACTION_HARD_DROP") score_to_add=$((factor * $2)) ;;
     *) echo "update_score_on_drop: invalid action($1) given" >&2 ;;
   esac
-  
+
   score=$((score + score_to_add))
-  
+
   # It is enough to update the score
   set_bold
   set_color "$SCORE_COLOR"
@@ -1366,7 +1366,6 @@ update_score_on_completion() {
     "$ACTION_NONE")
       new_combo_counter=-1
       ;;
-      
     *) echo "update_score_on_completion: invalid action($1) given" >&2 ;;
   esac
 
@@ -1389,7 +1388,7 @@ update_score_on_completion() {
 
   [ "$new_combo_counter" -ne "$combo_counter" ] && {
     combo_counter=$new_combo_counter
-    
+
     last_actions=${last_actions#*:} # pop first line
 
     [ $combo_counter -gt 0 ] && {
@@ -1826,7 +1825,7 @@ draw_playfield_piece() {
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     # relative coordinates are retrieved based on orientation and added to absolute coordinates
-    x=$((posx + $1)) 
+    x=$((posx + $1))
     y=$((PLAYFIELD_H - 1 - posy + $2))
 
     [ "$y" -ge 0 ]              &&
