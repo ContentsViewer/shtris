@@ -1184,8 +1184,7 @@ process_fallen_piece() {
   }
 
   # flash piece effect
-  set_color "$FLASH_COLOR"
-  draw_current "$dry_cell"
+  flash_current
   flush_screen
   sleep 0.03
 
@@ -1687,45 +1686,6 @@ hold() {
   hold_tetrimino
 }
 
-update_ghost() {
-  local new_ghost_piece_y=0
-
-  test_hard_drop $current_piece_x $current_piece_y
-  new_ghost_piece_y=$((current_piece_y - $?))
-
-  [ "$ghost_piece_x" -eq "$current_piece_x" ]               &&
-  [ "$ghost_piece_y" -eq "$new_ghost_piece_y" ]             &&
-  [ "$ghost_piece" -eq "$current_piece" ]                   &&
-  [ "$ghost_piece_rotation" -eq "$current_piece_rotation" ] && return
-
-  clear_ghost
-  show_ghost "$new_ghost_piece_y"
-}
-
-# Update ghost piece with new location according to current piece.
-show_ghost() {
-  if [ $# -gt 0 ]; then
-    ghost_piece_y=$1
-  else
-    test_hard_drop $current_piece_x $current_piece_y
-    ghost_piece_y=$((current_piece_y - $?))
-  fi
-  ghost_piece=$current_piece
-  ghost_piece_x=$current_piece_x
-  ghost_piece_rotation=$current_piece_rotation
-
-  set_ghost_color "$current_piece"
-  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$ghost_cell"
-
-  reset_colors
-}
-
-clear_ghost() {
-  ${ghost_piece+:} return
-
-  draw_playfield_piece $ghost_piece_x $ghost_piece_y  $ghost_piece $ghost_piece_rotation "$empty_cell"
-}
-
 # playfield is 2-dimensional array, data is stored as follows:
 # a_{y,x}
 #   x - 0, ..., (PLAYFIELD_W-1)
@@ -1761,49 +1721,104 @@ redraw_playfield() {
 #   3 - type
 #   4 - rotation
 #   5 - cell content
-#   6 - mask with playfield
 draw_piece() {
-  local posx="$1" posy="$2" type="$3" rotation="$4" content="$5" mask="${6:-false}" x=0 y=0
+  local posx="$1" posy="$2" type="$3" rotation="$4" content="$5"
 
   # set minos coordinates.
   eval set -- \$piece_"$type"_minos_"$rotation"
 
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
-    # relative coordinates are retrieved bassed on orientation and added to absolute coordinates
-    x=$((posx + $1 * 2)) # the width of cell is 2 characters thick
-    y=$((posy + $2))
+    # relative coordinates are retrieved based on orientation and added to absolute coordinates
+    # the width of cell is 2 characters thick
+    xyprint $((posx + $1 * 2)) $((posy + $2)) "$content"
+    shift 2
+  done
+}
 
-    "$mask"                                         &&
-    [ "$y" -ge "$PLAYFIELD_Y" ]                     &&
-    [ "$y" -lt $((PLAYFIELD_Y + PLAYFIELD_H)) ]     &&
-    [ "$x" -ge "$PLAYFIELD_X" ]                     &&
-    [ "$x" -lt $((PLAYFIELD_X + PLAYFIELD_W * 2)) ] && xyprint $x $y "$content" # draw mino within playfield
-    "$mask"                                         || xyprint $x $y "$content"
+# Arguments:
+#   1 - x
+#   2 - y
+#   3 - type
+#   4 - rotation
+#   5 - cell content
+draw_playfield_piece() {
+  local posx="$1" posy="$2" type="$3" rotation="$4" content="$5" x=0 y=0
+
+  # set minos coordinates.
+  eval set -- \$piece_"$type"_minos_"$rotation"
+
+  # loop through tetrimino minos: 4 minos, each has 2 coordinates
+  while [ $# -gt 0 ]; do
+    # relative coordinates are retrieved based on orientation and added to absolute coordinates
+    x=$((posx + $1)) 
+    y=$((PLAYFIELD_H - 1 - posy + $2))
+
+    [ "$y" -ge 0 ]              &&
+    [ "$y" -lt "$PLAYFIELD_H" ] &&
+    [ "$x" -ge 0 ]              &&
+    [ "$x" -lt "$PLAYFIELD_W" ] && {
+      # the width of cell is 2 characters thick
+      xyprint $((PLAYFIELD_X + x * 2)) $((PLAYFIELD_Y + y)) "$content"
+    }
 
     shift 2
   done
 }
 
-draw_playfield_piece() {
-  # factor 2 for x because each cell is 2 characters wide
-  draw_piece $((PLAYFIELD_X + $1 * 2)) $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $2)) "$3" "$4" "$5" true
-}
-
-# Arguments:
-#   1 - string to draw single cell
-draw_current() {
-  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$1"
-}
-
 show_current() {
   set_piece_color "$current_piece"
-  draw_current "$filled_cell"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$filled_cell"
+  reset_colors
+}
+
+flash_current() {
+  set_color "$FLASH_COLOR"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$dry_cell"
   reset_colors
 }
 
 clear_current() {
-  draw_current "$empty_cell"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$empty_cell"
+}
+
+# Update ghost piece with new location according to current piece.
+show_ghost() {
+  if [ $# -gt 0 ]; then
+    ghost_piece_y=$1
+  else
+    test_hard_drop $current_piece_x $current_piece_y
+    ghost_piece_y=$((current_piece_y - $?))
+  fi
+  ghost_piece=$current_piece
+  ghost_piece_x=$current_piece_x
+  ghost_piece_rotation=$current_piece_rotation
+
+  set_ghost_color "$current_piece"
+  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$ghost_cell"
+
+  reset_colors
+}
+
+clear_ghost() {
+  ${ghost_piece+:} return
+
+  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$empty_cell"
+}
+
+update_ghost() {
+  local new_ghost_piece_y=0
+
+  test_hard_drop $current_piece_x $current_piece_y
+  new_ghost_piece_y=$((current_piece_y - $?))
+
+  [ "$ghost_piece_x" -eq "$current_piece_x" ]               &&
+  [ "$ghost_piece_y" -eq "$new_ghost_piece_y" ]             &&
+  [ "$ghost_piece" -eq "$current_piece" ]                   &&
+  [ "$ghost_piece_rotation" -eq "$current_piece_rotation" ] && return
+
+  clear_ghost
+  show_ghost "$new_ghost_piece_y"
 }
 
 # Arguments:
