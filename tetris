@@ -132,7 +132,8 @@ TOGGLE_COLOR=10
 TOGGLE_HELP=11
 REFRESH_SCREEN=12
 LOCKDOWN=13
-NOTIFY_PID=14
+PAUSE=14
+NOTIFY_PID=15
 
 PROCESS_CONTROLLER=0
 PROCESS_TICKER=1
@@ -267,7 +268,7 @@ SCORE_Y=6
 
 # Location of help information
 HELP_X=52
-HELP_Y=9
+HELP_Y=8
 
 # Next piece location
 NEXT_X=41
@@ -279,8 +280,8 @@ HOLD_X=7
 HOLD_Y=2
 
 # Location of center of play field
-CENTER_X=$((PLAYFIELD_X + PLAYFIELD_W))     # 1 width equals 2 character
-CENTER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2))
+CENTER_X=$((PLAYFIELD_X + PLAYFIELD_W)) # 1 width equals 2 character
+CENTER_Y=$((PLAYFIELD_Y + PLAYFIELD_H / 2 - 1))
 
 # piece starting location
 # Tetriminos are all generated North Facing (just as they appear in the Next Queue) on the 21st
@@ -448,6 +449,7 @@ Hold            c
 Soft Drop       ↓
 Hard Drop       Space
 ${SP}
+Pause / Resume  TAB, F1
 Refresh Screen  R
 Toggle Color    C
 Toggle Beep     B
@@ -557,6 +559,7 @@ lowest_line=$START_Y       #
 current_tspin=$ACTION_NONE #
 theme='standard'
 lands_on=false
+pause=false
 
 # Game Over Conditions
 #
@@ -787,6 +790,14 @@ stop_process() {
 
 wakeup_process() {
   send_signal "$SIGNAL_CONT" "$@"
+}
+
+capture_input() {
+  send_signal "$SIGNAL_CAPTURE_INPUT" "$reader_pid"
+}
+
+release_input() {
+  send_signal "$SIGNAL_RELEASE_INPUT" "$reader_pid"
 }
 
 terminate_process() {
@@ -1196,7 +1207,7 @@ process_fallen_piece() {
   [ "$action" -eq $ACTION_MINI_TSPIN ] ||
   [ "$action" -eq $ACTION_TSPIN ]      && return
 
-  send_signal "$SIGNAL_RELEASE_INPUT" "$reader_pid"
+  release_input
 
   beep
 
@@ -1217,7 +1228,7 @@ process_fallen_piece() {
   flush_screen
   sleep 0.5
 
-  send_signal "$SIGNAL_CAPTURE_INPUT" "$reader_pid"
+  capture_input
 
   redraw_playfield
 }
@@ -1528,6 +1539,29 @@ lockdown() {
 
   # now lets sub process continue...
   wakeup_process "$ticker_pid" "$timer_pid"
+}
+
+pause() {
+  if "$pause"; then
+    release_input
+    ready
+    capture_input
+
+    redraw_playfield
+    show_ghost
+    show_current
+    show_next
+    show_hold
+    pause=false
+    wakeup_process "$ticker_pid" "$timer_pid"
+    return
+  fi
+
+  stop_process "$ticker_pid" "$timer_pid"
+  draw_pause
+  clear_next
+  clear_hold
+  pause=true
 }
 
 # Arguments:
@@ -1912,6 +1946,20 @@ draw_help() {
   reset_colors
 }
 
+draw_pause() {
+  local y=0 line=''
+
+  str_repeat line "  " "$PLAYFIELD_W"
+  while [ "$y" -lt "$PLAYFIELD_H" ]; do
+    xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + y)) "$line"
+    y=$((y + 1))
+  done
+
+  set_bold
+  xyprint $((CENTER_X - 3)) $CENTER_Y 'PAUSE'
+  reset_colors
+}
+
 refresh_screen() {
   clear_screen
   redraw_screen
@@ -2017,6 +2065,17 @@ init() {
   clear_screen
   redraw_screen
 
+  ready
+
+  wakeup_process "$ticker_pid" "$timer_pid"
+  capture_input
+
+  get_next
+  redraw_screen
+  flush_screen
+}
+
+ready() {
   # show 'READY' for 1 second.
   xyprint $((CENTER_X - 3)) $CENTER_Y 'READY'
   flush_screen
@@ -2030,13 +2089,6 @@ init() {
     sleep 1
     i=$((i - 1))
   done
-
-  wakeup_process "$ticker_pid" "$timer_pid"
-  send_signal "$SIGNAL_CAPTURE_INPUT" "$reader_pid"
-
-  get_next
-  redraw_screen
-  flush_screen
 }
 
 # this function runs in separate process
@@ -2149,18 +2201,19 @@ reader() {
         *"${ESC}[1" | *"${ESC}[1;"[0-9] | *"${ESC}[1;"[0-9][A-D]) ;;
         *"${ESC}[1;"[0-9][0-9] | *"${ESC}[1;"[0-9][0-9][A-D]) ;;
 
-        *[4]     | *"${ESC}[D") send_cmd "$LEFT"           ;; # Numpad 4, Left
-        *[6]     | *"${ESC}[C") send_cmd "$RIGHT"          ;; # Numpad 6, Right
-        *[x159]  | *"${ESC}[A") send_cmd "$ROTATE_CW"      ;; # x, Numpad 1 5 9, Up
-        *[z37]                ) send_cmd "$ROTATE_CCW"     ;; # z, Numpad 3, 7
-        *[c0]                 ) send_cmd "$HOLD"           ;; # c, Numpad 0
-        *[2]     | *"${ESC}[B") send_cmd "$SOFT_DROP"      ;; # Numpad 2, Down
-        *[${SP}8]             ) send_cmd "$HARD_DROP"      ;; # Space Bar, Numpad 8
-        *[R]                  ) send_cmd "$REFRESH_SCREEN" ;; # R
-        *[C]                  ) send_cmd "$TOGGLE_COLOR"   ;; # C
-        *[B]                  ) send_cmd "$TOGGLE_BEEP"    ;; # B
-        *[H]                  ) send_cmd "$TOGGLE_HELP"    ;; # H
-        *[Q] | *"${ESC}${ESC}") send_cmd "$QUIT"; break    ;; # Q, ESCx2
+        *[4]      | *"${ESC}[D") send_cmd "$LEFT"           ;; # Numpad 4, Left
+        *[6]      | *"${ESC}[C") send_cmd "$RIGHT"          ;; # Numpad 6, Right
+        *[x159]   | *"${ESC}[A") send_cmd "$ROTATE_CW"      ;; # x, Numpad 1 5 9, Up
+        *[z37]                 ) send_cmd "$ROTATE_CCW"     ;; # z, Numpad 3, 7
+        *[c0]                  ) send_cmd "$HOLD"           ;; # c, Numpad 0
+        *[2]      | *"${ESC}[B") send_cmd "$SOFT_DROP"      ;; # Numpad 2, Down
+        *[8${SP}]              ) send_cmd "$HARD_DROP"      ;; # Space Bar, Numpad 8
+        *[${TAB}] | *"${ESC}OP") send_cmd "$PAUSE"          ;; # TAB, F1
+        *[R]                   ) send_cmd "$REFRESH_SCREEN" ;; # R
+        *[C]                   ) send_cmd "$TOGGLE_COLOR"   ;; # C
+        *[B]                   ) send_cmd "$TOGGLE_BEEP"    ;; # B
+        *[H]                   ) send_cmd "$TOGGLE_HELP"    ;; # H
+        *[Q]  | *"${ESC}${ESC}") send_cmd "$QUIT"; break    ;; # Q, ESCx2
       esac
     done
 
@@ -2205,11 +2258,13 @@ controller() {
   eval commands_"$TOGGLE_COLOR"=toggle_color
   eval commands_"$TOGGLE_HELP"=toggle_help
   eval commands_"$LOCKDOWN"=lockdown
+  eval commands_"$PAUSE"=pause
 
   init
 
   while $running; do           # run while this variable is true, it is changed to false in quit function
     read cmd                   # read next command from stdout
+    "$pause" && [ "$cmd" -ne "$PAUSE" ] && continue
     eval "\"\$commands_$cmd\"" # run command
     flush_screen
   done
