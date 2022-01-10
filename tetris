@@ -547,13 +547,25 @@ lock_phase=false
 # In singleplayer modes, the reward is usually combo-counter*50*level points.
 combo_counter=-1
 
-lockdown_rule=$LOCKDOWN_RULE_EXTENDED
+# The variable to preserve last actions.
+# Each action is put on divided section by ':'.
+# draw_action() draws these actions.
+#
+# Actions will be drawn as follows:
+#   ---
+#   <REN>
+#   <ACTION-1>
+#   <ACTION-2>
+#   <EMPTY>
+#   <BACK-to-BACK>
+#   ---
+last_actions=''
 
+lockdown_rule=$LOCKDOWN_RULE_EXTENDED
 score=0                    # score variable initialization
 level=0                    # level variable initialization
 goal=0                     # goal variable initialization
 lines_completed=0          # completed lines counter initialization
-last_action=''             #
 already_hold=false         #
 help_on=true               # if this flag is true help is shown, if false, hide
 beep_on=true               #
@@ -1191,7 +1203,7 @@ process_fallen_piece() {
   what_action $#; action=$?
 
   update_score_on_completion "$action" && {
-    draw_action true # if last_action changed, perform flash effect
+    draw_action true # if last_actions changed, perform flash effect
   }
 
   # flash piece effect
@@ -1255,13 +1267,9 @@ update_score_on_drop() {
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
   case "$1" in
-    "$ACTION_SOFT_DROP")
-      score_to_add=$factor
-      ;;
-    "$ACTION_HARD_DROP")
-      score_to_add=$((factor * $2))
-      ;;
-    *) echo "update_score_on_drop: invalid action given" >&2 ;;
+    "$ACTION_SOFT_DROP") score_to_add=$factor ;;
+    "$ACTION_HARD_DROP") score_to_add=$((factor * $2)) ;;
+    *) echo "update_score_on_drop: invalid action($1) given" >&2 ;;
   esac
   
   score=$((score + score_to_add))
@@ -1291,75 +1299,75 @@ update_score_on_completion() {
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
       new_combo_counter=$((combo_counter + 1))
-      last_action=':Single:'; action_updated=true # align 2 lines
+      last_actions=':Single:'; action_updated=true
       ;;
     "$ACTION_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
       new_combo_counter=$((combo_counter + 1))
-      last_action=':Double:'; action_updated=true
+      last_actions=':Double:'; action_updated=true
       ;;
     "$ACTION_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
       new_combo_counter=$((combo_counter + 1))
-      last_action=':Triple:'; action_updated=true
+      last_actions=':Triple:'; action_updated=true
       ;;
     "$ACTION_TETRIS")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_action=':Tetris:'; action_updated=true
+      last_actions=':Tetris:'; action_updated=true
       ;;
     "$ACTION_MINI_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=-1
-      last_action=':Mini T-Spin:'; action_updated=true
+      last_actions=':Mini T-Spin:'; action_updated=true
       ;;
     "$ACTION_MINI_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_action=':Mini T-Spin: Single'; action_updated=true
+      last_actions=':Mini T-Spin: Single'; action_updated=true
       ;;
     "$ACTION_MINI_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_action=':Mini T-Spin: Double'; action_updated=true
+      last_actions=':Mini T-Spin: Double'; action_updated=true
       ;;
     "$ACTION_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=-1
-      last_action=':T-Spin:'; action_updated=true
+      last_actions=':T-Spin:'; action_updated=true
       ;;
     "$ACTION_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_action=':T-Spin: Single'; action_updated=true
+      last_actions=':T-Spin: Single'; action_updated=true
       ;;
     "$ACTION_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_action=':T-Spin: Double'; action_updated=true
+      last_actions=':T-Spin: Double'; action_updated=true
       ;;
     "$ACTION_TSPIN_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_action=':T-Spin: Triple'; action_updated=true
+      last_actions=':T-Spin: Triple'; action_updated=true
       ;;
     "$ACTION_NONE")
       new_combo_counter=-1
       ;;
       
-    *) echo "update_score_on_completion: invalid action given" >&2 ;;
+    *) echo "update_score_on_completion: invalid action($1) given" >&2 ;;
   esac
 
   # Awarded Back-to-Back Bonus
@@ -1374,7 +1382,7 @@ update_score_on_completion() {
       $b2b_sequence_continues && {
         score_to_add=$((score_to_add + score_to_add / 2))
         lines_to_add=$((lines_to_add + lines_to_add / 2))
-        last_action="$last_action::Back-to-Back"; action_updated=true
+        last_actions="$last_actions::Back-to-Back"; action_updated=true
       }
       b2b_sequence_continues=true;;
   esac
@@ -1382,14 +1390,14 @@ update_score_on_completion() {
   [ "$new_combo_counter" -ne "$combo_counter" ] && {
     combo_counter=$new_combo_counter
     
-    last_action=${last_action#*:} # pop first line
+    last_actions=${last_actions#*:} # pop first line
 
     [ $combo_counter -gt 0 ] && {
       # Combo Bonus
       score_to_add=$((score_to_add + SCORE_FACTOR_COMBO * combo_counter * level))
-      last_action="$combo_counter REN:$last_action"
+      last_actions="$combo_counter REN:$last_actions"
     } || {
-      last_action=":$last_action" # clear REN
+      last_actions=":$last_actions" # clear REN
     }
   }
 
@@ -1401,6 +1409,12 @@ update_score_on_completion() {
     level_up
   }
 
+  draw_score
+
+  $action_updated
+}
+
+draw_score() {
   set_bold
   set_color "$SCORE_COLOR"
   xyprint $((SCORE_X + 1)) $((SCORE_Y + 1)) "$score"
@@ -1411,8 +1425,6 @@ update_score_on_completion() {
   str_lpad text "$goal" 4
   xyprint $((SCORE_X + 8)) $((SCORE_Y + 5)) "$text"
   reset_colors
-
-  $action_updated
 }
 
 # Arguments:
@@ -1424,7 +1436,7 @@ draw_action() {
   set_color "$SCORE_COLOR"
 
   IFS_SAVE=$IFS; IFS=:
-  set -- $last_action
+  set -- $last_actions
   IFS=$IFS_SAVE
 
   # We should clear at least 3 lines (e.g., 'T-Spin; Double; B2B')
@@ -1993,7 +2005,7 @@ redraw_screen() {
   show_next
   [ ${hold_queue:-} ] && show_hold
   draw_scoreboard
-  update_score_on_completion "$ACTION_NONE"
+  draw_score
   draw_action false
   draw_border
   redraw_playfield
