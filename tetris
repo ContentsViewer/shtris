@@ -1849,24 +1849,16 @@ clear_next() {
   draw_next false
 }
 
-# Arguments:
-#   1 - visibility ( false - no, true - yes)
-draw_hold() {
-  $1 && {
-    set_piece_color "$hold_queue"
-    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$filled_cell"
-    reset_colors
-  } || {
-    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" '  '
-  }
-}
-
 show_hold() {
-  draw_hold true
+  [ -z "$hold_queue" ] && return
+  set_piece_color "$hold_queue"
+  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$filled_cell"
+  reset_colors
 }
 
 clear_hold() {
-  draw_hold false
+  [ -z "$hold_queue" ] && return
+  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" '  '
 }
 
 draw_border() {
@@ -1928,7 +1920,7 @@ refresh_screen() {
 redraw_screen() {
   draw_help # should first. draw help on the lowest layer
   show_next
-  [ ${hold_queue:-} ] && show_hold
+  show_hold
   draw_scoreboard
   update_score "$ACTION_NONE"
   draw_action false
