@@ -993,12 +993,17 @@ generate_tetrimino() {
   show_ghost
 }
 
+# Arguments:
+#   1 - x
+#   2 - y
+#   3 - rotation
+#   4 - rotation point
 what_type_tspin() {
   local pos_x="$1" pos_y="$2" rotation="$3" side=0 side_x=0 side_y=0 field_cell=-1
 
   # Rotation Point 5 is used to rotate the Tetrimino into the T-Slot.
   # Any further rotation will be considered a T-Spin, not a Mini T-Spin
-  [ ${5:-0} -ge 5 ] && {
+  [ ${4:-0} -ge 5 ] && {
     return $ACTION_TSPIN
   }
 
