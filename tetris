@@ -1449,9 +1449,9 @@ draw_action() {
   set -- $last_actions
   IFS=$IFS_SAVE
 
-  # We should clear at least 3 lines (e.g., 'T-Spin; Double; B2B')
+  # We should clear at least 5 lines
   i=7
-  for text in "${1:-}" "${2:-}" "${3:-}" "${4:-}"; do
+  for text in "${1:-}" "${2:-}" "${3:-}" "${4:-}" "${5:-}"; do
     $flash && str_repeat text '█' ${#text}
     str_rpad text " $text" 13 # max width 13 ' Back-to-Back'
     xyprint "$SCORE_X" $((SCORE_Y + i)) "$text"
