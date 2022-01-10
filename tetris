@@ -214,6 +214,7 @@ eval SCORE_FACTOR_"$ACTION_MINI_TSPIN_SINGLE"=200
 eval SCORE_FACTOR_"$ACTION_MINI_TSPIN_DOUBLE"=300
 eval SCORE_FACTOR_"$ACTION_SOFT_DROP"=1
 eval SCORE_FACTOR_"$ACTION_HARD_DROP"=2
+SCORE_FACTOR_COMBO=50
 
 # A Tetrimino that is Hard Dropped Locks Down immediately. However, if a Tetrimino naturally falls
 # or Soft Drops onto a Surface, it is given 0.5 seconds on a Lock Down Timer before it actually
@@ -538,13 +539,35 @@ b2b_sequence_continues=false
 # LOCKDOWN command is valid only when lock_phase=true
 lock_phase=false
 
-lockdown_rule=$LOCKDOWN_RULE_EXTENDED
+# Combos are bonuses which rewards multiple line clears in quick succession.
+# This type of combos is used in almost every official Tetris client that
+# follows the Tetris Guideline. For every placed piece that clears at least one line,
+# the combo counter is increased by +1. If a placed piece doesn't clear a line,
+# the combo counter is reset to -1. That means 2 consecutive line clears result
+# in a 1-combo, 3 consecutive line clears result in a 2-combo and so on.
+# Each time the combo counter is increased beyond 0, the player receives a reward:
+# In singleplayer modes, the reward is usually combo-counter*50*level points.
+combo_counter=-1
 
+# The variable to preserve last actions.
+# Each action is put on divided section by ':'.
+# draw_action() draws these actions.
+#
+# Actions will be drawn as follows:
+#   ---
+#   <REN>
+#   <ACTION-1>
+#   <ACTION-2>
+#   <EMPTY>
+#   <BACK-to-BACK>
+#   ---
+last_actions=''
+
+lockdown_rule=$LOCKDOWN_RULE_EXTENDED
 score=0                    # score variable initialization
 level=0                    # level variable initialization
 goal=0                     # goal variable initialization
 lines_completed=0          # completed lines counter initialization
-last_action=''             #
 already_hold=false         #
 help_on=true               # if this flag is true help is shown, if false, hide
 beep_on=true               #
@@ -1190,8 +1213,8 @@ process_fallen_piece() {
   set -- $completed_lines
   what_action $#; action=$?
 
-  update_score "$action" && {
-    draw_action true # if last_action changed, perform flash effect
+  update_score_on_completion "$action" && {
+    draw_action true # if last_actions changed, perform flash effect
   }
 
   # flash piece effect
@@ -1245,12 +1268,36 @@ draw_scoreboard() {
   reset_colors
 }
 
+# update score while falling phase
+# Arguments:
+#   1 - drop action name. ACTION_SOFT_DROP or ACTION_HARD_DROP
+#   2 - (ACTION_HARD_DROP) lines
+update_score_on_drop() {
+  local factor=0 score_to_add=0
+
+  eval factor=\"\$SCORE_FACTOR_"$1"\"
+
+  case "$1" in
+    "$ACTION_SOFT_DROP") score_to_add=$factor ;;
+    "$ACTION_HARD_DROP") score_to_add=$((factor * $2)) ;;
+    *) echo "update_score_on_drop: invalid action($1) given" >&2 ;;
+  esac
+
+  score=$((score + score_to_add))
+
+  # It is enough to update the score
+  set_bold
+  set_color "$SCORE_COLOR"
+  xyprint $((SCORE_X + 1)) $((SCORE_Y + 1)) "$score"
+  reset_colors
+}
+
+# update score on completion phase
 # Arguments:
 #   1 - ACTION name. ex: ACTION_SINGLE
-#   2 - (ACTION_HARD_DROP) lines
 # Returns:
-update_score() {
-  local factor=0 score_to_add=0 lines_to_add=0 action_updated=1
+update_score_on_completion() {
+  local factor=0 score_to_add=0 lines_to_add=0 action_updated=false new_combo_counter=$combo_counter
 
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
@@ -1262,66 +1309,75 @@ update_score() {
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      last_action='Single:'; action_updated=0 # align 2 lines
+      new_combo_counter=$((combo_counter + 1))
+      last_actions=':Single:'; action_updated=true
       ;;
     "$ACTION_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      last_action='Double:'; action_updated=0
+      new_combo_counter=$((combo_counter + 1))
+      last_actions=':Double:'; action_updated=true
       ;;
     "$ACTION_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
-      last_action='Triple:'; action_updated=0
+      new_combo_counter=$((combo_counter + 1))
+      last_actions=':Triple:'; action_updated=true
       ;;
     "$ACTION_TETRIS")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='Tetris:'; action_updated=0
+      new_combo_counter=$((combo_counter + 1))
+      last_actions=':Tetris:'; action_updated=true
       ;;
     "$ACTION_MINI_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='Mini T-Spin:'; action_updated=0
+      new_combo_counter=-1
+      last_actions=':Mini T-Spin:'; action_updated=true
       ;;
     "$ACTION_MINI_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='Mini T-Spin: Single'; action_updated=0
+      new_combo_counter=$((combo_counter + 1))
+      last_actions=':Mini T-Spin: Single'; action_updated=true
       ;;
     "$ACTION_MINI_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='Mini T-Spin: Double'; action_updated=0
+      new_combo_counter=$((combo_counter + 1))
+      last_actions=':Mini T-Spin: Double'; action_updated=true
       ;;
     "$ACTION_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='T-Spin:'; action_updated=0
+      new_combo_counter=-1
+      last_actions=':T-Spin:'; action_updated=true
       ;;
     "$ACTION_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='T-Spin: Single'; action_updated=0
+      new_combo_counter=$((combo_counter + 1))
+      last_actions=':T-Spin: Single'; action_updated=true
       ;;
     "$ACTION_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='T-Spin: Double'; action_updated=0
+      new_combo_counter=$((combo_counter + 1))
+      last_actions=':T-Spin: Double'; action_updated=true
       ;;
     "$ACTION_TSPIN_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
-      last_action='T-Spin: Triple'; action_updated=0
+      new_combo_counter=$((combo_counter + 1))
+      last_actions=':T-Spin: Triple'; action_updated=true
       ;;
-    "$ACTION_SOFT_DROP")
-      score_to_add=$factor
+    "$ACTION_NONE")
+      new_combo_counter=-1
       ;;
-    "$ACTION_HARD_DROP")
-      score_to_add=$((factor * $2))
-      ;;
+    *) echo "update_score_on_completion: invalid action($1) given" >&2 ;;
   esac
 
   # Awarded Back-to-Back Bonus
@@ -1336,10 +1392,24 @@ update_score() {
       $b2b_sequence_continues && {
         score_to_add=$((score_to_add + score_to_add / 2))
         lines_to_add=$((lines_to_add + lines_to_add / 2))
-        last_action="$last_action::Back-to-Back"; action_updated=0
+        last_actions="$last_actions::Back-to-Back"; action_updated=true
       }
       b2b_sequence_continues=true;;
   esac
+
+  [ "$new_combo_counter" -ne "$combo_counter" ] && {
+    combo_counter=$new_combo_counter
+
+    last_actions=${last_actions#*:} # pop first line
+
+    [ $combo_counter -gt 0 ] && {
+      # Combo Bonus
+      score_to_add=$((score_to_add + SCORE_FACTOR_COMBO * combo_counter * level))
+      last_actions="$combo_counter REN:$last_actions"
+    } || {
+      last_actions=":$last_actions" # clear REN
+    }
+  }
 
   score=$((score + score_to_add))
   lines_completed=$((lines_completed + lines_to_add))
@@ -1349,6 +1419,12 @@ update_score() {
     level_up
   }
 
+  draw_score
+
+  $action_updated
+}
+
+draw_score() {
   set_bold
   set_color "$SCORE_COLOR"
   xyprint $((SCORE_X + 1)) $((SCORE_Y + 1)) "$score"
@@ -1359,8 +1435,6 @@ update_score() {
   str_lpad text "$goal" 4
   xyprint $((SCORE_X + 8)) $((SCORE_Y + 5)) "$text"
   reset_colors
-
-  return $action_updated
 }
 
 # Arguments:
@@ -1372,7 +1446,7 @@ draw_action() {
   set_color "$SCORE_COLOR"
 
   IFS_SAVE=$IFS; IFS=:
-  set -- $last_action
+  set -- $last_actions
   IFS=$IFS_SAVE
 
   # We should clear at least 3 lines (e.g., 'T-Spin; Double; B2B')
@@ -1685,7 +1759,7 @@ soft_drop() {
   move_piece "$current_piece_x" $((current_piece_y - 1)) && {
     # if successfuly move
     current_piece_behaviour=$BEHAVIOUR_SOFT_DROP
-    update_score "$ACTION_SOFT_DROP"
+    update_score_on_drop "$ACTION_SOFT_DROP"
   }
 }
 
@@ -1709,7 +1783,7 @@ hard_drop() {
   # move piece all way down
   test_hard_drop $current_piece_x $current_piece_y; steps=$?
 
-  update_score "$ACTION_HARD_DROP" $steps
+  update_score_on_drop "$ACTION_HARD_DROP" $steps
   move_piece $current_piece_x $((current_piece_y - steps))
   lockdown # A Tetrimino that is Hard Dropped Locks Down immediately
 
@@ -1785,7 +1859,7 @@ draw_playfield_piece() {
   # loop through tetrimino minos: 4 minos, each has 2 coordinates
   while [ $# -gt 0 ]; do
     # relative coordinates are retrieved based on orientation and added to absolute coordinates
-    x=$((posx + $1)) 
+    x=$((posx + $1))
     y=$((PLAYFIELD_H - 1 - posy + $2))
 
     [ "$y" -ge 0 ]              &&
@@ -1970,7 +2044,7 @@ redraw_screen() {
   show_next
   show_hold
   draw_scoreboard
-  update_score "$ACTION_NONE"
+  draw_score
   draw_action false
   draw_border
   redraw_playfield
