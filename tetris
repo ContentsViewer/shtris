@@ -1929,32 +1929,30 @@ update_ghost() {
   show_ghost "$new_ghost_piece_y"
 }
 
-# Arguments:
-#   1 - visibility ( false - no, true - yes)
-draw_next() {
-  local visible="$1" next_x="$NEXT_X" next_y="$NEXT_Y"
+show_next() {
+  local next_y="$NEXT_Y"
 
   set -- $next_queue
 
   while [ $# -gt 0 ]; do
-    $visible && {
-      set_piece_color "$1"
-      draw_piece "$next_x" "$next_y" "$1" "$NORTH" "$filled_cell"
-    } || {
-      draw_piece "$next_x" "$next_y" "$1" "$NORTH" '  '
-    }
+    set_piece_color "$1"
+    draw_piece "$NEXT_X" "$next_y" "$1" "$NORTH" "$filled_cell"
     shift
     next_y=$((next_y + 3))
   done
-  $visible && reset_colors
-}
-
-show_next() {
-  draw_next true
+  reset_colors
 }
 
 clear_next() {
-  draw_next false
+  local next_y="$NEXT_Y"
+
+  set -- $next_queue
+
+  while [ $# -gt 0 ]; do
+    draw_piece "$NEXT_X" "$next_y" "$1" "$NORTH" '  '
+    shift
+    next_y=$((next_y + 3))
+  done
 }
 
 show_hold() {
