@@ -556,6 +556,7 @@ combo_counter=-1
 # Actions will be drawn as follows:
 #   ---
 #   <REN>
+#   <EMPTY>
 #   <ACTION-1>
 #   <ACTION-2>
 #   <EMPTY>
@@ -1315,69 +1316,69 @@ update_score_on_completion() {
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
       new_combo_counter=$((combo_counter + 1))
-      last_actions=':Single:'; action_updated=true
+      last_actions='::Single:'; action_updated=true
       ;;
     "$ACTION_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
       new_combo_counter=$((combo_counter + 1))
-      last_actions=':Double:'; action_updated=true
+      last_actions='::Double:'; action_updated=true
       ;;
     "$ACTION_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
       new_combo_counter=$((combo_counter + 1))
-      last_actions=':Triple:'; action_updated=true
+      last_actions='::Triple:'; action_updated=true
       ;;
     "$ACTION_TETRIS")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions=':Tetris:'; action_updated=true
+      last_actions='::Tetris:'; action_updated=true
       ;;
     "$ACTION_MINI_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=-1
-      last_actions=':Mini T-Spin:'; action_updated=true
+      last_actions='::Mini T-Spin:'; action_updated=true
       ;;
     "$ACTION_MINI_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions=':Mini T-Spin: Single'; action_updated=true
+      last_actions='::Mini T-Spin: Single'; action_updated=true
       ;;
     "$ACTION_MINI_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions=':Mini T-Spin: Double'; action_updated=true
+      last_actions='::Mini T-Spin: Double'; action_updated=true
       ;;
     "$ACTION_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=-1
-      last_actions=':T-Spin:'; action_updated=true
+      last_actions='::T-Spin:'; action_updated=true
       ;;
     "$ACTION_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions=':T-Spin: Single'; action_updated=true
+      last_actions='::T-Spin: Single'; action_updated=true
       ;;
     "$ACTION_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions=':T-Spin: Double'; action_updated=true
+      last_actions='::T-Spin: Double'; action_updated=true
       ;;
     "$ACTION_TSPIN_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions=':T-Spin: Triple'; action_updated=true
+      last_actions='::T-Spin: Triple'; action_updated=true
       ;;
     "$ACTION_NONE")
       new_combo_counter=-1
@@ -1454,9 +1455,9 @@ draw_action() {
   set -- $last_actions
   IFS=$IFS_SAVE
 
-  # We should clear at least 5 lines
+  # We should clear at least 6 lines (see last_actions).
   i=7
-  for text in "${1:-}" "${2:-}" "${3:-}" "${4:-}" "${5:-}"; do
+  for text in "${1:-}" "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}"; do
     $flash && str_repeat text '█' ${#text}
     str_rpad text " $text" 13 # max width 13 ' Back-to-Back'
     xyprint "$SCORE_X" $((SCORE_Y + i)) "$text"
