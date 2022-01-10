@@ -575,6 +575,7 @@ no_color=false             # do we use color or not
 running=true               # controller runs while this flag is true
 empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
+hold_cell='_]'             # how we draw hold cell
 ghost_cell='░░'            # how we draw ghost cell
 dry_cell='██'              #
 manipulation_counter=0     #
@@ -628,7 +629,7 @@ str_rpad() {
 switch_color_theme() {
   local i=''
 
-  SCORE_COLOR='' HELP_COLOR='' BORDER_COLOR='' FLASH_COLOR=''
+  SCORE_COLOR='' HELP_COLOR='' BORDER_COLOR='' FLASH_COLOR='' HOLD_COLOR=''
   eval "TETRIMINO_${EMPTY_CELL}_COLOR=''"
   for i in I J L O S T Z; do
     eval "TETRIMINO_${i}_COLOR=''"
@@ -636,16 +637,16 @@ switch_color_theme() {
 
   "color_theme_$1"
 
-  SCORE_COLOR="${ESC}[${SCORE_COLOR};49m"
-  HELP_COLOR="${ESC}[${HELP_COLOR};49m"
-  BORDER_COLOR="${ESC}[${BORDER_COLOR};49m"
-  FLASH_COLOR="${ESC}[${FLASH_COLOR};49m"
+  for i in SCORE HELP BORDER FLASH HOLD; do
+    eval "set -- $i \$${i}_COLOR"
+    eval "${1}_COLOR='${ESC}[${2};${3}m'"
+  done
 
   eval "TETRIMINO_${EMPTY_CELL}_COLOR='${ESC}[39;49m'"
   for i in I J L O S T Z; do
     eval "set -- \$${i}_TETRIMINO \$TETRIMINO_${i}_COLOR"
-    eval "TETRIMINO_${1}_COLOR='${ESC}[${2:-};${3:-}m'"
-    eval "GHOST_${1}_COLOR='${ESC}[${4:-};${5:-}m'"
+    eval "TETRIMINO_${1}_COLOR='${ESC}[${2};${3}m'"
+    eval "GHOST_${1}_COLOR='${ESC}[${4};${5}m'"
   done
 }
 
@@ -659,7 +660,7 @@ switch_color_theme() {
 #   40-47 - background color
 #     40:BLACK 41:RED 42:GREEN 43:YELLOW 44:BLUE 45:MAGENTA 46:CYAN 47:WHITE
 #
-# 16 Colors
+# 16 Colors (additional 8 colors)
 #    90- 97 - bright foreground color
 #     90:BLACK 91:RED 92:GREEN 93:YELLOW 94:BLUE 95:MAGENTA 96:CYAN 97:WHITE
 #   100-107 - bright background color
@@ -676,20 +677,22 @@ switch_color_theme() {
 #                R*36 + G*6 + B + 16 (0 <= R, G, B <= 5)
 #       232-255: grayscale from black to white in 24 steps
 #
-# 16777216 Colors
+# 16777216 Colors (256 * 256 * 256)
 #   38;2;<R>;<G>;<B> - foreground color
 #   48;2;<R>;<G>;<B> - background color
 #
 # Format:
+#   <N>_COLOR='<FG> <BG>'
 #   TETRIMINO_<T>_COLOR='<FG> <BG> <GHOST_FG> <GHOST_BG>'
 
 color_theme_system() {
-  SCORE_COLOR='32'  # GREEN
-  HELP_COLOR='33'   # YELLOW
+  SCORE_COLOR='32  49' # GREEN
+  HELP_COLOR=' 33  49' # YELLOW
+  HOLD_COLOR=' 90 100' # BRIGHT BLACK
 
   #  not specify color (e.g., WHITE) to match terminal color theme (dark or light)
-  BORDER_COLOR='39' # default
-  FLASH_COLOR='39'  # default
+  BORDER_COLOR='39 49' # default
+  FLASH_COLOR=' 39 49' # default
 
   TETRIMINO_I_COLOR='36  46  36 49' # CYAN
   TETRIMINO_J_COLOR='34  44  34 49' # BLUE
@@ -701,12 +704,13 @@ color_theme_system() {
 }
 
 color_theme_standard() {
-  SCORE_COLOR='38;5;70' # green  (r:1 g:3 b:0)
-  HELP_COLOR='38;5;220' # yellow (r:5 g:4 b:0)
+  SCORE_COLOR='38;5;70  49'       # green  (r:1 g:3 b:0)
+  HELP_COLOR=' 38;5;220 49'       # yellow (r:5 g:4 b:0)
+  HOLD_COLOR=' 38;5;245 48;5;245' # gray
 
   #  not specify color (e.g., WHITE) to match terminal color theme (dark or light)
-  BORDER_COLOR='39' # default
-  FLASH_COLOR='39'  # default
+  BORDER_COLOR='39 49' # default
+  FLASH_COLOR=' 39 49' # default
 
   TETRIMINO_I_COLOR='38;5;39  48;5;39   38;5;39  49' # light blue (r:0 g:3 b:5)
   TETRIMINO_J_COLOR='38;5;25  48;5;25   38;5;25  49' # dark blue  (r:0 g:1 b:3)
@@ -951,17 +955,16 @@ hold_tetrimino() {
   "$already_hold" && return
   already_hold=true
 
+  clear_current
   clear_ghost
 
   # if hold queue is empty,
   [ -z "$hold_queue" ] && {
     hold_queue="$current_piece" # hold current tetrimino
-    clear_current
     get_next                    # the Next Tetrimino is generated from the Next Queue and begins to fall
     show_hold
     return
   }
-  clear_current
   clear_hold
 
   # swap piece
@@ -1608,8 +1611,11 @@ lockdown() {
     quit; return    # ... Quit
   }
 
-  get_next             # and start the new one
-  already_hold=false   # player can hold the falling tetrimino.
+  get_next # and start the new one
+  if "$already_hold"; then
+    already_hold=false # player can hold the falling tetrimino.
+    show_hold
+  fi
 
   # now lets sub process continue...
   wakeup_process "$ticker_pid" "$timer_pid"
@@ -1957,8 +1963,13 @@ clear_next() {
 
 show_hold() {
   [ -z "$hold_queue" ] && return
-  set_piece_color "$hold_queue"
-  draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$filled_cell"
+  if "$already_hold"; then
+    set_color "$HOLD_COLOR"
+    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$hold_cell"
+  else
+    set_piece_color "$hold_queue"
+    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$filled_cell"
+  fi
   reset_colors
 }
 
