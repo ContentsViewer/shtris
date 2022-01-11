@@ -2493,7 +2493,7 @@ initialize() {
   printf '\033[%d;%dH\0337' "$ERRLOG_Y" "$ERRLOG_X"
 
   # disable terminal local echo (echoback) and canonical input mode
-  stty -echo -icanon time 0 min 1
+  stty -echo -icanon -ixon time 0 min 1
 }
 
 cleanup() {
