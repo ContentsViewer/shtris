@@ -62,6 +62,7 @@
 #
 
 set -u # non initialized variable is an error
+set -f # disable pathname expansion
 
 # game versioin
 # should follow "Semantic Versioning 2.0.0" <https://semver.org/>
@@ -139,6 +140,7 @@ PROCESS_CONTROLLER=0
 PROCESS_TICKER=1
 PROCESS_TIMER=2
 PROCESS_READER=3
+PROCESS_INKEY=4
 
 BEHAVIOUR_NON=0
 BEHAVIOUR_RIGHT=1
@@ -255,10 +257,6 @@ PLAYFIELD_H=20
 PLAYFIELD_X=18
 PLAYFIELD_Y=2
 
-# Location of termination information
-TERM_X=1
-TERM_Y=$((PLAYFIELD_Y + PLAYFIELD_H + 1))
-
 # Location of error logs
 ERRLOG_X=1
 ERRLOG_Y=$((PLAYFIELD_Y + PLAYFIELD_H + 2))
@@ -301,6 +299,9 @@ BUFFER_ZONE_Y=24
 # constant chars
 BEL="$(printf '\007')"
 ESC="$(printf '\033')"
+
+# exit information format
+EXIT_FORMAT="\033[$((PLAYFIELD_Y + PLAYFIELD_H + 1));1H\033[K> %s\n"
 
 # Minos:
 #   this array holds all possible pieces that can be used in the game
@@ -585,6 +586,7 @@ current_tspin=$ACTION_NONE #
 theme='standard'
 lands_on=false
 pause=false
+gameover=false
 
 # Game Over Conditions
 #
@@ -797,10 +799,12 @@ get_pid(){
 }
 
 send_signal() {
+  local signal=$1
+  shift
   set -- $@ # remove empty pid
   # If implemented correctly, there should be no need to discard the error,
   # but it's a little hard and not that important, so we ignore it.
-  { kill "-$@"; } 2>/dev/null
+  { kill -"$signal" "$@"; } 2>/dev/null
 }
 
 exist_process() {
@@ -941,7 +945,7 @@ get_next() {
   generate_tetrimino "$1" # peek the next piece
 
   # check if piece can be placed at this location, if not - game over
-  new_piece_location_ok $current_piece_x $current_piece_y || quit
+  new_piece_location_ok $current_piece_x $current_piece_y || gameover
   show_current
 
   # now let's shift next queue
@@ -1614,7 +1618,7 @@ lockdown() {
   test_lockout && { # a whole Tetrimino Locks Down above the Skyline - Game Over
     # now lets sub process continue...
     wakeup_process "$ticker_pid" "$timer_pid"
-    quit; return    # ... Quit
+    gameover; return # ... Quit
   }
 
   get_next # and start the new one
@@ -2085,16 +2089,21 @@ toggle_color() {
   redraw_screen
 }
 
+gameover() {
+  gameover=true
+  quit
+}
+
 quit() {
   running=false # let's stop controller ...
   xyprint $((CENTER_X - 5)) $CENTER_Y 'Game Over!'
-  xyprint "$TERM_X" "$TERM_Y" '> Press enter to continue ...'
   flush_screen
   terminate_process "$timer_pid" "$ticker_pid" "$reader_pid"
+  killdd "$inkey_pid"
 }
 
 init() {
-  local x=0 y=0 i=0 cmd='' from='' pid=''
+  local x=0 y=0 i=0
 
   switch_color_theme "$theme"
 
@@ -2127,25 +2136,8 @@ init() {
     i=$((i + 1))
   done
 
-  $debug echo 'Checking subprocess pid'
-  while [ -z $ticker_pid ] || [ -z $timer_pid ] || [ -z $reader_pid ]; do
-    read cmd from pid
-    [ "$cmd" = "$NOTIFY_PID" ] || continue
-    case $from in
-      $PROCESS_TICKER)
-        ticker_pid=$pid
-        $debug echo "> ticker $ticker_pid ...OK"
-        ;;
-      $PROCESS_READER)
-        reader_pid=$pid
-        $debug echo "> reader $reader_pid ...OK"
-        ;;
-      $PROCESS_TIMER)
-        timer_pid=$pid
-        $debug echo "> timer  $timer_pid ...OK"
-        ;;
-    esac
-  done
+  # receive subprocess pids
+  receive_pids
 
   # reset to starting level
   reset_level
@@ -2162,6 +2154,26 @@ init() {
   get_next
   redraw_screen
   flush_screen
+}
+
+receive_pids() {
+  local cmd='' from='' pid=''
+
+  get_pid pid
+  $debug echo "controller pid: $pid"
+  $debug echo 'Checking subprocess pid'
+  while [ -z $ticker_pid ] || [ -z $timer_pid ] || [ -z $reader_pid ] || [ -z $inkey_pid ]; do
+    read cmd from pid
+    [ "$cmd" = "$NOTIFY_PID" ] || continue
+    case $from in
+      $PROCESS_TICKER) ticker_pid=$pid from='ticker' ;;
+      $PROCESS_TIMER)  timer_pid=$pid  from='timer ' ;;
+      $PROCESS_READER) reader_pid=$pid from='reader' ;;
+      $PROCESS_INKEY)  inkey_pid=$pid  from='inkey ' ;;
+      *) echo "invalid process number: $from" >&2; continue ;;
+    esac
+    $debug echo "> $from $pid ...OK"
+  done
 }
 
 ready() {
@@ -2245,24 +2257,28 @@ ticker() {
 
 # this function processes keyboard input
 reader() {
-  local game_pid="$1" my_pid='' dd_wrapper_pid='' key_sequence='' key='' capture=false
-  trap exit "$SIGNAL_INT" # Only required for bash on macOS. Why?
+  local game_pid="$1" my_pid='' inkey_pid='' key_sequence='' key='' capture=false
+
+  # Output the error via FD3 to avoid the problem of FreeBSD sh outputting "Terminated" on exit.
+  exec 3>&2 2>/dev/null
 
   {
     get_pid
     while dd ibs=1 count=1; do
       echo # insert a newline: convert one character to one line
     done 2>/dev/null
-  } | { # Do not use '(' here
+  } 2>&3 | { # Do not use '(' here
     # Do not use subshell to make it work correctly with Solaris 11 sh (ksh).
     # It will not respond to keystrokes.
 
     # this process exits on SIGTERM
-    trap 'killdd "$dd_wrapper_pid"; exit' $SIGNAL_TERM
+    trap 'exit' $SIGNAL_TERM
     trap 'capture=true' $SIGNAL_CAPTURE_INPUT
     trap 'capture=false' $SIGNAL_RELEASE_INPUT
 
-    read dd_wrapper_pid
+    read inkey_pid
+    send_cmd "$NOTIFY_PID $PROCESS_INKEY $inkey_pid"
+
     get_pid my_pid
     send_cmd "$NOTIFY_PID $PROCESS_READER $my_pid"
 
@@ -2273,7 +2289,7 @@ reader() {
       # received during read. Therefore, do not read and assign IFS at the same time here,
       # since the space immediately after the signal will be ignored.
       IFS_SAVE=$IFS; IFS=''
-      # The read command is aborted with an error (e.g. USR1 + 128 * 2) when a signal is received.
+      # When a signal is received, the read command may be aborted with an error (e.g. 1 or USR1 + 256).
       read -r key || { IFS=$IFS_SAVE; continue; } # read one key
       IFS=$IFS_SAVE
 
@@ -2305,12 +2321,7 @@ reader() {
         *[Q]  | *"${ESC}${ESC}") send_cmd "$QUIT"; break    ;; # Q, ESCx2
       esac
     done
-
-    killdd "$dd_wrapper_pid"
-  }
-
-  # Prevent the input after the game from being output to the terminal.
-  read key
+  } 2>&3
 }
 
 # Even if the game is finished, dd is still waiting for input, so we need to find it and kill it.
@@ -2326,7 +2337,7 @@ killdd() {
 }
 
 controller() {
-  local cmd='' ticker_pid='' timer_pid='' reader_pid=''
+  local cmd='' ticker_pid='' timer_pid='' reader_pid='' inkey_pid=''
 
   # These signals are ignored
   trap '' $SIGNAL_TERM
@@ -2357,6 +2368,9 @@ controller() {
     eval "\"\$commands_$cmd\"" # run command
     flush_screen
   done
+
+  "$gameover" && return 1
+  return 0
 }
 
 controller_interrupt() {
@@ -2375,6 +2389,15 @@ game() {
   ) | (
     controller
   )
+
+  case $? in
+      0) return ;; # When Q (ESCx2) is pressed, do nothing and return.
+    143) return ;; # When CTRL-C is pressed, do nothing and return.
+  esac
+
+  # Prevent the input after the game over from being output to the terminal.
+  printf "$EXIT_FORMAT" "Press enter to continue ..."
+  read _
 }
 
 # Exit with error message and usage
@@ -2497,11 +2520,13 @@ initialize() {
 }
 
 cleanup() {
+  local msg=''
+
   stty "$stty_g" # let's restore terminal state
 
   # put message at bottom of playfield so that game screen will keep its shape.
   "$interrupt" && msg="Abort" || msg="Quit"
-  printf '\033[%d;%dH\033[K%s\n' "$TERM_Y" "$TERM_X" "> $msg"
+  printf "$EXIT_FORMAT" "$msg"
   printf '\0338'     # restore cursor position
   printf '\033[?25h' # show cursor
 
@@ -2510,7 +2535,8 @@ cleanup() {
 }
 
 errlogger() {
-  i=0
+  local i=0 line=''
+
   while IFS= read -r line; do
     i=$((i + 1))
     printf '\033[%dr' "$ERRLOG_Y"   # set scroll region
