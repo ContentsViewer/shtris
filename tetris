@@ -142,14 +142,6 @@ PROCESS_TIMER=2
 PROCESS_READER=3
 PROCESS_INKEY=4
 
-BEHAVIOUR_NON=0
-BEHAVIOUR_RIGHT=1
-BEHAVIOUR_LEFT=2
-BEHAVIOUR_ROTATE=3
-BEHAVIOUR_FALL=4
-BEHAVIOUR_SOFT_DROP=5
-BEHAVIOUR_HARD_DROP=6
-
 # The normal Fall Speed is defined here to be the time it takes a Tetrimino to fall by one line.
 # The current level of the game determines the normal Fall Speed using the following equation:
 # (0.8 - ((level - 1) * 0.007))^(level-1)
@@ -321,6 +313,10 @@ EXIT_FORMAT="\033[$((PLAYFIELD_Y + PLAYFIELD_H + 1));1H\033[K> %s\n"
 #       <ROTATION_<DIR>_shifts>: <shift_x> <shift_y>
 
 # O-Tetrimino
+#
+#    .[][]   .[][]   .[][]   .[][]
+#    .[][]   .[][]   .[][]   .[][]
+#    . . .   . . .   . . .   . . .
 eval piece_"$O_TETRIMINO"_minos_"$NORTH"=\'1 0  2 0  1 1  2 1\'
 eval piece_"$O_TETRIMINO"_minos_"$EAST"=\' 1 0  2 0  1 1  2 1\'
 eval piece_"$O_TETRIMINO"_minos_"$SOUTH"=\'1 0  2 0  1 1  2 1\'
@@ -335,6 +331,10 @@ eval piece_"$O_TETRIMINO"_lowest_"$SOUTH"=\'1\'
 eval piece_"$O_TETRIMINO"_lowest_"$WEST"=\' 1\'
 
 # I-Tetrimino
+#    . . . .   . .[] .   . . . .   .[] . .
+#   [][][][]   . .[] .   . . . .   .[] . .
+#    . . . .   . .[] .  [][][][]   .[] . .
+#    . . . .   . .[] .   . . . .   .[] . .
 eval piece_"$I_TETRIMINO"_minos_"$NORTH"=\'0 1  1 1  2 1  3 1\'
 eval piece_"$I_TETRIMINO"_minos_"$EAST"=\' 2 0  2 1  2 2  2 3\'
 eval piece_"$I_TETRIMINO"_minos_"$SOUTH"=\'0 2  1 2  2 2  3 2\'
@@ -349,6 +349,10 @@ eval piece_"$I_TETRIMINO"_lowest_"$SOUTH"=\'2\'
 eval piece_"$I_TETRIMINO"_lowest_"$WEST"=\' 3\'
 
 # T-Tetrimino
+#
+#    .[] .   .[] .   . . .   .[] .
+#   [][][]   .[][]  [][][]  [][] .
+#    . . .   .[] .   .[] .   .[] .
 eval piece_"$T_TETRIMINO"_minos_"$NORTH"=\'1 0  0 1  1 1  2 1\'
 eval piece_"$T_TETRIMINO"_minos_"$EAST"=\' 1 0  1 1  2 1  1 2\'
 eval piece_"$T_TETRIMINO"_minos_"$SOUTH"=\'0 1  1 1  2 1  1 2\'
@@ -363,6 +367,10 @@ eval piece_"$T_TETRIMINO"_lowest_"$SOUTH"=\'2\'
 eval piece_"$T_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # L-Tetrimino
+#
+#    . .[]   .[] .   . . .  [][] .
+#   [][][]   .[] .  [][][]   .[] .
+#    . . .   .[][]  [] . .   .[] .
 eval piece_"$L_TETRIMINO"_minos_"$NORTH"=\'2 0  0 1  1 1  2 1\'
 eval piece_"$L_TETRIMINO"_minos_"$EAST"=\' 1 0  1 1  1 2  2 2\'
 eval piece_"$L_TETRIMINO"_minos_"$SOUTH"=\'0 1  1 1  2 1  0 2\'
@@ -377,6 +385,9 @@ eval piece_"$L_TETRIMINO"_lowest_"$SOUTH"=\'2\'
 eval piece_"$L_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # J-Tetrimino
+#   [] . .   .[][]   . . .   .[] .
+#   [][][]   .[] .  [][][]   .[] .
+#    . . .   .[] .   . .[]  [][] .
 eval piece_"$J_TETRIMINO"_minos_"$NORTH"=\'0 0  0 1  1 1  2 1\'
 eval piece_"$J_TETRIMINO"_minos_"$EAST"=\' 1 0  2 0  1 1  1 2\'
 eval piece_"$J_TETRIMINO"_minos_"$SOUTH"=\'0 1  1 1  2 1  2 2\'
@@ -391,6 +402,9 @@ eval piece_"$J_TETRIMINO"_lowest_"$SOUTH"=\'2\'
 eval piece_"$J_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # S-Tetrimino
+#    .[][]   .[] .   . . .  [] . .
+#   [][] .   .[][]   .[][]  [][] .
+#    . . .   . .[]  [][] .   .[] .
 eval piece_"$S_TETRIMINO"_minos_"$NORTH"=\'1 0  2 0  0 1  1 1\'
 eval piece_"$S_TETRIMINO"_minos_"$EAST"=\' 1 0  1 1  2 1  2 2\'
 eval piece_"$S_TETRIMINO"_minos_"$SOUTH"=\'1 1  2 1  0 2  1 2\'
@@ -405,6 +419,9 @@ eval piece_"$S_TETRIMINO"_lowest_"$SOUTH"=\'2\'
 eval piece_"$S_TETRIMINO"_lowest_"$WEST"=\' 2\'
 
 # Z-Tetrimino
+#   [][] .   . .[]   . . .   .[] .
+#    .[][]   .[][]  [][] .  [][] .
+#    . . .   .[] .   .[][]  [] . .
 eval piece_"$Z_TETRIMINO"_minos_"$NORTH"=\"0 0  1 0  1 1  2 1\"
 eval piece_"$Z_TETRIMINO"_minos_"$EAST"=\" 2 0  1 1  2 1  1 2\"
 eval piece_"$Z_TETRIMINO"_minos_"$SOUTH"=\"0 1  1 1  1 2  2 2\"
@@ -577,7 +594,7 @@ no_color=false             # do we use color or not
 running=true               # controller runs while this flag is true
 empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
-hold_cell='_]'             # how we draw hold cell
+disactive_cell='_]'        # how we draw disactive cell
 ghost_cell='░░'            # how we draw ghost cell
 dry_cell='██'              #
 manipulation_counter=0     #
@@ -993,11 +1010,9 @@ generate_tetrimino() {
   current_piece_y=$((START_Y + 1)) # so that update_location() can process the update correctly
   lowest_line=$current_piece_y     # ...
   lands_on=false                   # ...
-
   update_location $START_X $START_Y false
 
-  current_piece_behaviour=$BEHAVIOUR_NON
-
+  current_tspin=$ACTION_NONE
   show_ghost
 }
 
@@ -1183,8 +1198,7 @@ what_action() {
     4) action="$ACTION_TETRIS" ;;
   esac
 
-  [ $current_piece -eq $T_TETRIMINO ]                &&
-  [ $current_piece_behaviour -eq $BEHAVIOUR_ROTATE ] && {
+  [ $current_piece -eq $T_TETRIMINO ] && {
     case $current_tspin in
       $ACTION_TSPIN)
         case $action in
@@ -1192,10 +1206,7 @@ what_action() {
           $ACTION_DOUBLE) action=$ACTION_TSPIN_DOUBLE ;;
           $ACTION_TRIPLE) action=$ACTION_TSPIN_TRIPLE ;;
           $ACTION_NONE)   action=$ACTION_TSPIN        ;;
-          *)
-            # Error: cannot be reached.
-            echo "invalid tspin action: $action" >&2
-            ;;
+          *) echo "invalid tspin action: $action" >&2 ;;
         esac
         ;;
       $ACTION_MINI_TSPIN)
@@ -1203,10 +1214,7 @@ what_action() {
           $ACTION_SINGLE) action=$ACTION_MINI_TSPIN_SINGLE ;;
           $ACTION_DOUBLE) action=$ACTION_MINI_TSPIN_DOUBLE ;;
           $ACTION_NONE)   action=$ACTION_MINI_TSPIN        ;;
-          *)
-            # Error: cannot be reached.
-            echo "invalid mini-tspin action: $action" >&2
-            ;;
+          *) echo "invalid mini-tspin action: $action" >&2 ;;
         esac
         ;;
     esac
@@ -1244,7 +1252,6 @@ process_fallen_piece() {
   [ "$action" -eq $ACTION_TSPIN ]      && return
 
   release_input
-
   beep
 
   # flash line effect
@@ -1265,7 +1272,6 @@ process_fallen_piece() {
   sleep 0.5
 
   capture_input
-
   redraw_playfield
 }
 
@@ -1309,6 +1315,7 @@ update_score_on_drop() {
 # Arguments:
 #   1 - ACTION name. ex: ACTION_SINGLE
 # Returns:
+#   actions updated
 update_score_on_completion() {
   local factor=0 score_to_add=0 lines_to_add=0 action_updated=false new_combo_counter=$combo_counter
 
@@ -1568,6 +1575,8 @@ can_maniqulate() {
 # Arguments:
 #   1 - new x coordinate
 #   2 - new y coordinate
+# Returns:
+#   can move piece
 move_piece() {
   if new_piece_location_ok "$1" "$2"; then # if new location is ok
     clear_current                          # let's wipe out piece current location
@@ -1730,51 +1739,30 @@ rotate_piece_super() {
 
 move_right() {
   can_maniqulate || return
-  move_piece $((current_piece_x + 1)) "$current_piece_y" && {
-    # if successfuly move
-    current_piece_behaviour=$BEHAVIOUR_RIGHT
-    on_manipulation
-  }
+  move_piece $((current_piece_x + 1)) "$current_piece_y" && on_manipulation
 }
 
 move_left() {
   can_maniqulate || return
-  move_piece $((current_piece_x - 1)) "$current_piece_y" && {
-    # if successfuly move
-    current_piece_behaviour=$BEHAVIOUR_LEFT
-    on_manipulation
-  }
+  move_piece $((current_piece_x - 1)) "$current_piece_y" && on_manipulation
 }
 
 rotate_cw() {
   can_maniqulate || return
-  $rotate_piece_func 1 && {
-    # if successfuly rotate
-    current_piece_behaviour=$BEHAVIOUR_ROTATE
-    on_manipulation
-  }
+  $rotate_piece_func 1 && on_manipulation
 }
 
 rotate_ccw() {
   can_maniqulate || return
-  $rotate_piece_func -1 && {
-    # if successfuly rotate
-    current_piece_behaviour=$BEHAVIOUR_ROTATE
-    on_manipulation
-  }
+  $rotate_piece_func -1 && on_manipulation
 }
 
 fall() {
-  move_piece "$current_piece_x" $((current_piece_y - 1)) && {
-    # if successfuly move
-    current_piece_behaviour=$BEHAVIOUR_FALL
-  }
+  move_piece "$current_piece_x" $((current_piece_y - 1))
 }
 
 soft_drop() {
   move_piece "$current_piece_x" $((current_piece_y - 1)) && {
-    # if successfuly move
-    current_piece_behaviour=$BEHAVIOUR_SOFT_DROP
     update_score_on_drop "$ACTION_SOFT_DROP"
   }
 }
@@ -1802,8 +1790,6 @@ hard_drop() {
   update_score_on_drop "$ACTION_HARD_DROP" $steps
   move_piece $current_piece_x $((current_piece_y - steps))
   lockdown # A Tetrimino that is Hard Dropped Locks Down immediately
-
-  current_piece_behaviour=$BEHAVIOUR_HARD_DROP
 }
 
 hold() {
@@ -1975,7 +1961,7 @@ show_hold() {
   [ -z "$hold_queue" ] && return
   if "$already_hold"; then
     set_color "$HOLD_COLOR"
-    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$hold_cell"
+    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$disactive_cell"
   else
     set_piece_color "$hold_queue"
     draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$filled_cell"
