@@ -596,7 +596,7 @@ empty_cell=' .'            # how we draw empty cell
 filled_cell='[]'           # how we draw filled cell
 disactive_cell='_]'        # how we draw disactive cell
 ghost_cell='░░'            # how we draw ghost cell
-dry_cell='██'              #
+dry_cell='  '              #
 manipulation_counter=0     #
 lowest_line=$START_Y       #
 current_tspin=$ACTION_NONE #
@@ -657,9 +657,9 @@ switch_color_theme() {
 
   "color_theme_$1"
 
-  for i in SCORE HELP BORDER FLASH HOLD; do
-    eval "set -- $i \$${i}_COLOR"
-    eval "${1}_COLOR='${ESC}[${2};${3}m'"
+  for i in SCORE_COLOR HELP_COLOR BORDER_COLOR FLASH_COLOR HOLD_COLOR; do
+    eval "set -- $i \$${i}"
+    eval "${1}='${ESC}[${2};${3}m'"
   done
 
   eval "TETRIMINO_${EMPTY_CELL}_COLOR='${ESC}[39;49m'"
@@ -782,8 +782,16 @@ reset_colors() {
   puts "${ESC}[m"
 }
 
-set_bold() {
-  puts "${ESC}[1m"
+set_style() {
+  while [ $# -gt 0 ]; do
+    case $1 in
+      bold)      puts "${ESC}[1m" ;;
+      underline) puts "${ESC}[4m" ;;
+      reverse)   puts "${ESC}[7m" ;;
+      *) echo "other styles are not supported" >&2 ;;
+    esac
+    shift
+  done
 }
 
 beep() {
@@ -1255,19 +1263,22 @@ process_fallen_piece() {
   beep
 
   # flash line effect
+  set_style reverse underline
   set_color "$FLASH_COLOR"
+  str_repeat line "$dry_cell" $PLAYFIELD_W
   for y in $completed_lines; do
-      str_repeat line $dry_cell $PLAYFIELD_W
       xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
   done
+  reset_colors
   flush_screen
   sleep 0.045
 
   set_piece_color "$EMPTY_CELL"
+  str_repeat line "$empty_cell" $PLAYFIELD_W
   for y in $completed_lines; do
-      str_repeat line "$empty_cell" $PLAYFIELD_W
       xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
   done
+  reset_colors
   flush_screen
   sleep 0.5
 
@@ -1276,7 +1287,7 @@ process_fallen_piece() {
 }
 
 draw_scoreboard() {
-  set_bold
+  set_style bold
   set_color "$SCORE_COLOR"
   xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE:"
   xyprint "$SCORE_X" $((SCORE_Y + 1)) "│"
@@ -1305,7 +1316,7 @@ update_score_on_drop() {
   score=$((score + score_to_add))
 
   # It is enough to update the score
-  set_bold
+  set_style bold
   set_color "$SCORE_COLOR"
   xyprint $((SCORE_X + 1)) $((SCORE_Y + 1)) "$score"
   reset_colors
@@ -1445,7 +1456,7 @@ update_score_on_completion() {
 }
 
 draw_score() {
-  set_bold
+  set_style bold
   set_color "$SCORE_COLOR"
   xyprint $((SCORE_X + 1)) $((SCORE_Y + 1)) "$score"
   str_lpad text "$lines_completed" 4
@@ -1462,7 +1473,7 @@ draw_score() {
 draw_action() {
   local flash="$1" i=0 text=''
 
-  set_bold
+  set_style bold
   set_color "$SCORE_COLOR"
 
   IFS_SAVE=$IFS; IFS=:
@@ -1883,6 +1894,7 @@ show_current() {
 }
 
 flash_current() {
+  set_style reverse
   set_color "$FLASH_COLOR"
   draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$dry_cell"
   reset_colors
@@ -1977,7 +1989,7 @@ clear_hold() {
 draw_border() {
   local x1=0 x2=0 y1=0 y2=0 i=0 x=0 y=0
 
-  set_bold
+  set_style bold
   set_color "$BORDER_COLOR"
 
   x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
@@ -2010,7 +2022,7 @@ draw_border() {
 draw_help() {
   local help_x="$HELP_X" help_y="$HELP_Y" line=''
 
-  set_bold
+  set_style bold
   set_color "$HELP_COLOR"
 
   IFS_SAVE=$IFS; IFS=$LF
@@ -2034,7 +2046,7 @@ draw_pause() {
     y=$((y + 1))
   done
 
-  set_bold
+  set_style bold
   xyprint $((CENTER_X - 3)) $CENTER_Y 'PAUSE'
   reset_colors
 }
