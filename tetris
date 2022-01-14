@@ -162,8 +162,8 @@ FALL_SPEED_LEVEL_14=0.011
 FALL_SPEED_LEVEL_15=0.007
 LEVEL_MAX=15
 
-# Those are Tetrimino type (and empty cell)
-EMPTY_CELL=0
+# Those are Tetrimino type (and empty)
+EMPTY=0
 O_TETRIMINO=1
 I_TETRIMINO=2
 T_TETRIMINO=3
@@ -650,7 +650,7 @@ switch_color_theme() {
   local i=''
 
   SCORE_COLOR='' HELP_COLOR='' BORDER_COLOR='' FLASH_COLOR='' HOLD_COLOR=''
-  eval "TETRIMINO_${EMPTY_CELL}_COLOR=''"
+  eval "TETRIMINO_${EMPTY}_COLOR=''"
   for i in I J L O S T Z; do
     eval "TETRIMINO_${i}_COLOR=''"
   done
@@ -662,7 +662,7 @@ switch_color_theme() {
     eval "${1}='${ESC}[${2};${3}m'"
   done
 
-  eval "TETRIMINO_${EMPTY_CELL}_COLOR='${ESC}[39;49m'"
+  eval "TETRIMINO_${EMPTY}_COLOR='${ESC}[39;49m'"
   for i in I J L O S T Z; do
     eval "set -- \$${i}_TETRIMINO \$TETRIMINO_${i}_COLOR"
     eval "TETRIMINO_${1}_COLOR='${ESC}[${2};${3}m'"
@@ -1054,7 +1054,7 @@ what_type_tspin() {
     }
 
     field_cell=$((playfield_${side_y}_${side_x}))
-    if [ $field_cell -ne "$EMPTY_CELL" ]; then
+    if [ $field_cell -ne "$EMPTY" ]; then
       eval is_touched_${side}=true
     else
       eval is_touched_${side}=false
@@ -1099,7 +1099,7 @@ new_piece_location_ok() {
     [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
 
     field_cell=$((playfield_${y}_${x}))
-    [ "$field_cell" -ne "$EMPTY_CELL" ] && return 1 # false; check if location is already occupied
+    [ "$field_cell" -ne "$EMPTY" ] && return 1 # false; check if location is already occupied
 
     shift 2 # shift to next minos coordinates
   done
@@ -1132,7 +1132,7 @@ is_line_completed() {
   x=$((PLAYFIELD_W - 1))
   while [ "$x" -ge 0 ]; do
     field_cell=$((playfield_${line_y}_${x}))
-    [ "$field_cell" -eq "$EMPTY_CELL" ] && return 1 # false
+    [ "$field_cell" -eq "$EMPTY" ] && return 1 # false
     x=$((x - 1))
   done
 
@@ -1187,7 +1187,7 @@ process_complete_lines() {
   while [ "$yi" -le "$BUFFER_ZONE_Y" ]; do
     x=$((PLAYFIELD_W - 1))
     while [ "$x" -ge 0 ]; do
-      eval playfield_"$yi"_"$x"="$EMPTY_CELL"
+      eval playfield_"$yi"_"$x"="$EMPTY"
       x=$((x - 1))
     done
     yi=$((yi + 1))
@@ -1273,7 +1273,7 @@ process_fallen_piece() {
   flush_screen
   sleep 0.045
 
-  set_piece_color "$EMPTY_CELL"
+  set_piece_color "$EMPTY"
   str_repeat line "$empty_cell" $PLAYFIELD_W
   for y in $completed_lines; do
       xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
@@ -1824,7 +1824,7 @@ redraw_playfield() {
         field_cell=$((playfield_${y}_${x}))
         set_piece_color "$field_cell"
       fi
-      if [ "$field_cell" -eq "$EMPTY_CELL" ]; then
+      if [ "$field_cell" -eq "$EMPTY" ]; then
         puts "$empty_cell"
       else
         puts "$filled_cell"
@@ -2113,7 +2113,7 @@ init() {
   }
   $debug echo "seed: $bag_random" # It is useful for reproducing the situation.
 
-  # playfield is initialized with EMPTY_CELL (0)
+  # playfield is initialized with EMPTY (0)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
   # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y), ..., (BUFFER_ZONE_Y)
   # (0, 0) is bottom left
@@ -2121,7 +2121,7 @@ init() {
   while [ "$y" -le "$BUFFER_ZONE_Y" ]; do
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      eval playfield_"$y"_"$x"="$EMPTY_CELL"
+      eval playfield_"$y"_"$x"="$EMPTY"
       x=$((x + 1))
     done
     y=$((y + 1))
