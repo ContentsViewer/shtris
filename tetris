@@ -459,6 +459,12 @@ eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  2 2  0 0  0 2\"
 eval T_TETRIMINO_"$SOUTH"_SIDES=\"2 2  0 2  2 0  0 0\"
 eval T_TETRIMINO_"$WEST"_SIDES=\" 0 2  0 0  2 2  2 0\"
 
+EMPTY_CELL=' .'            # how we draw empty cell
+FILLED_CELL='[]'           # how we draw filled cell
+DISACTIVE_CELL='_]'        # how we draw disactive cell
+GHOST_CELL='░░'            # how we draw ghost cell
+DRY_CELL='  '              # how we draw dry cell
+
 HELP="
 Move Left       ←
 Move Right      →
@@ -592,11 +598,6 @@ help_on=true               # if this flag is true help is shown, if false, hide
 beep_on=true               #
 no_color=false             # do we use color or not
 running=true               # controller runs while this flag is true
-empty_cell=' .'            # how we draw empty cell
-filled_cell='[]'           # how we draw filled cell
-disactive_cell='_]'        # how we draw disactive cell
-ghost_cell='░░'            # how we draw ghost cell
-dry_cell='  '              #
 manipulation_counter=0     #
 lowest_line=$START_Y       #
 current_tspin=$ACTION_NONE #
@@ -1265,7 +1266,7 @@ process_fallen_piece() {
   # flash line effect
   set_style reverse underline
   set_color "$FLASH_COLOR"
-  str_repeat line "$dry_cell" $PLAYFIELD_W
+  str_repeat line "$DRY_CELL" $PLAYFIELD_W
   for y in $completed_lines; do
       xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
   done
@@ -1274,7 +1275,7 @@ process_fallen_piece() {
   sleep 0.045
 
   set_piece_color "$EMPTY"
-  str_repeat line "$empty_cell" $PLAYFIELD_W
+  str_repeat line "$EMPTY_CELL" $PLAYFIELD_W
   for y in $completed_lines; do
       xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
   done
@@ -1825,9 +1826,9 @@ redraw_playfield() {
         set_piece_color "$field_cell"
       fi
       if [ "$field_cell" -eq "$EMPTY" ]; then
-        puts "$empty_cell"
+        puts "$EMPTY_CELL"
       else
-        puts "$filled_cell"
+        puts "$FILLED_CELL"
       fi
       x=$((x + 1))
     done
@@ -1889,19 +1890,19 @@ draw_playfield_piece() {
 
 show_current() {
   set_piece_color "$current_piece"
-  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$filled_cell"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$FILLED_CELL"
   reset_colors
 }
 
 flash_current() {
   set_style reverse
   set_color "$FLASH_COLOR"
-  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$dry_cell"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$DRY_CELL"
   reset_colors
 }
 
 clear_current() {
-  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$empty_cell"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$EMPTY_CELL"
 }
 
 # Update ghost piece with new location according to current piece.
@@ -1917,7 +1918,7 @@ show_ghost() {
   ghost_piece_rotation=$current_piece_rotation
 
   set_ghost_color "$current_piece"
-  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$ghost_cell"
+  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$GHOST_CELL"
 
   reset_colors
 }
@@ -1925,7 +1926,7 @@ show_ghost() {
 clear_ghost() {
   ${ghost_piece+:} return
 
-  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$empty_cell"
+  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$EMPTY_CELL"
 }
 
 update_ghost() {
@@ -1950,7 +1951,7 @@ show_next() {
 
   while [ $# -gt 0 ]; do
     set_piece_color "$1"
-    draw_piece "$NEXT_X" "$next_y" "$1" "$NORTH" "$filled_cell"
+    draw_piece "$NEXT_X" "$next_y" "$1" "$NORTH" "$FILLED_CELL"
     shift
     next_y=$((next_y + 3))
   done
@@ -1973,10 +1974,10 @@ show_hold() {
   [ -z "$hold_queue" ] && return
   if "$already_hold"; then
     set_color "$HOLD_COLOR"
-    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$disactive_cell"
+    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$DISACTIVE_CELL"
   else
     set_piece_color "$hold_queue"
-    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$filled_cell"
+    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$FILLED_CELL"
   fi
   reset_colors
 }
