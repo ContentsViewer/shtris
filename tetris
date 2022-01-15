@@ -614,6 +614,7 @@ gameover=false
 #   an existing Block in the Matrix
 
 debug() {
+  [ $# -eq 0 ] && return
   "$@" >> "$LOG"
 }
 
@@ -818,9 +819,14 @@ send_signal() {
   local signal=$1
   shift
   set -- $@ # remove empty pid
+
   # If implemented correctly, there should be no need to discard the error,
-  # but it's a little hard and not that important, so we ignore it.
-  { kill -"$signal" "$@"; } 2>/dev/null
+  # but it's a little hard and not that important, so we output only in debug mode.
+  if $debug; then
+    kill -"$signal" "$@" || echo "send signal failed: $signal:" "$@" >&2
+  else
+    { kill -"$signal" "$@"; } 2>/dev/null
+  fi
 }
 
 exist_process() {
@@ -829,8 +835,8 @@ exist_process() {
 
 stop_at_start() {
   sleep 0.1 # wait a bit because the too fast(?) ksh will output an error "Stopped (SIGSTOP)".
+  $debug echo "stop at start: $1"
   send_signal "$SIGNAL_STOP" "$1"
-  # $debug echo "stop at start: $1"
 }
 
 wakeup_ticker() {
@@ -869,9 +875,9 @@ release_input() {
 }
 
 terminate_process() {
-  send_signal "$SIGNAL_CONT" "$@"
-  send_signal "$SIGNAL_TERM" "$@"
-  # $debug echo 'terminate process' "$@"
+  send_signal "$SIGNAL_CONT" "$@" 2>/dev/null
+  send_signal "$SIGNAL_TERM" "$@" 2>/dev/null
+  $debug echo 'terminate process:' "$@"
 }
 
 # return random value (0 ~ 4294967295)
@@ -2105,8 +2111,6 @@ quit() {
   running=false # let's stop controller ...
   xyprint $((CENTER_X - 5)) $CENTER_Y 'Game Over!'
   flush_screen
-  terminate_process "$timer_pid" "$ticker_pid" "$reader_pid"
-  killdd "$inkey_pid"
 }
 
 init() {
@@ -2340,6 +2344,7 @@ killdd() {
   ps -o pid= -o ppid= -o comm= 2>/dev/null | {
     while IFS="${SP}${TAB}" read -r pid ppid comm; do
       if [ "$ppid" = "$parent_pid" ] && [ "$comm" = "dd" ]; then
+        $debug echo "kill dd: $pid"
         terminate_process "$pid"
       fi
     done
@@ -2378,6 +2383,9 @@ controller() {
     eval "\"\$commands_$cmd\"" # run command
     flush_screen
   done
+
+  terminate_process "$timer_pid" "$ticker_pid" "$reader_pid"
+  killdd "$inkey_pid"
 
   "$gameover" && return 1
   return 0
@@ -2420,7 +2428,8 @@ die_usage() {
 main() {
   rotate_piece_func=rotate_piece_super
   starting_level=1
-  debug=":"
+  debug=false
+
   while [ $# -gt 0 ]; do
     case $1 in
       -d|--debug)
