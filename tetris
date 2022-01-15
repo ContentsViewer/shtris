@@ -162,8 +162,8 @@ FALL_SPEED_LEVEL_14=0.011
 FALL_SPEED_LEVEL_15=0.007
 LEVEL_MAX=15
 
-# Those are Tetrimino type (and empty cell)
-EMPTY_CELL=0
+# Those are Tetrimino type (and empty)
+EMPTY=0
 O_TETRIMINO=1
 I_TETRIMINO=2
 T_TETRIMINO=3
@@ -459,6 +459,12 @@ eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  2 2  0 0  0 2\"
 eval T_TETRIMINO_"$SOUTH"_SIDES=\"2 2  0 2  2 0  0 0\"
 eval T_TETRIMINO_"$WEST"_SIDES=\" 0 2  0 0  2 2  2 0\"
 
+EMPTY_CELL=' .'     # how we draw empty cell
+FILLED_CELL='[]'    # how we draw filled cell
+INACTIVE_CELL='_]'  # how we draw inactive cell
+GHOST_CELL='░░'     # how we draw ghost cell
+DRY_CELL='  '       # how we draw dry cell
+
 HELP="
 Move Left       ←
 Move Right      →
@@ -592,11 +598,6 @@ help_on=true               # if this flag is true help is shown, if false, hide
 beep_on=true               #
 no_color=false             # do we use color or not
 running=true               # controller runs while this flag is true
-empty_cell=' .'            # how we draw empty cell
-filled_cell='[]'           # how we draw filled cell
-disactive_cell='_]'        # how we draw disactive cell
-ghost_cell='░░'            # how we draw ghost cell
-dry_cell='██'              #
 manipulation_counter=0     #
 lowest_line=$START_Y       #
 current_tspin=$ACTION_NONE #
@@ -650,19 +651,19 @@ switch_color_theme() {
   local i=''
 
   SCORE_COLOR='' HELP_COLOR='' BORDER_COLOR='' FLASH_COLOR='' HOLD_COLOR=''
-  eval "TETRIMINO_${EMPTY_CELL}_COLOR=''"
+  eval "TETRIMINO_${EMPTY}_COLOR=''"
   for i in I J L O S T Z; do
     eval "TETRIMINO_${i}_COLOR=''"
   done
 
   "color_theme_$1"
 
-  for i in SCORE HELP BORDER FLASH HOLD; do
-    eval "set -- $i \$${i}_COLOR"
-    eval "${1}_COLOR='${ESC}[${2};${3}m'"
+  for i in SCORE_COLOR HELP_COLOR BORDER_COLOR FLASH_COLOR HOLD_COLOR; do
+    eval "set -- $i \$${i}"
+    eval "${1}='${ESC}[${2};${3}m'"
   done
 
-  eval "TETRIMINO_${EMPTY_CELL}_COLOR='${ESC}[39;49m'"
+  eval "TETRIMINO_${EMPTY}_COLOR='${ESC}[39;49m'"
   for i in I J L O S T Z; do
     eval "set -- \$${i}_TETRIMINO \$TETRIMINO_${i}_COLOR"
     eval "TETRIMINO_${1}_COLOR='${ESC}[${2};${3}m'"
@@ -782,8 +783,16 @@ reset_colors() {
   puts "${ESC}[m"
 }
 
-set_bold() {
-  puts "${ESC}[1m"
+set_style() {
+  while [ $# -gt 0 ]; do
+    case $1 in
+      bold)      puts "${ESC}[1m" ;;
+      underline) puts "${ESC}[4m" ;;
+      reverse)   puts "${ESC}[7m" ;;
+      *) echo "other styles are not supported" >&2 ;;
+    esac
+    shift
+  done
 }
 
 beep() {
@@ -1046,7 +1055,7 @@ what_type_tspin() {
     }
 
     field_cell=$((playfield_${side_y}_${side_x}))
-    if [ $field_cell -ne "$EMPTY_CELL" ]; then
+    if [ $field_cell -ne "$EMPTY" ]; then
       eval is_touched_${side}=true
     else
       eval is_touched_${side}=false
@@ -1091,7 +1100,7 @@ new_piece_location_ok() {
     [ "$x" -ge "$PLAYFIELD_W" ] && return 1 # false; check if we are out of the play field
 
     field_cell=$((playfield_${y}_${x}))
-    [ "$field_cell" -ne "$EMPTY_CELL" ] && return 1 # false; check if location is already occupied
+    [ "$field_cell" -ne "$EMPTY" ] && return 1 # false; check if location is already occupied
 
     shift 2 # shift to next minos coordinates
   done
@@ -1124,7 +1133,7 @@ is_line_completed() {
   x=$((PLAYFIELD_W - 1))
   while [ "$x" -ge 0 ]; do
     field_cell=$((playfield_${line_y}_${x}))
-    [ "$field_cell" -eq "$EMPTY_CELL" ] && return 1 # false
+    [ "$field_cell" -eq "$EMPTY" ] && return 1 # false
     x=$((x - 1))
   done
 
@@ -1179,7 +1188,7 @@ process_complete_lines() {
   while [ "$yi" -le "$BUFFER_ZONE_Y" ]; do
     x=$((PLAYFIELD_W - 1))
     while [ "$x" -ge 0 ]; do
-      eval playfield_"$yi"_"$x"="$EMPTY_CELL"
+      eval playfield_"$yi"_"$x"="$EMPTY"
       x=$((x - 1))
     done
     yi=$((yi + 1))
@@ -1223,7 +1232,7 @@ what_action() {
 }
 
 process_fallen_piece() {
-  local action='' y=0 line='' completed_lines=''
+  local action='' completed_lines=''
 
   flatten_playfield
 
@@ -1255,19 +1264,12 @@ process_fallen_piece() {
   beep
 
   # flash line effect
-  set_color "$FLASH_COLOR"
-  for y in $completed_lines; do
-      str_repeat line $dry_cell $PLAYFIELD_W
-      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
-  done
+  flash_line "$@"
   flush_screen
   sleep 0.045
 
-  set_piece_color "$EMPTY_CELL"
-  for y in $completed_lines; do
-      str_repeat line "$empty_cell" $PLAYFIELD_W
-      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
-  done
+  # clear line
+  clear_line "$@"
   flush_screen
   sleep 0.5
 
@@ -1276,7 +1278,7 @@ process_fallen_piece() {
 }
 
 draw_scoreboard() {
-  set_bold
+  set_style bold
   set_color "$SCORE_COLOR"
   xyprint "$SCORE_X" "$SCORE_Y"       "│SCORE:"
   xyprint "$SCORE_X" $((SCORE_Y + 1)) "│"
@@ -1305,7 +1307,7 @@ update_score_on_drop() {
   score=$((score + score_to_add))
 
   # It is enough to update the score
-  set_bold
+  set_style bold
   set_color "$SCORE_COLOR"
   xyprint $((SCORE_X + 1)) $((SCORE_Y + 1)) "$score"
   reset_colors
@@ -1445,7 +1447,7 @@ update_score_on_completion() {
 }
 
 draw_score() {
-  set_bold
+  set_style bold
   set_color "$SCORE_COLOR"
   xyprint $((SCORE_X + 1)) $((SCORE_Y + 1)) "$score"
   str_lpad text "$lines_completed" 4
@@ -1462,7 +1464,7 @@ draw_score() {
 draw_action() {
   local flash="$1" i=0 text=''
 
-  set_bold
+  set_style bold
   set_color "$SCORE_COLOR"
 
   IFS_SAVE=$IFS; IFS=:
@@ -1813,10 +1815,10 @@ redraw_playfield() {
         field_cell=$((playfield_${y}_${x}))
         set_piece_color "$field_cell"
       fi
-      if [ "$field_cell" -eq "$EMPTY_CELL" ]; then
-        puts "$empty_cell"
+      if [ "$field_cell" -eq "$EMPTY" ]; then
+        puts "$EMPTY_CELL"
       else
-        puts "$filled_cell"
+        puts "$FILLED_CELL"
       fi
       x=$((x + 1))
     done
@@ -1878,18 +1880,19 @@ draw_playfield_piece() {
 
 show_current() {
   set_piece_color "$current_piece"
-  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$filled_cell"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$FILLED_CELL"
   reset_colors
 }
 
 flash_current() {
+  set_style reverse
   set_color "$FLASH_COLOR"
-  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$dry_cell"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$DRY_CELL"
   reset_colors
 }
 
 clear_current() {
-  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$empty_cell"
+  draw_playfield_piece $current_piece_x $current_piece_y $current_piece $current_piece_rotation "$EMPTY_CELL"
 }
 
 # Update ghost piece with new location according to current piece.
@@ -1905,7 +1908,7 @@ show_ghost() {
   ghost_piece_rotation=$current_piece_rotation
 
   set_ghost_color "$current_piece"
-  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$ghost_cell"
+  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$GHOST_CELL"
 
   reset_colors
 }
@@ -1913,7 +1916,7 @@ show_ghost() {
 clear_ghost() {
   ${ghost_piece+:} return
 
-  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$empty_cell"
+  draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$EMPTY_CELL"
 }
 
 update_ghost() {
@@ -1931,6 +1934,31 @@ update_ghost() {
   show_ghost "$new_ghost_piece_y"
 }
 
+flash_line() {
+  local line=''
+
+  set_style reverse underline
+  set_color "$FLASH_COLOR"
+  str_repeat line "$DRY_CELL" $PLAYFIELD_W
+  while [ $# -gt 0 ]; do
+    xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $1)) "$line"
+    shift
+  done
+  reset_colors
+}
+
+clear_line() {
+  local line=''
+
+  set_piece_color "$EMPTY"
+  str_repeat line "$EMPTY_CELL" $PLAYFIELD_W
+  while [ $# -gt 0 ]; do
+    xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $1)) "$line"
+    shift
+  done
+  reset_colors
+}
+
 show_next() {
   local next_y="$NEXT_Y"
 
@@ -1938,7 +1966,7 @@ show_next() {
 
   while [ $# -gt 0 ]; do
     set_piece_color "$1"
-    draw_piece "$NEXT_X" "$next_y" "$1" "$NORTH" "$filled_cell"
+    draw_piece "$NEXT_X" "$next_y" "$1" "$NORTH" "$FILLED_CELL"
     shift
     next_y=$((next_y + 3))
   done
@@ -1961,10 +1989,10 @@ show_hold() {
   [ -z "$hold_queue" ] && return
   if "$already_hold"; then
     set_color "$HOLD_COLOR"
-    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$disactive_cell"
+    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$INACTIVE_CELL"
   else
     set_piece_color "$hold_queue"
-    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$filled_cell"
+    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$FILLED_CELL"
   fi
   reset_colors
 }
@@ -1977,7 +2005,7 @@ clear_hold() {
 draw_border() {
   local x1=0 x2=0 y1=0 y2=0 i=0 x=0 y=0
 
-  set_bold
+  set_style bold
   set_color "$BORDER_COLOR"
 
   x1=$((PLAYFIELD_X - 1))               # 1 here is because border is 1 characters thick
@@ -2010,7 +2038,7 @@ draw_border() {
 draw_help() {
   local help_x="$HELP_X" help_y="$HELP_Y" line=''
 
-  set_bold
+  set_style bold
   set_color "$HELP_COLOR"
 
   IFS_SAVE=$IFS; IFS=$LF
@@ -2034,7 +2062,7 @@ draw_pause() {
     y=$((y + 1))
   done
 
-  set_bold
+  set_style bold
   xyprint $((CENTER_X - 3)) $CENTER_Y 'PAUSE'
   reset_colors
 }
@@ -2101,7 +2129,7 @@ init() {
   }
   $debug echo "seed: $bag_random" # It is useful for reproducing the situation.
 
-  # playfield is initialized with EMPTY_CELL (0)
+  # playfield is initialized with EMPTY (0)
   # x of playfield - 0, ..., (PLAYFIELD_W-1)
   # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y), ..., (BUFFER_ZONE_Y)
   # (0, 0) is bottom left
@@ -2109,7 +2137,7 @@ init() {
   while [ "$y" -le "$BUFFER_ZONE_Y" ]; do
     x=0
     while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      eval playfield_"$y"_"$x"="$EMPTY_CELL"
+      eval playfield_"$y"_"$x"="$EMPTY"
       x=$((x + 1))
     done
     y=$((y + 1))
