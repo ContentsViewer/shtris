@@ -459,11 +459,11 @@ eval T_TETRIMINO_"$EAST"_SIDES=\" 2 0  2 2  0 0  0 2\"
 eval T_TETRIMINO_"$SOUTH"_SIDES=\"2 2  0 2  2 0  0 0\"
 eval T_TETRIMINO_"$WEST"_SIDES=\" 0 2  0 0  2 2  2 0\"
 
-EMPTY_CELL=' .'            # how we draw empty cell
-FILLED_CELL='[]'           # how we draw filled cell
-DISACTIVE_CELL='_]'        # how we draw disactive cell
-GHOST_CELL='░░'            # how we draw ghost cell
-DRY_CELL='  '              # how we draw dry cell
+EMPTY_CELL=' .'     # how we draw empty cell
+FILLED_CELL='[]'    # how we draw filled cell
+INACTIVE_CELL='_]'  # how we draw inactive cell
+GHOST_CELL='░░'     # how we draw ghost cell
+DRY_CELL='  '       # how we draw dry cell
 
 HELP="
 Move Left       ←
@@ -1974,7 +1974,7 @@ show_hold() {
   [ -z "$hold_queue" ] && return
   if "$already_hold"; then
     set_color "$HOLD_COLOR"
-    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$DISACTIVE_CELL"
+    draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$INACTIVE_CELL"
   else
     set_piece_color "$hold_queue"
     draw_piece $((HOLD_X)) $((HOLD_Y)) $hold_queue "$NORTH" "$FILLED_CELL"
