@@ -250,7 +250,6 @@ PLAYFIELD_X=18
 PLAYFIELD_Y=2
 
 # Location of error logs
-ERRLOG_X=1
 ERRLOG_Y=$((PLAYFIELD_Y + PLAYFIELD_H + 2))
 
 # Location of score information
@@ -2523,7 +2522,7 @@ initialize() {
   printf '\033[2J'   # clear full screen
 
   # save error log position
-  printf '\033[%d;%dH\0337' "$ERRLOG_Y" "$ERRLOG_X"
+  printf '\033[%dH\0337' "$ERRLOG_Y"
 
   # disable terminal local echo (echoback) and canonical input mode
   stty -echo -icanon -ixon time 0 min 1
@@ -2545,15 +2544,16 @@ cleanup() {
 }
 
 errlogger() {
-  local i=0 line=''
+  local i=0 line='' pre='' post=''
+
+  pre="${pre}${ESC}[${ERRLOG_Y}r" # set scroll region
+  pre="${pre}${ESC}8"             # restore cursor position
+  post="${post}${ESC}7"           # save cursor position
+  post="${post}${ESC}[r"          # unset scroll region
 
   while IFS= read -r line; do
     i=$((i + 1))
-    printf '\033[%dr' "$ERRLOG_Y"   # set scroll region
-    printf '\0338'                  # restore cursor position
-    printf '[%d] %s\n' "$i" "$line" # error log
-    printf "\0337"                  # save cursor position
-    printf "\033[r"                 # unset scroll region
+    printf '%s[%d] %s\n%s' "$pre" "$i" "$line" "$post"
     $debug printf '%s\n' "$line"
   done
 }
