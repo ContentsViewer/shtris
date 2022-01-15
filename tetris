@@ -970,7 +970,9 @@ reset_level() {
 level_up() {
   increment_level
   # send level-up signal to ticker (please see ticker for more details)
-  send_signal "$SIGNAL_LEVEL_UP" "$ticker_pid"
+  [ "$level" -lt "$LEVEL_MAX" ] && {
+    send_signal "$SIGNAL_LEVEL_UP" "$ticker_pid"
+  }
 }
 
 increment_level() {
@@ -1463,10 +1465,7 @@ update_score_on_completion() {
   score=$((score + score_to_add))
   lines_completed=$((lines_completed + lines_to_add))
 
-  [ "$level" -lt "$LEVEL_MAX" ]      &&
-  [ "$lines_completed" -ge "$goal" ] && {
-    level_up
-  }
+  [ "$lines_completed" -ge "$goal" ] && level_up
 
   draw_score
 
