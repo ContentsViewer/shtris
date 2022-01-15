@@ -250,7 +250,6 @@ PLAYFIELD_X=18
 PLAYFIELD_Y=2
 
 # Location of error logs
-ERRLOG_X=1
 ERRLOG_Y=$((PLAYFIELD_Y + PLAYFIELD_H + 2))
 
 # Location of score information
@@ -616,6 +615,7 @@ gameover=false
 #   an existing Block in the Matrix
 
 debug() {
+  [ $# -eq 0 ] && return
   "$@" >> "$LOG"
 }
 
@@ -828,9 +828,14 @@ send_signal() {
   local signal=$1
   shift
   set -- $@ # remove empty pid
+
   # If implemented correctly, there should be no need to discard the error,
-  # but it's a little hard and not that important, so we ignore it.
-  { kill -"$signal" "$@"; } 2>/dev/null
+  # but it's a little hard and not that important, so we output only in debug mode.
+  if $debug; then
+    kill -"$signal" "$@" || echo "send signal failed: $signal:" "$@" >&2
+  else
+    { kill -"$signal" "$@"; } 2>/dev/null
+  fi
 }
 
 exist_process() {
@@ -839,27 +844,49 @@ exist_process() {
 
 stop_at_start() {
   sleep 0.1 # wait a bit because the too fast(?) ksh will output an error "Stopped (SIGSTOP)".
-  send_signal "$SIGNAL_STOP" "$@"
+  $debug echo "stop at start: $1"
+  send_signal "$SIGNAL_STOP" "$1"
 }
 
-stop_process() {
-  send_signal "$SIGNAL_STOP" "$@"
+wakeup_ticker() {
+  send_signal "$SIGNAL_CONT" "$ticker_pid"
+  # $debug echo 'wakeup ticker'
 }
 
-wakeup_process() {
-  send_signal "$SIGNAL_CONT" "$@"
+stop_ticker() {
+  send_signal "$SIGNAL_STOP" "$ticker_pid"
+  # $debug echo 'stop ticker'
+}
+
+wakeup_lockdown_timer() {
+  send_signal "$SIGNAL_CONT" "$timer_pid"
+  # $debug echo 'wakeup lockdown timer'
+}
+
+restart_lockdown_timer() {
+  send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
+  # $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+}
+
+stop_lockdown_timer() {
+  send_signal "$SIGNAL_STOP" "$timer_pid"
+  # $debug echo 'stop lockdown timer'
 }
 
 capture_input() {
   send_signal "$SIGNAL_CAPTURE_INPUT" "$reader_pid"
+  # $debug echo 'capture input'
 }
 
 release_input() {
   send_signal "$SIGNAL_RELEASE_INPUT" "$reader_pid"
+  # $debug echo 'release input'
 }
 
 terminate_process() {
-  send_signal "$SIGNAL_TERM" "$@"
+  send_signal "$SIGNAL_CONT" "$@" 2>/dev/null
+  send_signal "$SIGNAL_TERM" "$@" 2>/dev/null
+  $debug echo 'terminate process:' "$@"
 }
 
 # return random value (0 ~ 4294967295)
@@ -1507,14 +1534,12 @@ update_location() {
       lands_on=true
       if ! $lock_phase; then
         # start lock Phase
-        wakeup_process "$timer_pid"
-        send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-        # $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+        wakeup_lockdown_timer
+        restart_lockdown_timer
         lock_phase=true
       else
         # already in Lock Phase
-        wakeup_process "$timer_pid"
-        # $debug echo 'wakeup lockdown timer'
+        wakeup_lockdown_timer
       fi
 
       # Once these movements/rotations have been used, the Lock Down
@@ -1525,8 +1550,7 @@ update_location() {
   else
     $lands_on && { # currently not lands on but previously lands on - lifts up
       # $debug echo 'lifts up'
-      stop_process "$timer_pid"
-      # $debug echo 'stop lockdown timer'
+      stop_lockdown_timer
     }
     lands_on=false
   fi
@@ -1541,8 +1565,7 @@ on_manipulation() {
     $LOCKDOWN_RULE_INFINITE)
       $lock_phase && {
         # when the tetromino moves or rotates, the lockdown timer is reset
-        send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-        # $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+        restart_lockdown_timer
       }
       ;;
     $LOCKDOWN_RULE_EXTENDED)
@@ -1555,8 +1578,7 @@ on_manipulation() {
         } || {
           $lock_phase && {
             # when the tetromino moves or rotates, the lockdown timer is reset
-            send_signal "$SIGNAL_RESTART_LOCKDOWN_TIMER" $timer_pid
-            # $debug echo 'send_signal: RESTART_LOCKDOWN_TIMER'
+            restart_lockdown_timer
           }
         }
       }
@@ -1622,13 +1644,15 @@ lockdown() {
   lock_phase=false # exit lock Phase, then start Pattern Phase
 
   # stop sub process until next the Generation Phase of the Next Tetrimino.
-  stop_process "$ticker_pid" "$timer_pid"
+  stop_ticker
+  stop_lockdown_timer
 
   process_fallen_piece # let's finalize this piece
 
   test_lockout && { # a whole Tetrimino Locks Down above the Skyline - Game Over
     # now lets sub process continue...
-    wakeup_process "$ticker_pid" "$timer_pid"
+    wakeup_ticker
+    wakeup_lockdown_timer
     gameover; return # ... Quit
   }
 
@@ -1639,7 +1663,8 @@ lockdown() {
   fi
 
   # now lets sub process continue...
-  wakeup_process "$ticker_pid" "$timer_pid"
+  wakeup_ticker
+  wakeup_lockdown_timer
 }
 
 pause() {
@@ -1654,11 +1679,13 @@ pause() {
     show_next
     show_hold
     pause=false
-    wakeup_process "$ticker_pid" "$timer_pid"
+    wakeup_ticker
+    wakeup_lockdown_timer
     return
   fi
 
-  stop_process "$ticker_pid" "$timer_pid"
+  stop_ticker
+  stop_lockdown_timer
   draw_pause
   clear_next
   clear_hold
@@ -2112,8 +2139,6 @@ quit() {
   running=false # let's stop controller ...
   xyprint $((CENTER_X - 5)) $CENTER_Y 'Game Over!'
   flush_screen
-  terminate_process "$timer_pid" "$ticker_pid" "$reader_pid"
-  killdd "$inkey_pid"
 }
 
 init() {
@@ -2162,7 +2187,8 @@ init() {
 
   ready
 
-  wakeup_process "$ticker_pid" "$timer_pid"
+  wakeup_ticker
+  wakeup_lockdown_timer
   capture_input
 
   get_next
@@ -2213,7 +2239,7 @@ lockdown_timer() {
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
   # on this signal reset the timer. lockdown 0.5~0.6(0.5 is correct) sec after receiving signal
-  trap 'trigger_counter=5'  $SIGNAL_RESTART_LOCKDOWN_TIMER
+  trap 'trigger_counter=5' $SIGNAL_RESTART_LOCKDOWN_TIMER
 
   get_pid my_pid
   send_cmd "$NOTIFY_PID $PROCESS_TIMER $my_pid"
@@ -2222,8 +2248,10 @@ lockdown_timer() {
   trigger_counter=-1 # -1: already triggerd, 0: triggered, >0: count to trigger
   while exist_process "$game_pid"; do
     trigger_counter=$((trigger_counter >= 0 ? trigger_counter - 1 : trigger_counter))
+    # $debug echo "trigger_counter: $trigger_counter"
+
     [ "$trigger_counter" -eq 0 ] && {
-      # $debug echo "send_cmd: LOCKDOWN
+      # $debug echo "send_cmd: LOCKDOWN"
       send_cmd "$LOCKDOWN"
     }
 
@@ -2344,6 +2372,7 @@ killdd() {
   ps -o pid= -o ppid= -o comm= 2>/dev/null | {
     while IFS="${SP}${TAB}" read -r pid ppid comm; do
       if [ "$ppid" = "$parent_pid" ] && [ "$comm" = "dd" ]; then
+        $debug echo "kill dd: $pid"
         terminate_process "$pid"
       fi
     done
@@ -2383,13 +2412,15 @@ controller() {
     flush_screen
   done
 
+  terminate_process "$timer_pid" "$ticker_pid" "$reader_pid"
+  killdd "$inkey_pid"
+
   "$gameover" && return 1
   return 0
 }
 
 controller_interrupt() {
   # The process that is being stopped does not terminate on WSL1
-  wakeup_process "$timer_pid" "$ticker_pid"
   terminate_process "$timer_pid" "$ticker_pid"
   exit 143
 }
@@ -2425,7 +2456,8 @@ die_usage() {
 main() {
   rotate_piece_func=rotate_piece_super
   starting_level=1
-  debug=":"
+  debug=false
+
   while [ $# -gt 0 ]; do
     case $1 in
       -d|--debug)
@@ -2527,7 +2559,7 @@ initialize() {
   printf '\033[2J'   # clear full screen
 
   # save error log position
-  printf '\033[%d;%dH\0337' "$ERRLOG_Y" "$ERRLOG_X"
+  printf '\033[%dH\0337' "$ERRLOG_Y"
 
   # disable terminal local echo (echoback) and canonical input mode
   stty -echo -icanon -ixon time 0 min 1
@@ -2549,15 +2581,16 @@ cleanup() {
 }
 
 errlogger() {
-  local i=0 line=''
+  local i=0 line='' pre='' post=''
+
+  pre="${pre}${ESC}[${ERRLOG_Y}r" # set scroll region
+  pre="${pre}${ESC}8"             # restore cursor position
+  post="${post}${ESC}7"           # save cursor position
+  post="${post}${ESC}[r"          # unset scroll region
 
   while IFS= read -r line; do
     i=$((i + 1))
-    printf '\033[%dr' "$ERRLOG_Y"   # set scroll region
-    printf '\0338'                  # restore cursor position
-    printf '[%d] %s\n' "$i" "$line" # error log
-    printf "\0337"                  # save cursor position
-    printf "\033[r"                 # unset scroll region
+    printf '%s[%d] %s\n%s' "$pre" "$i" "$line" "$post"
     $debug printf '%s\n' "$line"
   done
 }
