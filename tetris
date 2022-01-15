@@ -1232,7 +1232,7 @@ what_action() {
 }
 
 process_fallen_piece() {
-  local action='' y=0 line='' completed_lines=''
+  local action='' completed_lines=''
 
   flatten_playfield
 
@@ -1264,22 +1264,12 @@ process_fallen_piece() {
   beep
 
   # flash line effect
-  set_style reverse underline
-  set_color "$FLASH_COLOR"
-  str_repeat line "$DRY_CELL" $PLAYFIELD_W
-  for y in $completed_lines; do
-      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
-  done
-  reset_colors
+  flash_line "$@"
   flush_screen
   sleep 0.045
 
-  set_piece_color "$EMPTY"
-  str_repeat line "$EMPTY_CELL" $PLAYFIELD_W
-  for y in $completed_lines; do
-      xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - y)) "$line"
-  done
-  reset_colors
+  # clear line
+  clear_line "$@"
   flush_screen
   sleep 0.5
 
@@ -1942,6 +1932,31 @@ update_ghost() {
 
   clear_ghost
   show_ghost "$new_ghost_piece_y"
+}
+
+flash_line() {
+  local line=''
+
+  set_style reverse underline
+  set_color "$FLASH_COLOR"
+  str_repeat line "$DRY_CELL" $PLAYFIELD_W
+  while [ $# -gt 0 ]; do
+    xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $1)) "$line"
+    shift
+  done
+  reset_colors
+}
+
+clear_line() {
+  local line=''
+
+  set_piece_color "$EMPTY"
+  str_repeat line "$EMPTY_CELL" $PLAYFIELD_W
+  while [ $# -gt 0 ]; do
+    xyprint "$PLAYFIELD_X" $((PLAYFIELD_Y + PLAYFIELD_H - 1 - $1)) "$line"
+    shift
+  done
+  reset_colors
 }
 
 show_next() {
