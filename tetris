@@ -1183,7 +1183,7 @@ is_line_completed() {
 #   completed_lines
 #   perfect_clear
 process_complete_lines() {
-  local y="$1" yi="$2" x=0 field_cell=-1 
+  local y="$1" yi="$2" x=0 field_cell=-1
 
   completed_lines='' perfect_clear=false
   [ $y -lt 0 ] && y=0
@@ -1266,7 +1266,6 @@ process_fallen_piece() {
 
   # There should be a line clear between current_y - 4 ~ current_y
   process_complete_lines $((current_piece_y - 4)) $current_piece_y
-  # $debug echo "$completed_lines" "$perfect_clear"
   set -- $completed_lines
   what_action $#; action=$?
 
@@ -1290,21 +1289,12 @@ process_fallen_piece() {
   release_input
   beep
 
-  $perfect_clear && {
-    set_style reverse
-    draw_perfect_clear
-  }
-
-  # flash line effect
-  flash_line "$@"
+  $perfect_clear && flash_perfect_clear
+  flash_line "$@" # flash line effect
   flush_screen
   sleep 0.045
 
-  $perfect_clear && {
-    draw_perfect_clear
-  }
-
-  # clear line
+  $perfect_clear && draw_perfect_clear
   clear_line "$@"
   flush_screen
   sleep 0.5
@@ -2116,6 +2106,11 @@ draw_pause() {
   set_style bold
   xyprint $((CENTER_X - 3)) $CENTER_Y 'PAUSE'
   reset_colors
+}
+
+flash_perfect_clear() {
+  set_style reverse
+  draw_perfect_clear
 }
 
 draw_perfect_clear() {
