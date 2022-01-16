@@ -1210,18 +1210,10 @@ process_complete_lines() {
       x=$((x - 1))
     done
     yi=$((yi + 1))
-
   done
 
   # now let's mark lines from line yi to top line of the playfield as free.
-  while [ "$yi" -le "$BUFFER_ZONE_Y" ]; do
-    x=$((PLAYFIELD_W - 1))
-    while [ "$x" -ge 0 ]; do
-      eval playfield_"$yi"_"$x"="$EMPTY"
-      x=$((x - 1))
-    done
-    yi=$((yi + 1))
-  done
+  free_playfield "$yi"
 }
 
 # Arguments:
@@ -2154,18 +2146,7 @@ init() {
   $debug echo "seed: $bag_random" # It is useful for reproducing the situation.
 
   # playfield is initialized with EMPTY (0)
-  # x of playfield - 0, ..., (PLAYFIELD_W-1)
-  # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y), ..., (BUFFER_ZONE_Y)
-  # (0, 0) is bottom left
-  y=0
-  while [ "$y" -le "$BUFFER_ZONE_Y" ]; do
-    x=0
-    while [ "$x" -lt "$PLAYFIELD_W" ]; do
-      eval playfield_"$y"_"$x"="$EMPTY"
-      x=$((x + 1))
-    done
-    y=$((y + 1))
-  done
+  free_playfield
 
   # prepare next queue filled with NEXT_MAX tetrimino
   i=0
@@ -2193,6 +2174,25 @@ init() {
   get_next
   redraw_screen
   flush_screen
+}
+
+# Free playfield with EMPTY (0)
+# Arguments:
+#   1 - start of y
+free_playfield() {
+  local y=${1:-0} x=0
+
+  # x of playfield - 0, ..., (PLAYFIELD_W-1)
+  # y of playfield - 0, ..., (PLAYFIELD_H-1), ..., (START_Y), ..., (BUFFER_ZONE_Y)
+  # (0, 0) is bottom left
+  while [ "$y" -le "$BUFFER_ZONE_Y" ]; do
+    x=0
+    while [ "$x" -lt "$PLAYFIELD_W" ]; do
+      eval playfield_"$y"_"$x"="$EMPTY"
+      x=$((x + 1))
+    done
+    y=$((y + 1))
+  done
 }
 
 receive_pids() {
