@@ -2172,7 +2172,7 @@ init() {
   capture_input
 
   get_next
-  redraw_screen
+  redraw_playfield
   flush_screen
 }
 
