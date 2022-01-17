@@ -1562,7 +1562,7 @@ update_location() {
     lowest_line=$lowest    # update lowest_line y
   }
 
-  # Clear the "perfect line" when a piece is close to it.
+  # Clear the "perfect clear" when a piece is close to it.
   $perfect_clear && [ $(($2 - 4)) -lt $((PLAYFIELD_H / 2)) ] && {
     perfect_clear=false
     clear_perfect_clear
