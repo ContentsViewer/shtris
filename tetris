@@ -2234,6 +2234,7 @@ ready() {
 # this function runs in separate process
 lockdown_timer() {
   game_pid=$1
+  trigger_counter=-1 # -1: already triggerd, 0: triggered, >0: count to trigger
 
   # on SIGTERM this process should exit
   trap exit $SIGNAL_TERM
@@ -2244,8 +2245,9 @@ lockdown_timer() {
   send_cmd "$NOTIFY_PID $PROCESS_TIMER $my_pid"
   stop_at_start "$my_pid"
 
-  trigger_counter=-1 # -1: already triggerd, 0: triggered, >0: count to trigger
   while exist_process "$game_pid"; do
+    sleep 0.1
+
     trigger_counter=$((trigger_counter >= 0 ? trigger_counter - 1 : trigger_counter))
     # $debug echo "trigger_counter: $trigger_counter"
 
@@ -2253,8 +2255,6 @@ lockdown_timer() {
       # $debug echo "send_cmd: LOCKDOWN"
       send_cmd "$LOCKDOWN"
     }
-
-    sleep 0.1
 
     # The following code will cause an error ("Illegal instruction: 4") on macOS(bash 3.2.57).
     #   sleep 0.1 & # wait in background for receiving the signal
