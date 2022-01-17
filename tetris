@@ -209,6 +209,10 @@ eval SCORE_FACTOR_"$ACTION_MINI_TSPIN_DOUBLE"=300
 eval SCORE_FACTOR_"$ACTION_SOFT_DROP"=1
 eval SCORE_FACTOR_"$ACTION_HARD_DROP"=2
 SCORE_FACTOR_COMBO=50
+SCORE_FACTOR_SINGLE_LINE_PERFECT_CLEAR=800
+SCORE_FACTOR_DOUBLE_LINE_PERFECT_CLEAR=1200
+SCORE_FACTOR_TRIPLE_LINE_PERFECT_CLEAR=1800
+SCORE_FACTOR_TETRIS_PERFECT_CLEAR=2000
 
 # A Tetrimino that is Hard Dropped Locks Down immediately. However, if a Tetrimino naturally falls
 # or Soft Drops onto a Surface, it is given 0.5 seconds on a Lock Down Timer before it actually
@@ -586,6 +590,25 @@ combo_counter=-1
 #   <BACK-to-BACK>
 #   ---
 last_actions=''
+
+# A Perfect Clear (PC) means having no filled cells left after a line clear.
+# Scoring:
+#   Single-line perfect clear         | 800  x level
+#   Double-line perfect clear         | 1200 x level
+#   Triple-line perfect clear         | 1800 x level
+#   Tetris perfect clear              | 2000 x level
+#   Back-to-back Tetris perfect clear | 3200 x level
+#
+#   ex)
+#     Back-to-back Tetris perfect clear 3200 * level pt
+#
+#     Tetris (800 * level pt) + B2B-Bonus (800 / 2 * level pt) + Tetris-PC (2000 * level)
+#     = 3200 * level pt
+#
+#   details:
+#     * <https://n3twork.zendesk.com/hc/en-us/articles/360046263052-Scoring>
+#     * <https://tetris.wiki/Scoring>
+perfect_clear=false
 
 lockdown_rule=$LOCKDOWN_RULE_EXTENDED
 score=0                    # score variable initialization
@@ -1176,10 +1199,12 @@ is_line_completed() {
 #   1 - hot zone y min
 #   2 - hot zone y max (inclusive)
 # Globals:
-#   lastout - completed_lines
+#   completed_lines
+#   perfect_clear
 process_complete_lines() {
-  local y="$1" yi="$2" x=0 field_cell=-1 completed_lines=''
+  local y="$1" yi="$2" x=0 field_cell=-1
 
+  completed_lines='' perfect_clear=false
   [ $y -lt 0 ] && y=0
 
   while [ "$y" -le "$yi" ]; do
@@ -1187,11 +1212,11 @@ process_complete_lines() {
     y=$((y + 1))
   done
 
-  lastout=$completed_lines
-
   set -- $completed_lines
 
   [ $# -eq 0 ] && return # no line clear
+
+  [ $1 -eq 0 ] && perfect_clear=true
 
   # move lines down. move cells from y to yi
   y=$1; shift; yi=$y
@@ -1207,6 +1232,7 @@ process_complete_lines() {
     while [ "$x" -ge 0 ]; do
       field_cell=$((playfield_${y}_${x}))
       eval playfield_"$yi"_"$x"=\"$field_cell\"
+      [ $field_cell -ne $EMPTY ] && perfect_clear=false
       x=$((x - 1))
     done
     yi=$((yi + 1))
@@ -1253,18 +1279,17 @@ what_action() {
 }
 
 process_fallen_piece() {
-  local action='' completed_lines=''
+  local action=''
 
+  $perfect_clear && clear_perfect_clear
   flatten_playfield
 
   # There should be a line clear between current_y - 4 ~ current_y
   process_complete_lines $((current_piece_y - 4)) $current_piece_y
-  completed_lines=$lastout
-
   set -- $completed_lines
   what_action $#; action=$?
 
-  update_score_on_completion "$action" && {
+  update_score_on_completion "$action" "$perfect_clear" && {
     draw_action true # if last_actions changed, perform flash effect
   }
 
@@ -1284,18 +1309,19 @@ process_fallen_piece() {
   release_input
   beep
 
-  # flash line effect
+  $perfect_clear && flash_perfect_clear
   flash_line "$@"
   flush_screen
   sleep 0.045
 
-  # clear line
+  $perfect_clear && draw_perfect_clear
   clear_line "$@"
   flush_screen
   sleep 0.5
 
   capture_input
   redraw_playfield
+  $perfect_clear && draw_perfect_clear # Keep showing it for a while.
 }
 
 draw_scoreboard() {
@@ -1338,9 +1364,9 @@ update_score_on_drop() {
 # Arguments:
 #   1 - ACTION name. ex: ACTION_SINGLE
 # Returns:
-#   actions updated
+#   0 if actions updated, 1 not
 update_score_on_completion() {
-  local factor=0 score_to_add=0 lines_to_add=0 action_updated=false new_combo_counter=$combo_counter
+  local factor=0 score_to_add=0 lines_to_add=0 action_updated=1 new_combo_counter=$combo_counter
 
   eval factor=\"\$SCORE_FACTOR_"$1"\"
 
@@ -1353,69 +1379,69 @@ update_score_on_completion() {
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
       new_combo_counter=$((combo_counter + 1))
-      last_actions='::Single:'; action_updated=true
+      last_actions='::Single:'; action_updated=0
       ;;
     "$ACTION_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
       new_combo_counter=$((combo_counter + 1))
-      last_actions='::Double:'; action_updated=true
+      last_actions='::Double:'; action_updated=0
       ;;
     "$ACTION_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       b2b_sequence_continues=false
       new_combo_counter=$((combo_counter + 1))
-      last_actions='::Triple:'; action_updated=true
+      last_actions='::Triple:'; action_updated=0
       ;;
     "$ACTION_TETRIS")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions='::Tetris:'; action_updated=true
+      last_actions='::Tetris:'; action_updated=0
       ;;
     "$ACTION_MINI_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=-1
-      last_actions='::Mini T-Spin:'; action_updated=true
+      last_actions='::Mini T-Spin:'; action_updated=0
       ;;
     "$ACTION_MINI_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions='::Mini T-Spin: Single'; action_updated=true
+      last_actions='::Mini T-Spin: Single'; action_updated=0
       ;;
     "$ACTION_MINI_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions='::Mini T-Spin: Double'; action_updated=true
+      last_actions='::Mini T-Spin: Double'; action_updated=0
       ;;
     "$ACTION_TSPIN")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=-1
-      last_actions='::T-Spin:'; action_updated=true
+      last_actions='::T-Spin:'; action_updated=0
       ;;
     "$ACTION_TSPIN_SINGLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions='::T-Spin: Single'; action_updated=true
+      last_actions='::T-Spin: Single'; action_updated=0
       ;;
     "$ACTION_TSPIN_DOUBLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions='::T-Spin: Double'; action_updated=true
+      last_actions='::T-Spin: Double'; action_updated=0
       ;;
     "$ACTION_TSPIN_TRIPLE")
       score_to_add=$((level * factor)) # Awarded Line Clears
       lines_to_add=$((factor / 100))
       new_combo_counter=$((combo_counter + 1))
-      last_actions='::T-Spin: Triple'; action_updated=true
+      last_actions='::T-Spin: Triple'; action_updated=0
       ;;
     "$ACTION_NONE")
       new_combo_counter=-1
@@ -1435,10 +1461,28 @@ update_score_on_completion() {
       $b2b_sequence_continues && {
         score_to_add=$((score_to_add + score_to_add / 2))
         lines_to_add=$((lines_to_add + lines_to_add / 2))
-        last_actions="$last_actions::Back-to-Back"; action_updated=true
+        last_actions="$last_actions::Back-to-Back"; action_updated=0
       }
       b2b_sequence_continues=true;;
   esac
+
+  $perfect_clear && {
+    case $1 in
+      "$ACTION_SINGLE")
+        score_to_add=$((score_to_add + SCORE_FACTOR_SINGLE_LINE_PERFECT_CLEAR * level))
+      ;;
+      "$ACTION_DOUBLE"|"$ACTION_MINI_TSPIN_DOUBLE"|"$ACTION_TSPIN_DOUBLE")
+        score_to_add=$((score_to_add + SCORE_FACTOR_DOUBLE_LINE_PERFECT_CLEAR * level))
+      ;;
+      "$ACTION_TRIPLE"|"$ACTION_TSPIN_TRIPLE")
+        score_to_add=$((score_to_add + SCORE_FACTOR_TRIPLE_LINE_PERFECT_CLEAR * level))
+      ;;
+      "$ACTION_TETRIS")
+        score_to_add=$((score_to_add + SCORE_FACTOR_TETRIS_PERFECT_CLEAR * level))
+      ;;
+    esac
+  }
+
 
   [ "$new_combo_counter" -ne "$combo_counter" ] && {
     combo_counter=$new_combo_counter
@@ -1461,7 +1505,7 @@ update_score_on_completion() {
 
   draw_score
 
-  $action_updated
+  return $action_updated
 }
 
 draw_score() {
@@ -1516,6 +1560,12 @@ update_location() {
     manipulation_counter=0 # reset manipulation counter
     lock_phase=false       # exit lock phase
     lowest_line=$lowest    # update lowest_line y
+  }
+
+  # Clear the "perfect clear" when a piece is close to it.
+  $perfect_clear && [ $(($2 - 4)) -lt $((PLAYFIELD_H / 2)) ] && {
+    perfect_clear=false
+    clear_perfect_clear
   }
 
   #test lands on
@@ -1924,7 +1974,6 @@ show_ghost() {
 
   set_ghost_color "$current_piece"
   draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$GHOST_CELL"
-
   reset_colors
 }
 
@@ -2082,6 +2131,25 @@ draw_pause() {
   reset_colors
 }
 
+flash_perfect_clear() {
+  set_style reverse
+  draw_perfect_clear
+}
+
+draw_perfect_clear() {
+  set_style bold
+  xyprint $((CENTER_X - 3)) "$CENTER_Y"       'PERFECT'
+  xyprint $((CENTER_X - 2)) $((CENTER_Y + 1))  'CLEAR'
+  reset_colors
+}
+
+clear_perfect_clear() {
+  local line=''
+  str_repeat line "$EMPTY_CELL" "$PLAYFIELD_W"
+  xyprint "$PLAYFIELD_X" "$CENTER_Y"       "$line"
+  xyprint "$PLAYFIELD_X" $((CENTER_Y + 1)) "$line"
+}
+
 refresh_screen() {
   clear_screen
   redraw_screen
@@ -2167,8 +2235,8 @@ init() {
   wakeup_ticker
   capture_input
 
-  get_next
   redraw_playfield
+  get_next
   flush_screen
 }
 
