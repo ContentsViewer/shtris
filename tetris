@@ -1642,8 +1642,6 @@ lockdown() {
 
   test_lockout && { # a whole Tetrimino Locks Down above the Skyline - Game Over
     # now lets sub process continue...
-    wakeup_ticker
-    wakeup_lockdown_timer
     gameover; return # ... Quit
   }
 
@@ -1655,7 +1653,6 @@ lockdown() {
 
   # now lets sub process continue...
   wakeup_ticker
-  wakeup_lockdown_timer
 }
 
 pause() {
@@ -1671,12 +1668,12 @@ pause() {
     show_hold
     pause=false
     wakeup_ticker
-    wakeup_lockdown_timer
+    $lock_phase && wakeup_lockdown_timer
     return
   fi
 
   stop_ticker
-  stop_lockdown_timer
+  $lock_phase && stop_lockdown_timer
   draw_pause
   clear_next
   clear_hold
@@ -2168,7 +2165,6 @@ init() {
   ready
 
   wakeup_ticker
-  wakeup_lockdown_timer
   capture_input
 
   get_next
