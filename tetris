@@ -1563,8 +1563,10 @@ update_location() {
   }
 
   # Clear the "perfect line" when a piece is close to it.
-  [ $(($2 - 4)) -lt $((PLAYFIELD_H / 2)) ] &&
-  $perfect_clear && clear_perfect_clear
+  $perfect_clear && [ $(($2 - 4)) -lt $((PLAYFIELD_H / 2)) ] && {
+    perfect_clear=false
+    clear_perfect_clear
+  }
 
   #test lands on
   if ! new_piece_location_ok "$1" $(($2 - 1)); then
