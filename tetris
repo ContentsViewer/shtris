@@ -591,6 +591,25 @@ combo_counter=-1
 #   ---
 last_actions=''
 
+# A Perfect Clear (PC) means having no filled cells left after a line clear.
+# Scoring:
+#   Single-line perfect clear         | 800  x level
+#   Double-line perfect clear         | 1200 x level
+#   Triple-line perfect clear         | 1800 x level
+#   Tetris perfect clear              | 2000 x level
+#   Back-to-back Tetris perfect clear | 3200 x level
+#
+#   ex)
+#     Back-to-back Tetris perfect clear 3200 * level pt
+#
+#     Tetris (800 * level pt) + B2B-Bonus (800 / 2 * level pt) + Tetris-PC (2000 * level)
+#     = 3200 * level pt
+#
+#   details:
+#     * <https://n3twork.zendesk.com/hc/en-us/articles/360046263052-Scoring>
+#     * <https://tetris.wiki/Scoring>
+perfect_clear=false
+
 lockdown_rule=$LOCKDOWN_RULE_EXTENDED
 score=0                    # score variable initialization
 level=0                    # level variable initialization
@@ -1262,6 +1281,7 @@ what_action() {
 process_fallen_piece() {
   local action=''
 
+  $perfect_clear && clear_perfect_clear
   flatten_playfield
 
   # There should be a line clear between current_y - 4 ~ current_y
@@ -1290,7 +1310,7 @@ process_fallen_piece() {
   beep
 
   $perfect_clear && flash_perfect_clear
-  flash_line "$@" # flash line effect
+  flash_line "$@"
   flush_screen
   sleep 0.045
 
@@ -1301,6 +1321,7 @@ process_fallen_piece() {
 
   capture_input
   redraw_playfield
+  $perfect_clear && draw_perfect_clear # Keep showing it for a while.
 }
 
 draw_scoreboard() {
@@ -1540,6 +1561,10 @@ update_location() {
     lock_phase=false       # exit lock phase
     lowest_line=$lowest    # update lowest_line y
   }
+
+  # Clear the "perfect line" when a piece is close to it.
+  [ $(($2 - 4)) -lt $((PLAYFIELD_H / 2)) ] &&
+  $perfect_clear && clear_perfect_clear
 
   #test lands on
   if ! new_piece_location_ok "$1" $(($2 - 1)); then
@@ -1950,7 +1975,6 @@ show_ghost() {
 
   set_ghost_color "$current_piece"
   draw_playfield_piece $ghost_piece_x $ghost_piece_y $ghost_piece $ghost_piece_rotation "$GHOST_CELL"
-
   reset_colors
 }
 
@@ -2115,9 +2139,16 @@ flash_perfect_clear() {
 
 draw_perfect_clear() {
   set_style bold
-  xyprint $((CENTER_X - 3)) $CENTER_Y         'PERFECT'
-  xyprint $((CENTER_X - 3)) $((CENTER_Y + 1)) ' CLEAR'
+  xyprint $((CENTER_X - 3)) "$CENTER_Y"       'PERFECT'
+  xyprint $((CENTER_X - 2)) $((CENTER_Y + 1))  'CLEAR'
   reset_colors
+}
+
+clear_perfect_clear() {
+  local line=''
+  str_repeat line "$EMPTY_CELL" "$PLAYFIELD_W"
+  xyprint "$PLAYFIELD_X" "$CENTER_Y"       "$line"
+  xyprint "$PLAYFIELD_X" $((CENTER_Y + 1)) "$line"
 }
 
 refresh_screen() {
@@ -2206,8 +2237,8 @@ init() {
   wakeup_lockdown_timer
   capture_input
 
-  get_next
   redraw_playfield
+  get_next
   flush_screen
 }
 
