@@ -26,8 +26,8 @@ I've implemented the following
 ## Usage
 
 ```sh
-# Download (v2.2.0)
-wget https://raw.githubusercontent.com/ContentsViewer/shtris/v2.2.0/shtris
+# Download (v3.0.0)
+wget https://raw.githubusercontent.com/ContentsViewer/shtris/v3.0.0/shtris
 chmod +x shtris
 
 ./shtris
@@ -59,7 +59,7 @@ Options:
  -V, --version  output version infromation and exit
 
 Version:
- 2.2.0
+ 3.0.0
 ```
 
 </details>
