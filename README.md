@@ -1,4 +1,4 @@
-# sh-tetris
+# shtris
 
 The pure shell script (sh) that implements the Tetris game following the Tetris Guideline (2009).
 
@@ -27,19 +27,19 @@ I've implemented the following
 
 ```sh
 # Download (v2.2.0)
-wget https://raw.githubusercontent.com/ContentsViewer/sh-tetris/v2.2.0/tetris
-chmod +x tetris
+wget https://raw.githubusercontent.com/ContentsViewer/shtris/v2.2.0/shtris
+chmod +x shtris
 
-./tetris
+./shtris
 ```
 
 <details>
 <summary>Show Help</summary>
 
 ```shellsession
-$ ./tetris -h
+$ ./shtris -h
 
-Usage: tetris [options]
+Usage: shtris [options]
 
 Options:
  -d, --debug          debug mode
@@ -64,7 +64,7 @@ Version:
 
 </details>
 
-![Tetris](https://contentsviewer.work/Master/ShellScript/Apps/Tetris/Images/tetris.jpg)
+![shtris](https://contentsviewer.work/Master/ShellScript/Apps/Tetris/Images/tetris.jpg)
 
 Enjoy :-)
 
