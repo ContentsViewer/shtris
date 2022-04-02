@@ -32,7 +32,7 @@
 #   Solaris sh | o (Almost works)
 #
 # Github Page:
-#   <https://github.com/ContentsViewer/sh-tetris>
+#   <https://github.com/ContentsViewer/shtris>
 #
 # Author:
 #   IOE <Github: ContentsViewer>
@@ -55,7 +55,7 @@
 #     and program stopped.
 #
 #   * Delete extra spaces
-#     `sed 's/ *$//' tetris >_ && mv _ tetris && chmod +x tetris`
+#     `sed 's/ *$//' shtris >_ && mv _ shtris && chmod +x shtris`
 #
 #   * Peformance test
 #     `time sh -c 'i=0; while [ $i -lt 1000 ]; do i=$((i+1)); <TEST CODE>; done'`
@@ -67,7 +67,7 @@ set -f # disable pathname expansion
 # game versioin
 # should follow "Semantic Versioning 2.0.0" <https://semver.org/>
 # so that users have a clear indicator of when an upgrade will introduce breaking changes.
-VERSION='2.3.0-alpha'
+VERSION='3.0.0'
 
 # program name
 PROG=${0##*/}
