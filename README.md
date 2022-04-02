@@ -64,7 +64,7 @@ Version:
 
 </details>
 
-![shtris](https://contentsviewer.work/Master/ShellScript/Apps/Tetris/Images/tetris.jpg)
+![shtris](https://contentsviewer.work/Master/ShellScript/Apps/Tetris/Images/shtris.jpg)
 
 Enjoy :-)
 
